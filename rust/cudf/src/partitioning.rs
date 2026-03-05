@@ -2,3 +2,122 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Table partitioning operations.
+
+use crate::error::Result;
+use crate::table::Table;
+
+/// Hash-partitions a table into `num_partitions` partitions.
+///
+/// Rows are rearranged so that rows in the same partition are contiguous.
+/// The columns specified by `columns` are used for computing the hash.
+pub fn hash_partition(table: &Table, columns: &[usize], num_partitions: usize) -> Result<Table> {
+    let cols_i32: Vec<i32> = columns.iter().map(|&c| c as i32).collect();
+    let tbl =
+        cudf_sys::ffi::hash_partition_table(&table.0, &cols_i32, num_partitions as i32)?;
+    Ok(Table(tbl))
+}
+
+/// Returns partition offsets for hash partitioning.
+///
+/// The returned vector has `num_partitions + 1` elements. Partition `i`
+/// contains rows in the range `[offsets[i], offsets[i+1])`.
+pub fn hash_partition_offsets(
+    table: &Table,
+    columns: &[usize],
+    num_partitions: usize,
+) -> Result<Vec<usize>> {
+    let cols_i32: Vec<i32> = columns.iter().map(|&c| c as i32).collect();
+    let offsets =
+        cudf_sys::ffi::hash_partition_offsets(&table.0, &cols_i32, num_partitions as i32)?;
+    Ok(offsets.into_iter().map(|o| o as usize).collect())
+}
+
+/// Round-robin partitions a table into `num_partitions` partitions.
+///
+/// Rows are assigned to partitions in a round-robin fashion starting
+/// from `start_partition`.
+pub fn round_robin(
+    table: &Table,
+    num_partitions: usize,
+    start_partition: usize,
+) -> Result<Table> {
+    let tbl = cudf_sys::ffi::round_robin_partition_table(
+        &table.0,
+        num_partitions as i32,
+        start_partition as i32,
+    )?;
+    Ok(Table(tbl))
+}
+
+/// Returns partition offsets for round-robin partitioning.
+pub fn round_robin_offsets(
+    table: &Table,
+    num_partitions: usize,
+    start_partition: usize,
+) -> Result<Vec<usize>> {
+    let offsets = cudf_sys::ffi::round_robin_partition_offsets(
+        &table.0,
+        num_partitions as i32,
+        start_partition as i32,
+    )?;
+    Ok(offsets.into_iter().map(|o| o as usize).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::column::Column as Col;
+    use crate::table::TableBuilder;
+
+    #[test]
+    fn hash_partition_basic() {
+        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
+        let mut builder = TableBuilder::new();
+        builder.push_column(c1);
+        let table = builder.build();
+
+        let result = hash_partition(&table, &[0], 2).unwrap();
+        // Row count is preserved
+        assert_eq!(result.len(), 6);
+        assert_eq!(result.columns_len(), 1);
+    }
+
+    #[test]
+    fn hash_partition_offsets_basic() {
+        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
+        let mut builder = TableBuilder::new();
+        builder.push_column(c1);
+        let table = builder.build();
+
+        let offsets = hash_partition_offsets(&table, &[0], 2).unwrap();
+        // Should have num_partitions + 1 offsets
+        assert_eq!(offsets.len(), 3);
+        // Last offset should equal total row count
+        assert_eq!(offsets[2], 6);
+    }
+
+    #[test]
+    fn round_robin_basic() {
+        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
+        let mut builder = TableBuilder::new();
+        builder.push_column(c1);
+        let table = builder.build();
+
+        let result = round_robin(&table, 3, 0).unwrap();
+        assert_eq!(result.len(), 6);
+        assert_eq!(result.columns_len(), 1);
+    }
+
+    #[test]
+    fn round_robin_offsets_basic() {
+        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
+        let mut builder = TableBuilder::new();
+        builder.push_column(c1);
+        let table = builder.build();
+
+        let offsets = round_robin_offsets(&table, 3, 0).unwrap();
+        // 3 partitions + 1 = 4 offsets
+        assert_eq!(offsets.len(), 4);
+        assert_eq!(offsets[3], 6);
+    }
+}

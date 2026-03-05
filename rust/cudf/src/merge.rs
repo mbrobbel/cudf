@@ -2,3 +2,58 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Merge operations on sorted tables.
+
+use crate::error::Result;
+use crate::sorting::{NullOrder, Order};
+use crate::table::Table;
+
+/// Merges two sorted tables maintaining sort order.
+///
+/// Both input tables must be sorted by the key columns according to
+/// the specified `orders` and `null_orders`. The result is a single
+/// sorted table containing rows from both inputs.
+pub fn merge(
+    left: &Table,
+    right: &Table,
+    key_columns: &[usize],
+    orders: &[Order],
+    null_orders: &[NullOrder],
+) -> Result<Table> {
+    let keys_i32: Vec<i32> = key_columns.iter().map(|&k| k as i32).collect();
+    let orders_i32: Vec<i32> = orders.iter().map(|o| o.repr).collect();
+    let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
+    let tbl = cudf_sys::ffi::merge_tables(&left.0, &right.0, &keys_i32, &orders_i32, &nulls_i32)?;
+    Ok(Table(tbl))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::column::Column as Col;
+    use crate::table::TableBuilder;
+
+    #[test]
+    fn merge_sorted_tables() {
+        // left: [1, 3, 5], right: [2, 4, 6]
+        let c1 = Col::from_slice_i32(&[1, 3, 5]);
+        let mut b1 = TableBuilder::new();
+        b1.push_column(c1);
+        let left = b1.build();
+
+        let c2 = Col::from_slice_i32(&[2, 4, 6]);
+        let mut b2 = TableBuilder::new();
+        b2.push_column(c2);
+        let right = b2.build();
+
+        let result = merge(
+            &left,
+            &right,
+            &[0],
+            &[Order::ASCENDING],
+            &[NullOrder::BEFORE],
+        )
+        .unwrap();
+        assert_eq!(result.len(), 6);
+        assert_eq!(result.columns_len(), 1);
+    }
+}

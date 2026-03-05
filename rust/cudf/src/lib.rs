@@ -43,6 +43,7 @@ pub mod transform;
 pub use column::{Column, ColumnView};
 pub use data_type::{DataType, TypeId};
 pub use error::{Error, Result};
+pub use groupby::AggregationKind;
 pub use ops::BinaryOperator;
 pub use scalar::Scalar;
 pub use sorting::{NullOrder, Order};

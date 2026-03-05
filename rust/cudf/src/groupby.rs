@@ -105,31 +105,19 @@ mod tests {
 
     /// Sort a groupby result by first column and extract (keys_i32, vals_i32).
     fn sorted_kv_i32(result: &Table) -> (Vec<i32>, Vec<i32>) {
-        let sorted = crate::sorting::sort(
-            result,
-            &[crate::sorting::Order::Ascending],
-            &[crate::sorting::NullOrder::After],
-        );
+        let sorted = crate::sorting::sort(result, &[], &[]).unwrap();
         (col_to_host_i32(&sorted, 0), col_to_host_i32(&sorted, 1))
     }
 
     /// Sort a groupby result by first column and extract (keys_i32, vals_i64).
     fn sorted_kv_i64(result: &Table) -> (Vec<i32>, Vec<i64>) {
-        let sorted = crate::sorting::sort(
-            result,
-            &[crate::sorting::Order::Ascending],
-            &[crate::sorting::NullOrder::After],
-        );
+        let sorted = crate::sorting::sort(result, &[], &[]).unwrap();
         (col_to_host_i32(&sorted, 0), col_to_host_i64(&sorted, 1))
     }
 
     /// Sort a groupby result by first column and extract (keys_i32, vals_f64).
     fn sorted_kv_f64(result: &Table) -> (Vec<i32>, Vec<f64>) {
-        let sorted = crate::sorting::sort(
-            result,
-            &[crate::sorting::Order::Ascending],
-            &[crate::sorting::NullOrder::After],
-        );
+        let sorted = crate::sorting::sort(result, &[], &[]).unwrap();
         (col_to_host_i32(&sorted, 0), col_to_host_f64(&sorted, 1))
     }
 
@@ -200,11 +188,7 @@ mod tests {
         );
         assert_eq!(result.columns_len(), 3);
 
-        let sorted = crate::sorting::sort(
-            &result,
-            &[crate::sorting::Order::Ascending],
-            &[crate::sorting::NullOrder::After],
-        );
+        let sorted = crate::sorting::sort(&result, &[], &[]).unwrap();
 
         let keys = col_to_host_i32(&sorted, 0);
         let sums = col_to_host_i64(&sorted, 1);
