@@ -786,7 +786,7 @@ std::unique_ptr<Column> quantile_column(
     std::size_t stream) {
   rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
   std::vector<double> q(quantiles.begin(), quantiles.end());
-  auto result = cudf::quantile(col, q, static_cast<cudf::interpolation>(interp), cudf::sorted::NO, {}, s);
+  auto result = cudf::quantile(col, q, static_cast<cudf::interpolation>(interp), cudf::column_view{}, cudf::sorted::NO, s);
   return std::make_unique<Column>(std::move(result));
 }
 
@@ -1406,7 +1406,7 @@ std::unique_ptr<Table> groupby_single(
   auto keys_view = view.select(key_cols);
 
   cudf::groupby::groupby gb(keys_view, cudf::null_policy::EXCLUDE,
-      cudf::sorted::NO, {}, {}, s);
+      cudf::sorted::NO, {}, {});
 
   // Build aggregation request
   std::vector<cudf::groupby::aggregation_request> requests;
@@ -1445,7 +1445,7 @@ std::unique_ptr<Table> groupby_multi(
   auto keys_view = view.select(key_cols);
 
   cudf::groupby::groupby gb(keys_view, cudf::null_policy::EXCLUDE,
-      cudf::sorted::NO, {}, {}, s);
+      cudf::sorted::NO, {}, {});
 
   // Build aggregation requests -- one per (value_column, agg) pair
   std::vector<cudf::groupby::aggregation_request> requests;
