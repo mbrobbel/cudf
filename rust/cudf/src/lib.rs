@@ -47,7 +47,7 @@ pub mod transform;
 /// `T` must be a `#[repr(i32)]` type with the same size and alignment as `i32`.
 pub(crate) unsafe fn enum_slice_as_i32<T>(slice: &[T]) -> &[i32] {
     debug_assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
-    std::slice::from_raw_parts(slice.as_ptr() as *const i32, slice.len())
+    unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const i32, slice.len()) }
 }
 
 pub use column::{Column, ColumnView};
