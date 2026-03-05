@@ -42,7 +42,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);
-        let table = builder.build();
+        let table = builder.build().unwrap();
 
         let result = interleave_columns(&table).unwrap();
         assert_eq!(result.len(), 6);
@@ -54,7 +54,7 @@ mod tests {
         let c1 = Col::from_slice_i32(&[1, 2, 3]);
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
-        let table = builder.build();
+        let table = builder.build().unwrap();
 
         let result = tile(&table, 2).unwrap();
         assert_eq!(result.len(), 6);

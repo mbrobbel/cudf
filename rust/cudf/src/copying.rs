@@ -45,7 +45,7 @@ mod tests {
         let indices = Col::from_scalar(&Scalar::from_i32(0), 2);
         let mut builder = TableBuilder::new();
         builder.push_column(col);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let result = gather(&table, &indices.view()).unwrap();
         assert_eq!(result.len(), 2);
     }
@@ -65,7 +65,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let empty = empty_like_table(&table);
         assert_eq!(empty.len(), 0);
         assert_eq!(empty.columns_len(), 2);

@@ -40,7 +40,7 @@ mod tests {
         let mask = Column::from_scalar(&Scalar::from_bool(true), 4);
         let mut builder = TableBuilder::new();
         builder.push_column(col);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         // For a uniform true mask, all rows should be kept
         let result = apply_boolean_mask(&table, &mask.view()).unwrap();
         assert_eq!(result.len(), 4);
@@ -51,7 +51,7 @@ mod tests {
         let col = Column::from_scalar(&Scalar::from_i32(5), 3);
         let mut builder = TableBuilder::new();
         builder.push_column(col);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let result = drop_nulls(&table).unwrap();
         // No nulls, so all rows should be kept
         assert_eq!(result.len(), 3);

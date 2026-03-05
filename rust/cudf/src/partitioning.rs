@@ -15,10 +15,9 @@ fn ds() -> usize {
 ///
 /// Rows are rearranged so that rows in the same partition are contiguous.
 /// The columns specified by `columns` are used for computing the hash.
-pub fn hash_partition(table: &Table, columns: &[usize], num_partitions: usize) -> Result<Table> {
-    let cols_i32: Vec<i32> = columns.iter().map(|&c| c as i32).collect();
+pub fn hash_partition(table: &Table, columns: &[i32], num_partitions: usize) -> Result<Table> {
     let tbl =
-        cudf_sys::ffi::hash_partition_table(&table.0, &cols_i32, num_partitions as i32, ds())?;
+        cudf_sys::ffi::hash_partition_table(&table.0, columns, num_partitions as i32, ds())?;
     Ok(Table(tbl))
 }
 
@@ -28,12 +27,11 @@ pub fn hash_partition(table: &Table, columns: &[usize], num_partitions: usize) -
 /// the start row of each partition.
 pub fn hash_partition_offsets(
     table: &Table,
-    columns: &[usize],
+    columns: &[i32],
     num_partitions: usize,
 ) -> Result<Vec<usize>> {
-    let cols_i32: Vec<i32> = columns.iter().map(|&c| c as i32).collect();
     let offsets =
-        cudf_sys::ffi::hash_partition_offsets(&table.0, &cols_i32, num_partitions as i32, ds())?;
+        cudf_sys::ffi::hash_partition_offsets(&table.0, columns, num_partitions as i32, ds())?;
     Ok(offsets.into_iter().map(|o| o as usize).collect())
 }
 
@@ -81,9 +79,9 @@ mod tests {
         let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
-        let table = builder.build();
+        let table = builder.build().unwrap();
 
-        let result = hash_partition(&table, &[0], 2).unwrap();
+        let result = hash_partition(&table, &[0i32], 2).unwrap();
         // Row count is preserved
         assert_eq!(result.len(), 6);
         assert_eq!(result.columns_len(), 1);
@@ -94,9 +92,9 @@ mod tests {
         let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
-        let table = builder.build();
+        let table = builder.build().unwrap();
 
-        let offsets = hash_partition_offsets(&table, &[0], 2).unwrap();
+        let offsets = hash_partition_offsets(&table, &[0i32], 2).unwrap();
         // cudf returns num_partitions offsets (start of each partition)
         assert_eq!(offsets.len(), 2);
     }
@@ -106,7 +104,7 @@ mod tests {
         let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
-        let table = builder.build();
+        let table = builder.build().unwrap();
 
         let result = round_robin(&table, 3, 0).unwrap();
         assert_eq!(result.len(), 6);
@@ -118,7 +116,7 @@ mod tests {
         let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
-        let table = builder.build();
+        let table = builder.build().unwrap();
 
         let offsets = round_robin_offsets(&table, 3, 0).unwrap();
         // cudf returns num_partitions offsets (start of each partition)

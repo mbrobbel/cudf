@@ -13,7 +13,7 @@ pub mod csv {
 
     /// Reads a CSV file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path.as_ref().to_str().expect("path is not valid UTF-8");
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
         let tbl = cudf_sys::ffi::read_csv(path_str)?;
         Ok(Table(tbl))
     }
@@ -46,7 +46,7 @@ pub mod csv {
         path: P,
         opts: &ReadOptions,
     ) -> crate::Result<Table> {
-        let path_str = path.as_ref().to_str().expect("path is not valid UTF-8");
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
         let tbl = cudf_sys::ffi::read_csv_with_options(
             path_str,
             opts.delimiter,
@@ -59,7 +59,7 @@ pub mod csv {
 
     /// Writes a [`Table`] to a CSV file.
     pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
-        let path_str = path.as_ref().to_str().expect("path is not valid UTF-8");
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
         cudf_sys::ffi::write_csv(&table.0, path_str)?;
         Ok(())
     }
@@ -90,7 +90,7 @@ pub mod csv {
         path: P,
         opts: &WriteOptions<'_>,
     ) -> crate::Result<()> {
-        let path_str = path.as_ref().to_str().expect("path is not valid UTF-8");
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
         cudf_sys::ffi::write_csv_with_options(
             &table.0,
             path_str,
@@ -108,14 +108,14 @@ pub mod parquet {
 
     /// Reads a Parquet file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path.as_ref().to_str().expect("path is not valid UTF-8");
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
         let tbl = cudf_sys::ffi::read_parquet(path_str)?;
         Ok(Table(tbl))
     }
 
     /// Writes a [`Table`] to a Parquet file.
     pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
-        let path_str = path.as_ref().to_str().expect("path is not valid UTF-8");
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
         cudf_sys::ffi::write_parquet(&table.0, path_str)?;
         Ok(())
     }
@@ -132,7 +132,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);
-        builder.build()
+        builder.build().unwrap()
     }
 
     #[test]

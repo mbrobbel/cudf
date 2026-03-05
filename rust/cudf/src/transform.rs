@@ -56,7 +56,7 @@ mod tests {
         let c1 = Col::from_slice_i32(&[3, 1, 2, 1, 3]);
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
-        let table = builder.build();
+        let table = builder.build().unwrap();
 
         let indices = encode(&table).unwrap();
         assert_eq!(indices.len(), 5);

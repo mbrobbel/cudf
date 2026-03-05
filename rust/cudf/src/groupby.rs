@@ -3,6 +3,7 @@
 
 //! GroupBy aggregation operations.
 
+use crate::error::Result;
 use crate::table::Table;
 
 /// Aggregation operation kind for groupby.
@@ -21,20 +22,18 @@ fn ds() -> usize {
 /// Returns a table with `[key_columns..., aggregated_value_column]`.
 pub fn groupby(
     table: &Table,
-    key_columns: &[usize],
-    value_column: usize,
+    key_columns: &[i32],
+    value_column: i32,
     aggregation: AggregationKind,
-) -> Table {
-    let key_indices: Vec<i32> = key_columns.iter().map(|&i| i as i32).collect();
+) -> Result<Table> {
     let result = cudf_sys::ffi::groupby_single(
         &table.0,
-        &key_indices,
-        value_column as i32,
+        key_columns,
+        value_column,
         aggregation.repr,
         ds(),
-    )
-    .expect("groupby_single failed");
-    Table(result)
+    )?;
+    Ok(Table(result))
 }
 
 /// Performs groupby with multiple aggregations on multiple value columns.
@@ -47,27 +46,25 @@ pub fn groupby(
 /// Returns a table with `[key_columns..., agg_result_0, agg_result_1, ...]`.
 pub fn groupby_multi(
     table: &Table,
-    key_columns: &[usize],
-    value_columns: &[usize],
+    key_columns: &[i32],
+    value_columns: &[i32],
     aggregations: &[AggregationKind],
-) -> Table {
-    assert_eq!(
-        value_columns.len(),
-        aggregations.len(),
-        "value_columns and aggregations must have the same length"
-    );
-    let key_indices: Vec<i32> = key_columns.iter().map(|&i| i as i32).collect();
-    let val_indices: Vec<i32> = value_columns.iter().map(|&i| i as i32).collect();
-    let agg_kinds: Vec<i32> = aggregations.iter().map(|a| a.repr).collect();
+) -> Result<Table> {
+    if value_columns.len() != aggregations.len() {
+        return Err(crate::error::Error::OutOfBounds {
+            index: aggregations.len(),
+            len: value_columns.len(),
+        });
+    }
+    let agg_kinds = unsafe { crate::enum_slice_as_i32(aggregations) };
     let result = cudf_sys::ffi::groupby_multi(
         &table.0,
-        &key_indices,
-        &val_indices,
-        &agg_kinds,
+        key_columns,
+        value_columns,
+        agg_kinds,
         ds(),
-    )
-    .expect("groupby_multi failed");
-    Table(result)
+    )?;
+    Ok(Table(result))
 }
 
 #[cfg(test)]
@@ -83,7 +80,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(key_col);
         builder.push_column(val_col);
-        builder.build()
+        builder.build().unwrap()
     }
 
     /// Extract column data as i32 from a table column using unary_cast identity trick.
@@ -131,7 +128,7 @@ mod tests {
     #[test]
     fn groupby_sum() {
         let tbl = make_kv_table(&[1, 1, 2, 2], &[1, 2, 3, 4]);
-        let result = groupby(&tbl, &[0], 1, AggregationKind::SUM);
+        let result = groupby(&tbl, &[0i32], 1, AggregationKind::SUM).unwrap();
         assert_eq!(result.columns_len(), 2);
         let (keys, vals) = sorted_kv_i64(&result);
         assert_eq!(keys, vec![1, 2]);
@@ -141,7 +138,7 @@ mod tests {
     #[test]
     fn groupby_min() {
         let tbl = make_kv_table(&[1, 1, 2, 2], &[5, 2, 8, 3]);
-        let result = groupby(&tbl, &[0], 1, AggregationKind::MIN);
+        let result = groupby(&tbl, &[0i32], 1, AggregationKind::MIN).unwrap();
         let (keys, vals) = sorted_kv_i32(&result);
         assert_eq!(keys, vec![1, 2]);
         assert_eq!(vals, vec![2, 3]);
@@ -150,7 +147,7 @@ mod tests {
     #[test]
     fn groupby_max() {
         let tbl = make_kv_table(&[1, 1, 2, 2], &[5, 2, 8, 3]);
-        let result = groupby(&tbl, &[0], 1, AggregationKind::MAX);
+        let result = groupby(&tbl, &[0i32], 1, AggregationKind::MAX).unwrap();
         let (keys, vals) = sorted_kv_i32(&result);
         assert_eq!(keys, vec![1, 2]);
         assert_eq!(vals, vec![5, 8]);
@@ -159,7 +156,7 @@ mod tests {
     #[test]
     fn groupby_mean() {
         let tbl = make_kv_table(&[1, 1, 2, 2], &[10, 20, 30, 50]);
-        let result = groupby(&tbl, &[0], 1, AggregationKind::MEAN);
+        let result = groupby(&tbl, &[0i32], 1, AggregationKind::MEAN).unwrap();
         let (keys, vals) = sorted_kv_f64(&result);
         assert_eq!(keys, vec![1, 2]);
         assert!((vals[0] - 15.0).abs() < 1e-9);
@@ -169,7 +166,7 @@ mod tests {
     #[test]
     fn groupby_count() {
         let tbl = make_kv_table(&[1, 1, 1, 2, 2], &[10, 20, 30, 40, 50]);
-        let result = groupby(&tbl, &[0], 1, AggregationKind::COUNT);
+        let result = groupby(&tbl, &[0i32], 1, AggregationKind::COUNT).unwrap();
         let (keys, vals) = sorted_kv_i32(&result);
         assert_eq!(keys, vec![1, 2]);
         assert_eq!(vals, vec![3, 2]);
@@ -178,7 +175,7 @@ mod tests {
     #[test]
     fn groupby_nunique() {
         let tbl = make_kv_table(&[1, 1, 1, 2, 2], &[10, 10, 20, 30, 30]);
-        let result = groupby(&tbl, &[0], 1, AggregationKind::NUNIQUE);
+        let result = groupby(&tbl, &[0i32], 1, AggregationKind::NUNIQUE).unwrap();
         let (keys, vals) = sorted_kv_i32(&result);
         assert_eq!(keys, vec![1, 2]);
         assert_eq!(vals, vec![2, 1]);
@@ -189,10 +186,11 @@ mod tests {
         let tbl = make_kv_table(&[1, 1, 2, 2], &[10, 20, 30, 40]);
         let result = groupby_multi(
             &tbl,
-            &[0],
-            &[1, 1],
+            &[0i32],
+            &[1i32, 1i32],
             &[AggregationKind::SUM, AggregationKind::MIN],
-        );
+        )
+        .unwrap();
         assert_eq!(result.columns_len(), 3);
 
         let sorted = crate::sorting::sort(&result, &[], &[]).unwrap();
@@ -209,7 +207,7 @@ mod tests {
     #[test]
     fn groupby_single_group() {
         let tbl = make_kv_table(&[1, 1, 1, 1], &[10, 20, 30, 40]);
-        let result = groupby(&tbl, &[0], 1, AggregationKind::SUM);
+        let result = groupby(&tbl, &[0i32], 1, AggregationKind::SUM).unwrap();
         assert_eq!(result.len(), 1);
         let (keys, vals) = sorted_kv_i64(&result);
         assert_eq!(keys, vec![1]);

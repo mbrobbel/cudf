@@ -60,10 +60,10 @@ mod tests {
         let c2 = Col::from_scalar(&Scalar::from_i32(3), 2);
         let mut b1 = TableBuilder::new();
         b1.push_column(c1);
-        let t1 = b1.build();
+        let t1 = b1.build().unwrap();
         let mut b2 = TableBuilder::new();
         b2.push_column(c2);
-        let t2 = b2.build();
+        let t2 = b2.build().unwrap();
         let result = concatenate_tables(&[&t1, &t2]).unwrap();
         assert_eq!(result.len(), 4);
         assert_eq!(result.columns_len(), 1);

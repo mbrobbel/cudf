@@ -23,9 +23,9 @@ pub fn sort(
     column_orders: &[Order],
     null_orders: &[NullOrder],
 ) -> Result<Table> {
-    let orders_i32: Vec<i32> = column_orders.iter().map(|o| o.repr).collect();
-    let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    let t = cudf_sys::ffi::sort_table(&table.0, &orders_i32, &nulls_i32, ds())?;
+    let orders_i32 = unsafe { crate::enum_slice_as_i32(column_orders) };
+    let nulls_i32 = unsafe { crate::enum_slice_as_i32(null_orders) };
+    let t = cudf_sys::ffi::sort_table(&table.0, orders_i32, nulls_i32, ds())?;
     Ok(Table(t))
 }
 
@@ -40,9 +40,9 @@ pub fn sorted_order(
     column_orders: &[Order],
     null_orders: &[NullOrder],
 ) -> Result<Column> {
-    let orders_i32: Vec<i32> = column_orders.iter().map(|o| o.repr).collect();
-    let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    let col = cudf_sys::ffi::sorted_order(&table.0, &orders_i32, &nulls_i32, ds())?;
+    let orders_i32 = unsafe { crate::enum_slice_as_i32(column_orders) };
+    let nulls_i32 = unsafe { crate::enum_slice_as_i32(null_orders) };
+    let col = cudf_sys::ffi::sorted_order(&table.0, orders_i32, nulls_i32, ds())?;
     Ok(Column(col))
 }
 
@@ -52,9 +52,9 @@ pub fn is_sorted(
     column_orders: &[Order],
     null_orders: &[NullOrder],
 ) -> Result<bool> {
-    let orders_i32: Vec<i32> = column_orders.iter().map(|o| o.repr).collect();
-    let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    cudf_sys::ffi::is_sorted_table(&table.0, &orders_i32, &nulls_i32, ds()).map_err(Into::into)
+    let orders_i32 = unsafe { crate::enum_slice_as_i32(column_orders) };
+    let nulls_i32 = unsafe { crate::enum_slice_as_i32(null_orders) };
+    cudf_sys::ffi::is_sorted_table(&table.0, orders_i32, nulls_i32, ds()).map_err(Into::into)
 }
 
 #[cfg(test)]
@@ -71,7 +71,7 @@ mod tests {
         let col = Col::from_scalar(&Scalar::from_i32(5), 4);
         let mut builder = TableBuilder::new();
         builder.push_column(col);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let sorted = sort_ascending(&table).unwrap();
         assert_eq!(sorted.len(), 4);
         assert_eq!(sorted.columns_len(), 1);
@@ -82,7 +82,7 @@ mod tests {
         let col = Col::from_scalar(&Scalar::from_i32(5), 3);
         let mut builder = TableBuilder::new();
         builder.push_column(col);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let sorted = sort(&table, &[Order::DESCENDING], &[NullOrder::AFTER]).unwrap();
         assert_eq!(sorted.len(), 3);
     }
@@ -92,7 +92,7 @@ mod tests {
         let col = Col::from_scalar(&Scalar::from_i32(1), 3);
         let mut builder = TableBuilder::new();
         builder.push_column(col);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let indices = sorted_order(&table, &[], &[]).unwrap();
         assert_eq!(indices.len(), 3);
         assert_eq!(indices.type_id(), TypeId::INT32);
@@ -103,7 +103,7 @@ mod tests {
         let col = Col::from_scalar(&Scalar::from_i32(7), 4);
         let mut builder = TableBuilder::new();
         builder.push_column(col);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let result = is_sorted(&table, &[Order::ASCENDING], &[NullOrder::BEFORE]).unwrap();
         assert!(result);
     }
@@ -113,7 +113,7 @@ mod tests {
         let col = Col::from_scalar(&Scalar::from_i32(7), 4);
         let mut builder = TableBuilder::new();
         builder.push_column(col);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let result = is_sorted(&table, &[Order::DESCENDING], &[NullOrder::AFTER]).unwrap();
         assert!(result);
     }

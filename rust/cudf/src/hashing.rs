@@ -53,7 +53,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);
-        builder.build()
+        builder.build().unwrap()
     }
 
     #[test]
@@ -87,7 +87,7 @@ mod tests {
         let c = Col::from_scalar(&Scalar::from_i32(42), 2);
         let mut builder = TableBuilder::new();
         builder.push_column(c);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let hashes = md5(&table);
         assert_eq!(hashes.len(), 2);
         assert_eq!(hashes.type_id(), TypeId::STRING);
@@ -103,7 +103,7 @@ mod tests {
         let c = Col::from_scalar(&Scalar::from_i32(1), 2);
         let mut builder = TableBuilder::new();
         builder.push_column(c);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let hashes = sha256(&table);
         assert_eq!(hashes.len(), 2);
         assert_eq!(hashes.type_id(), TypeId::STRING);

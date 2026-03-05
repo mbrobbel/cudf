@@ -38,9 +38,10 @@ pub mod binary {
         op: BinaryOperator,
         output_type: TypeId,
     ) -> Result<Column> {
+        let rhs_ffi = crate::scalar::scalar_to_ffi(rhs);
         let col = cudf_sys::ffi::binary_operation_column_scalar(
             lhs.0,
-            &rhs.0,
+            &rhs_ffi,
             op,
             output_type.repr,
             ds(),
@@ -55,8 +56,9 @@ pub mod binary {
         op: BinaryOperator,
         output_type: TypeId,
     ) -> Result<Column> {
+        let lhs_ffi = crate::scalar::scalar_to_ffi(lhs);
         let col = cudf_sys::ffi::binary_operation_scalar_column(
-            &lhs.0,
+            &lhs_ffi,
             rhs.0,
             op,
             output_type.repr,

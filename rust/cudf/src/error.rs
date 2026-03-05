@@ -15,6 +15,8 @@ pub enum Error {
         /// The length of the container.
         len: usize,
     },
+    /// A file path could not be converted to valid UTF-8.
+    InvalidPath,
 }
 
 impl fmt::Display for Error {
@@ -24,6 +26,7 @@ impl fmt::Display for Error {
             Error::OutOfBounds { index, len } => {
                 write!(f, "index {index} out of bounds for length {len}")
             }
+            Error::InvalidPath => write!(f, "path is not valid UTF-8"),
         }
     }
 }
@@ -32,7 +35,7 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::Cudf(e) => Some(e),
-            Error::OutOfBounds { .. } => None,
+            Error::OutOfBounds { .. } | Error::InvalidPath => None,
         }
     }
 }

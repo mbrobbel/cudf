@@ -20,14 +20,13 @@ fn ds() -> usize {
 pub fn merge(
     left: &Table,
     right: &Table,
-    key_columns: &[usize],
+    key_columns: &[i32],
     orders: &[Order],
     null_orders: &[NullOrder],
 ) -> Result<Table> {
-    let keys_i32: Vec<i32> = key_columns.iter().map(|&k| k as i32).collect();
-    let orders_i32: Vec<i32> = orders.iter().map(|o| o.repr).collect();
-    let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    let tbl = cudf_sys::ffi::merge_tables(&left.0, &right.0, &keys_i32, &orders_i32, &nulls_i32, ds())?;
+    let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+    let nulls_i32 = unsafe { crate::enum_slice_as_i32(null_orders) };
+    let tbl = cudf_sys::ffi::merge_tables(&left.0, &right.0, key_columns, orders_i32, nulls_i32, ds())?;
     Ok(Table(tbl))
 }
 
@@ -43,17 +42,17 @@ mod tests {
         let c1 = Col::from_slice_i32(&[1, 3, 5]);
         let mut b1 = TableBuilder::new();
         b1.push_column(c1);
-        let left = b1.build();
+        let left = b1.build().unwrap();
 
         let c2 = Col::from_slice_i32(&[2, 4, 6]);
         let mut b2 = TableBuilder::new();
         b2.push_column(c2);
-        let right = b2.build();
+        let right = b2.build().unwrap();
 
         let result = merge(
             &left,
             &right,
-            &[0],
+            &[0i32],
             &[Order::ASCENDING],
             &[NullOrder::BEFORE],
         )

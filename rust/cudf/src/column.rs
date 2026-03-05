@@ -24,8 +24,9 @@ unsafe impl Sync for Column {}
 impl Column {
     /// Creates a column by repeating a scalar value `count` times.
     pub fn from_scalar(scalar: &Scalar, count: usize) -> Self {
+        let ffi = crate::scalar::scalar_to_ffi(scalar);
         Self(cudf_sys::ffi::make_column_from_scalar(
-            &scalar.0,
+            &ffi,
             count as i32,
             ds(),
         ))

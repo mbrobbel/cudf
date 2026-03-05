@@ -16,7 +16,8 @@ fn ds() -> usize {
 
 /// Checks if a scalar value exists in a column.
 pub fn contains(col: &ColumnView<'_>, needle: &Scalar) -> Result<bool> {
-    cudf_sys::ffi::contains_scalar(col.0, &needle.0, ds()).map_err(Into::into)
+    let ffi = crate::scalar::scalar_to_ffi(needle);
+    cudf_sys::ffi::contains_scalar(col.0, &ffi, ds()).map_err(Into::into)
 }
 
 /// Checks which values from `needles` exist in `haystack`.
@@ -37,9 +38,9 @@ pub fn lower_bound(
     column_orders: &[Order],
     null_orders: &[NullOrder],
 ) -> Result<Column> {
-    let orders_i32: Vec<i32> = column_orders.iter().map(|o| o.repr).collect();
-    let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    let c = cudf_sys::ffi::lower_bound(&haystack.0, &needles.0, &orders_i32, &nulls_i32, ds())?;
+    let orders_i32 = unsafe { crate::enum_slice_as_i32(column_orders) };
+    let nulls_i32 = unsafe { crate::enum_slice_as_i32(null_orders) };
+    let c = cudf_sys::ffi::lower_bound(&haystack.0, &needles.0, orders_i32, nulls_i32, ds())?;
     Ok(Column(c))
 }
 
@@ -50,9 +51,9 @@ pub fn upper_bound(
     column_orders: &[Order],
     null_orders: &[NullOrder],
 ) -> Result<Column> {
-    let orders_i32: Vec<i32> = column_orders.iter().map(|o| o.repr).collect();
-    let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    let c = cudf_sys::ffi::upper_bound(&haystack.0, &needles.0, &orders_i32, &nulls_i32, ds())?;
+    let orders_i32 = unsafe { crate::enum_slice_as_i32(column_orders) };
+    let nulls_i32 = unsafe { crate::enum_slice_as_i32(null_orders) };
+    let c = cudf_sys::ffi::upper_bound(&haystack.0, &needles.0, orders_i32, nulls_i32, ds())?;
     Ok(Column(c))
 }
 

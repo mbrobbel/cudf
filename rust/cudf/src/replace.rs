@@ -20,7 +20,8 @@ pub fn replace_nulls(col: &ColumnView<'_>, replacement: &ColumnView<'_>) -> Resu
 
 /// Replaces null values with a scalar.
 pub fn replace_nulls_scalar(col: &ColumnView<'_>, replacement: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::replace_nulls_scalar(col.0, &replacement.0, ds())?;
+    let ffi = crate::scalar::scalar_to_ffi(replacement);
+    let c = cudf_sys::ffi::replace_nulls_scalar(col.0, &ffi, ds())?;
     Ok(Column(c))
 }
 
@@ -32,13 +33,16 @@ pub fn replace_nans(col: &ColumnView<'_>, replacement: &ColumnView<'_>) -> Resul
 
 /// Replaces NaN values with a scalar.
 pub fn replace_nans_scalar(col: &ColumnView<'_>, replacement: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::replace_nans_scalar(col.0, &replacement.0, ds())?;
+    let ffi = crate::scalar::scalar_to_ffi(replacement);
+    let c = cudf_sys::ffi::replace_nans_scalar(col.0, &ffi, ds())?;
     Ok(Column(c))
 }
 
 /// Clamps column values to the range [lo, hi].
 pub fn clamp(col: &ColumnView<'_>, lo: &Scalar, hi: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::clamp_column(col.0, &lo.0, &hi.0, ds())?;
+    let lo_ffi = crate::scalar::scalar_to_ffi(lo);
+    let hi_ffi = crate::scalar::scalar_to_ffi(hi);
+    let c = cudf_sys::ffi::clamp_column(col.0, &lo_ffi, &hi_ffi, ds())?;
     Ok(Column(c))
 }
 

@@ -15,7 +15,8 @@ fn ds() -> usize {
 
 /// Fills the range [begin, end) in a column with a scalar value (out-of-place).
 pub fn fill(col: &ColumnView<'_>, begin: usize, end: usize, value: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::fill_column(col.0, begin as i32, end as i32, &value.0, ds())?;
+    let ffi = crate::scalar::scalar_to_ffi(value);
+    let c = cudf_sys::ffi::fill_column(col.0, begin as i32, end as i32, &ffi, ds())?;
     Ok(Column(c))
 }
 
@@ -27,7 +28,9 @@ pub fn repeat(table: &Table, count: usize) -> Result<Table> {
 
 /// Generates an arithmetic sequence: [init, init+step, init+2*step, ...].
 pub fn sequence(count: usize, init: &Scalar, step: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::sequence_column(count as i32, &init.0, &step.0, ds())?;
+    let init_ffi = crate::scalar::scalar_to_ffi(init);
+    let step_ffi = crate::scalar::scalar_to_ffi(step);
+    let c = cudf_sys::ffi::sequence_column(count as i32, &init_ffi, &step_ffi, ds())?;
     Ok(Column(c))
 }
 
@@ -52,7 +55,7 @@ mod tests {
         let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30], ds()));
         let mut builder = TableBuilder::new();
         builder.push_column(col);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         let result = repeat(&table, 2).unwrap();
         assert_eq!(result.len(), 6);
     }

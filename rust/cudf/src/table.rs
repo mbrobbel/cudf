@@ -112,10 +112,9 @@ impl TableBuilder {
     }
 
     /// Consumes the builder and returns a [`Table`].
-    pub fn build(mut self) -> Table {
-        let tbl = cudf_sys::ffi::table_builder_build(self.0.pin_mut())
-            .expect("table_builder_build should not fail");
-        Table(tbl)
+    pub fn build(mut self) -> crate::Result<Table> {
+        let tbl = cudf_sys::ffi::table_builder_build(self.0.pin_mut())?;
+        Ok(Table(tbl))
     }
 }
 
@@ -154,7 +153,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);
-        let table = builder.build();
+        let table = builder.build().unwrap();
         assert_eq!(table.columns_len(), 2);
         assert_eq!(table.len(), 3);
     }
@@ -164,7 +163,7 @@ mod tests {
         let c1 = Column::from_scalar(&Scalar::from_i32(10), 4);
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
-        let table = builder.build();
+        let table = builder.build().unwrap();
 
         let view = table.column(0).unwrap();
         assert_eq!(view.len(), 4);
@@ -180,7 +179,7 @@ mod tests {
         builder.push_column(c1);
         builder.push_column(c2);
         builder.push_column(c3);
-        let table = builder.build();
+        let table = builder.build().unwrap();
 
         let cols: Vec<_> = table.columns().collect();
         assert_eq!(cols.len(), 3);
