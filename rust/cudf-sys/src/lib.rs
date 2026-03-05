@@ -124,6 +124,21 @@ pub mod ffi {
         UNEQUAL = 1,
     }
 
+    /// Aggregation operation kind for groupby.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum AggregationKind {
+        SUM = 0,
+        MIN = 1,
+        MAX = 2,
+        MEAN = 3,
+        COUNT = 4,
+        NUNIQUE = 5,
+        MEDIAN = 6,
+        STD = 7,
+        VAR = 8,
+    }
+
     /// Interpolation strategy for quantile computation.
     ///
     /// Mirrors `cudf::interpolation`.
@@ -292,6 +307,9 @@ pub mod ffi {
         fn make_empty_column_by_type(type_id: i32) -> UniquePtr<Column>;
 
         // -- Column data extraction (device → host) --
+
+        /// Copies INT16 column data to a host vector.
+        fn column_to_host_i16(col: &Column) -> Vec<i16>;
 
         /// Copies INT32 column data to a host vector.
         fn column_to_host_i32(col: &Column) -> Vec<i32>;
@@ -714,5 +732,137 @@ pub mod ffi {
 
         /// Writes a Table to a Parquet file.
         fn write_parquet(tbl: &Table, filepath: &str) -> Result<()>;
+
+        // -- GroupBy operations --
+
+        /// Performs a single groupby aggregation on one value column.
+        /// Returns a table with [key_columns..., aggregated_value_column].
+        fn groupby_single(
+            tbl: &Table,
+            key_indices: &[i32],
+            value_index: i32,
+            agg_kind: i32,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Performs groupby with multiple aggregations on multiple value columns.
+        /// value_indices and agg_kinds must have the same length.
+        fn groupby_multi(
+            tbl: &Table,
+            key_indices: &[i32],
+            value_indices: &[i32],
+            agg_kinds: &[i32],
+        ) -> Result<UniquePtr<Table>>;
+
+        // -- Datetime operations --
+
+        /// Extracts the year component from a timestamp column (returns INT16).
+        fn datetime_extract_year(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Extracts the month component from a timestamp column (returns INT16).
+        fn datetime_extract_month(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Extracts the day component from a timestamp column (returns INT16).
+        fn datetime_extract_day(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Extracts the weekday component from a timestamp column (returns INT16).
+        fn datetime_extract_weekday(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Extracts the hour component from a timestamp column (returns INT16).
+        fn datetime_extract_hour(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Extracts the minute component from a timestamp column (returns INT16).
+        fn datetime_extract_minute(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Extracts the second component from a timestamp column (returns INT16).
+        fn datetime_extract_second(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns the day of year (1-366) for each timestamp (returns INT16).
+        fn datetime_day_of_year(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns whether each timestamp's year is a leap year (returns BOOL8).
+        fn datetime_is_leap_year(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns the number of days in the month for each timestamp (returns INT16).
+        fn datetime_days_in_month(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns the last day of the month for each timestamp (returns TIMESTAMP_DAYS).
+        fn datetime_last_day_of_month(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns the quarter (1-4) for each timestamp (returns INT16).
+        fn datetime_extract_quarter(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        // -- Hashing --
+
+        /// Computes MurmurHash3 32-bit hash of each row.
+        fn hash_murmur3(tbl: &Table, seed: u32) -> UniquePtr<Column>;
+
+        /// Computes XXHash64 hash of each row.
+        fn hash_xxhash64(tbl: &Table, seed: u64) -> UniquePtr<Column>;
+
+        /// Computes MD5 hash of each row (returns string column).
+        fn hash_md5(tbl: &Table) -> UniquePtr<Column>;
+
+        /// Computes SHA-256 hash of each row (returns string column).
+        fn hash_sha256(tbl: &Table) -> UniquePtr<Column>;
+
+        // -- Reshape --
+
+        /// Interleaves columns of a table into a single column.
+        fn interleave_columns(tbl: &Table) -> Result<UniquePtr<Column>>;
+
+        /// Tiles (repeats) the rows of a table.
+        fn tile_table(tbl: &Table, count: i32) -> Result<UniquePtr<Table>>;
+
+        // -- Transform --
+
+        /// Converts NaN values to null in a floating-point column.
+        fn nans_to_nulls(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Encodes table rows as integer indices into sorted distinct rows.
+        fn encode_table(tbl: &Table) -> Result<UniquePtr<Column>>;
+
+        /// Returns the sorted distinct key rows from encoding.
+        fn encode_keys(tbl: &Table) -> Result<UniquePtr<Table>>;
+
+        // -- Merge --
+
+        /// Merges two sorted tables maintaining sort order.
+        fn merge_tables(
+            left: &Table,
+            right: &Table,
+            key_indices: &[i32],
+            column_orders: &[i32],
+            null_orders: &[i32],
+        ) -> Result<UniquePtr<Table>>;
+
+        // -- Partitioning --
+
+        /// Hash-partitions a table into N partitions.
+        fn hash_partition_table(
+            tbl: &Table,
+            columns_to_hash: &[i32],
+            num_partitions: i32,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Returns partition offsets for hash partitioning.
+        fn hash_partition_offsets(
+            tbl: &Table,
+            columns_to_hash: &[i32],
+            num_partitions: i32,
+        ) -> Result<Vec<i32>>;
+
+        /// Round-robin partitions a table.
+        fn round_robin_partition_table(
+            tbl: &Table,
+            num_partitions: i32,
+            start_partition: i32,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Returns partition offsets for round-robin partitioning.
+        fn round_robin_partition_offsets(
+            tbl: &Table,
+            num_partitions: i32,
+            start_partition: i32,
+        ) -> Result<Vec<i32>>;
     }
 }

@@ -145,6 +145,7 @@ rust::Vec<int32_t> column_to_host_i32(Column const& col);
 rust::Vec<int64_t> column_to_host_i64(Column const& col);
 rust::Vec<float> column_to_host_f32(Column const& col);
 rust::Vec<double> column_to_host_f64(Column const& col);
+rust::Vec<int16_t> column_to_host_i16(Column const& col);
 rust::Vec<bool> column_to_host_bool(Column const& col);
 rust::Vec<bool> column_null_mask_to_host(Column const& col);
 
@@ -443,5 +444,85 @@ void write_csv_with_options(
 
 std::unique_ptr<Table> read_parquet(rust::Str filepath);
 void write_parquet(Table const& tbl, rust::Str filepath);
+
+// -- Datetime operations --
+
+std::unique_ptr<Column> datetime_extract_year(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_extract_month(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_extract_day(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_extract_weekday(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_extract_hour(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_extract_minute(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_extract_second(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_day_of_year(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_is_leap_year(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_days_in_month(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_last_day_of_month(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_extract_quarter(cudf::column_view const& col);
+
+// -- Hashing --
+
+std::unique_ptr<Column> hash_murmur3(Table const& tbl, uint32_t seed);
+std::unique_ptr<Column> hash_xxhash64(Table const& tbl, uint64_t seed);
+std::unique_ptr<Column> hash_md5(Table const& tbl);
+std::unique_ptr<Column> hash_sha256(Table const& tbl);
+
+// -- Reshape --
+
+std::unique_ptr<Column> interleave_columns(Table const& tbl);
+std::unique_ptr<Table> tile_table(Table const& tbl, int32_t count);
+
+// -- Transform --
+
+std::unique_ptr<Column> nans_to_nulls(cudf::column_view const& col);
+std::unique_ptr<Column> encode_table(Table const& tbl);
+std::unique_ptr<Table> encode_keys(Table const& tbl);
+
+// -- Merge --
+
+std::unique_ptr<Table> merge_tables(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> key_indices,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders);
+
+// -- Partitioning --
+
+std::unique_ptr<Table> hash_partition_table(
+    Table const& tbl,
+    rust::Slice<int32_t const> columns_to_hash,
+    int32_t num_partitions);
+
+rust::Vec<int32_t> hash_partition_offsets(
+    Table const& tbl,
+    rust::Slice<int32_t const> columns_to_hash,
+    int32_t num_partitions);
+
+std::unique_ptr<Table> round_robin_partition_table(
+    Table const& tbl,
+    int32_t num_partitions,
+    int32_t start_partition);
+
+rust::Vec<int32_t> round_robin_partition_offsets(
+    Table const& tbl,
+    int32_t num_partitions,
+    int32_t start_partition);
+
+// -- CXX shared enum (generated from Rust bridge) --
+enum class AggregationKind : ::std::int32_t;
+
+// -- GroupBy operations --
+
+std::unique_ptr<Table> groupby_single(
+    Table const& tbl,
+    rust::Slice<int32_t const> key_indices,
+    int32_t value_index,
+    int32_t agg_kind);
+
+std::unique_ptr<Table> groupby_multi(
+    Table const& tbl,
+    rust::Slice<int32_t const> key_indices,
+    rust::Slice<int32_t const> value_indices,
+    rust::Slice<int32_t const> agg_kinds);
 
 }  // namespace cudf_sys

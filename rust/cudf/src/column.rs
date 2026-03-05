@@ -65,6 +65,11 @@ impl Column {
         )
     }
 
+    /// Copies the column data to host as `Vec<i16>`.
+    pub fn to_vec_i16(&self) -> Vec<i16> {
+        cudf_sys::ffi::column_to_host_i16(&self.0)
+    }
+
     /// Copies the column data to host as `Vec<i32>`.
     pub fn to_vec_i32(&self) -> Vec<i32> {
         cudf_sys::ffi::column_to_host_i32(&self.0)

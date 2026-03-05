@@ -21,7 +21,14 @@
 #include <cudf/sorting.hpp>
 #include <cudf/stream_compaction.hpp>
 #include <cudf/types.hpp>
+#include <cudf/datetime.hpp>
+#include <cudf/groupby.hpp>
 #include <cudf/unary.hpp>
+#include <cudf/hashing.hpp>
+#include <cudf/reshape.hpp>
+#include <cudf/transform.hpp>
+#include <cudf/merge.hpp>
+#include <cudf/partitioning.hpp>
 
 #include <cudf/strings/attributes.hpp>
 #include <cudf/strings/case.hpp>
@@ -197,6 +204,18 @@ std::unique_ptr<Column> make_empty_column_by_type(int32_t type_id) {
 }
 
 // -- Column data extraction (device → host) --
+
+rust::Vec<int16_t> column_to_host_i16(Column const& col) {
+  auto view = col.cached_view();
+  auto size = view.size();
+  rust::Vec<int16_t> result;
+  result.reserve(size);
+  std::vector<int16_t> host_data(size);
+  cudaMemcpy(host_data.data(), view.data<int16_t>(),
+             size * sizeof(int16_t), cudaMemcpyDeviceToHost);
+  for (auto v : host_data) result.push_back(v);
+  return result;
+}
 
 rust::Vec<int32_t> column_to_host_i32(Column const& col) {
   auto view = col.cached_view();
@@ -1139,6 +1158,292 @@ void write_parquet(Table const& tbl, rust::Str filepath) {
   auto opts = cudf::io::parquet_writer_options::builder(
       cudf::io::sink_info{path}, tbl.cached_view()).build();
   cudf::io::write_parquet(opts);
+}
+
+// -- Datetime operations --
+
+std::unique_ptr<Column> datetime_extract_year(cudf::column_view const& col) {
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::YEAR);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_extract_month(cudf::column_view const& col) {
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::MONTH);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_extract_day(cudf::column_view const& col) {
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::DAY);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_extract_weekday(cudf::column_view const& col) {
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::WEEKDAY);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_extract_hour(cudf::column_view const& col) {
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::HOUR);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_extract_minute(cudf::column_view const& col) {
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::MINUTE);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_extract_second(cudf::column_view const& col) {
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::SECOND);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_day_of_year(cudf::column_view const& col) {
+  auto result = cudf::datetime::day_of_year(col);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_is_leap_year(cudf::column_view const& col) {
+  auto result = cudf::datetime::is_leap_year(col);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_days_in_month(cudf::column_view const& col) {
+  auto result = cudf::datetime::days_in_month(col);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_last_day_of_month(cudf::column_view const& col) {
+  auto result = cudf::datetime::last_day_of_month(col);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_extract_quarter(cudf::column_view const& col) {
+  auto result = cudf::datetime::extract_quarter(col);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- GroupBy operations --
+
+static std::unique_ptr<cudf::groupby_aggregation> make_groupby_agg(int32_t kind) {
+  switch (kind) {
+    case 0: return cudf::make_sum_aggregation<cudf::groupby_aggregation>();
+    case 1: return cudf::make_min_aggregation<cudf::groupby_aggregation>();
+    case 2: return cudf::make_max_aggregation<cudf::groupby_aggregation>();
+    case 3: return cudf::make_mean_aggregation<cudf::groupby_aggregation>();
+    case 4: return cudf::make_count_aggregation<cudf::groupby_aggregation>();
+    case 5: return cudf::make_nunique_aggregation<cudf::groupby_aggregation>();
+    case 6: return cudf::make_median_aggregation<cudf::groupby_aggregation>();
+    case 7: return cudf::make_std_aggregation<cudf::groupby_aggregation>();
+    case 8: return cudf::make_variance_aggregation<cudf::groupby_aggregation>();
+    default:
+      throw std::invalid_argument("Unknown aggregation kind: " + std::to_string(kind));
+  }
+}
+
+std::unique_ptr<Table> groupby_single(
+    Table const& tbl,
+    rust::Slice<int32_t const> key_indices,
+    int32_t value_index,
+    int32_t agg_kind) {
+
+  auto view = tbl.cached_view();
+
+  // Build keys table_view
+  std::vector<cudf::size_type> key_cols(key_indices.begin(), key_indices.end());
+  auto keys_view = view.select(key_cols);
+
+  cudf::groupby::groupby gb(keys_view);
+
+  // Build aggregation request
+  std::vector<cudf::groupby::aggregation_request> requests;
+  cudf::groupby::aggregation_request req;
+  req.values = view.column(value_index);
+  req.aggregations.push_back(make_groupby_agg(agg_kind));
+  requests.push_back(std::move(req));
+
+  auto [result_keys, result_vals] = gb.aggregate(requests);
+
+  // Combine keys + result value columns into one table
+  auto key_cols_owned = result_keys->release();
+  auto& val_results = result_vals[0].results;
+
+  std::vector<std::unique_ptr<cudf::column>> all_cols;
+  all_cols.reserve(key_cols_owned.size() + val_results.size());
+  for (auto& c : key_cols_owned) all_cols.push_back(std::move(c));
+  for (auto& c : val_results) all_cols.push_back(std::move(c));
+
+  return std::make_unique<Table>(
+      std::make_unique<cudf::table>(std::move(all_cols)));
+}
+
+std::unique_ptr<Table> groupby_multi(
+    Table const& tbl,
+    rust::Slice<int32_t const> key_indices,
+    rust::Slice<int32_t const> value_indices,
+    rust::Slice<int32_t const> agg_kinds) {
+
+  auto view = tbl.cached_view();
+
+  // Build keys table_view
+  std::vector<cudf::size_type> key_cols(key_indices.begin(), key_indices.end());
+  auto keys_view = view.select(key_cols);
+
+  cudf::groupby::groupby gb(keys_view);
+
+  // Build aggregation requests — one per (value_column, agg) pair
+  std::vector<cudf::groupby::aggregation_request> requests;
+  requests.reserve(value_indices.size());
+  for (size_t i = 0; i < value_indices.size(); ++i) {
+    cudf::groupby::aggregation_request req;
+    req.values = view.column(value_indices[i]);
+    req.aggregations.push_back(make_groupby_agg(agg_kinds[i]));
+    requests.push_back(std::move(req));
+  }
+
+  auto [result_keys, result_vals] = gb.aggregate(requests);
+
+  // Combine keys + all result value columns into one table
+  auto key_cols_owned = result_keys->release();
+
+  std::vector<std::unique_ptr<cudf::column>> all_cols;
+  all_cols.reserve(key_cols_owned.size() + result_vals.size());
+  for (auto& c : key_cols_owned) all_cols.push_back(std::move(c));
+  for (auto& rv : result_vals) {
+    for (auto& c : rv.results) all_cols.push_back(std::move(c));
+  }
+
+  return std::make_unique<Table>(
+      std::make_unique<cudf::table>(std::move(all_cols)));
+}
+
+// -- Hashing --
+
+std::unique_ptr<Column> hash_murmur3(Table const& tbl, uint32_t seed) {
+  auto result = cudf::hashing::murmurhash3_x86_32(tbl.cached_view(), seed);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> hash_xxhash64(Table const& tbl, uint64_t seed) {
+  auto result = cudf::hashing::xxhash_64(tbl.cached_view(), seed);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> hash_md5(Table const& tbl) {
+  auto result = cudf::hashing::md5(tbl.cached_view());
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> hash_sha256(Table const& tbl) {
+  auto result = cudf::hashing::sha256(tbl.cached_view());
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Reshape --
+
+std::unique_ptr<Column> interleave_columns(Table const& tbl) {
+  auto result = cudf::interleave_columns(tbl.cached_view());
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Table> tile_table(Table const& tbl, int32_t count) {
+  auto result = cudf::tile(tbl.cached_view(), count);
+  return std::make_unique<Table>(std::move(result));
+}
+
+// -- Transform --
+
+std::unique_ptr<Column> nans_to_nulls(cudf::column_view const& col) {
+  auto [null_mask, null_count] = cudf::nans_to_nulls(col);
+  auto result = std::make_unique<cudf::column>(col);
+  result->set_null_mask(std::move(*null_mask), null_count);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> encode_table(Table const& tbl) {
+  auto [keys, indices] = cudf::encode(tbl.cached_view());
+  return std::make_unique<Column>(std::move(indices));
+}
+
+std::unique_ptr<Table> encode_keys(Table const& tbl) {
+  auto [keys, indices] = cudf::encode(tbl.cached_view());
+  return std::make_unique<Table>(std::move(keys));
+}
+
+// -- Merge --
+
+std::unique_ptr<Table> merge_tables(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> key_indices,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders) {
+  std::vector<cudf::table_view> views = {left.cached_view(), right.cached_view()};
+
+  std::vector<cudf::size_type> keys;
+  keys.reserve(key_indices.size());
+  for (auto k : key_indices) keys.push_back(k);
+
+  std::vector<cudf::order> orders;
+  orders.reserve(column_orders.size());
+  for (auto o : column_orders) orders.push_back(static_cast<cudf::order>(o));
+
+  std::vector<cudf::null_order> nulls;
+  nulls.reserve(null_orders.size());
+  for (auto n : null_orders) nulls.push_back(static_cast<cudf::null_order>(n));
+
+  auto result = cudf::merge(views, keys, orders, nulls);
+  return std::make_unique<Table>(std::move(result));
+}
+
+// -- Partitioning --
+
+std::unique_ptr<Table> hash_partition_table(
+    Table const& tbl,
+    rust::Slice<int32_t const> columns_to_hash,
+    int32_t num_partitions) {
+  std::vector<cudf::size_type> cols;
+  cols.reserve(columns_to_hash.size());
+  for (auto c : columns_to_hash) cols.push_back(c);
+
+  auto [result_table, offsets] = cudf::hash_partition(
+      tbl.cached_view(), cols, num_partitions);
+  return std::make_unique<Table>(std::move(result_table));
+}
+
+rust::Vec<int32_t> hash_partition_offsets(
+    Table const& tbl,
+    rust::Slice<int32_t const> columns_to_hash,
+    int32_t num_partitions) {
+  std::vector<cudf::size_type> cols;
+  cols.reserve(columns_to_hash.size());
+  for (auto c : columns_to_hash) cols.push_back(c);
+
+  auto [result_table, offsets] = cudf::hash_partition(
+      tbl.cached_view(), cols, num_partitions);
+  rust::Vec<int32_t> result;
+  result.reserve(offsets.size());
+  for (auto o : offsets) result.push_back(o);
+  return result;
+}
+
+std::unique_ptr<Table> round_robin_partition_table(
+    Table const& tbl,
+    int32_t num_partitions,
+    int32_t start_partition) {
+  auto [result_table, offsets] = cudf::round_robin_partition(
+      tbl.cached_view(), num_partitions, start_partition);
+  return std::make_unique<Table>(std::move(result_table));
+}
+
+rust::Vec<int32_t> round_robin_partition_offsets(
+    Table const& tbl,
+    int32_t num_partitions,
+    int32_t start_partition) {
+  auto [result_table, offsets] = cudf::round_robin_partition(
+      tbl.cached_view(), num_partitions, start_partition);
+  rust::Vec<int32_t> result;
+  result.reserve(offsets.size());
+  for (auto o : offsets) result.push_back(o);
+  return result;
 }
 
 }  // namespace cudf_sys
