@@ -7,6 +7,11 @@ use crate::column::{Column, ColumnView};
 use crate::error::Result;
 use crate::table::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Concatenates multiple columns vertically into a single column.
 ///
 /// All columns must have the same type.
@@ -15,7 +20,7 @@ pub fn concatenate_columns(columns: &[&ColumnView<'_>]) -> Result<Column> {
     for col in columns {
         cudf_sys::ffi::column_concatenator_add(cat.pin_mut(), col.0);
     }
-    let c = cudf_sys::ffi::column_concatenator_finish(cat.pin_mut())?;
+    let c = cudf_sys::ffi::column_concatenator_finish(cat.pin_mut(), ds())?;
     Ok(Column(c))
 }
 
@@ -27,7 +32,7 @@ pub fn concatenate_tables(tables: &[&Table]) -> Result<Table> {
     for t in tables {
         cudf_sys::ffi::table_concatenator_add(cat.pin_mut(), &t.0);
     }
-    let t = cudf_sys::ffi::table_concatenator_finish(cat.pin_mut())?;
+    let t = cudf_sys::ffi::table_concatenator_finish(cat.pin_mut(), ds())?;
     Ok(Table(t))
 }
 

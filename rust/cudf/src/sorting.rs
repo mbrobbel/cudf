@@ -9,6 +9,11 @@ use crate::table::Table;
 
 pub use cudf_sys::ffi::{NullOrder, Order};
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Sorts a table by all columns using the given orders.
 ///
 /// `column_orders` and `null_orders` should have one entry per column.
@@ -20,7 +25,7 @@ pub fn sort(
 ) -> Result<Table> {
     let orders_i32: Vec<i32> = column_orders.iter().map(|o| o.repr).collect();
     let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    let t = cudf_sys::ffi::sort_table(&table.0, &orders_i32, &nulls_i32)?;
+    let t = cudf_sys::ffi::sort_table(&table.0, &orders_i32, &nulls_i32, ds())?;
     Ok(Table(t))
 }
 
@@ -37,7 +42,7 @@ pub fn sorted_order(
 ) -> Result<Column> {
     let orders_i32: Vec<i32> = column_orders.iter().map(|o| o.repr).collect();
     let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    let col = cudf_sys::ffi::sorted_order(&table.0, &orders_i32, &nulls_i32)?;
+    let col = cudf_sys::ffi::sorted_order(&table.0, &orders_i32, &nulls_i32, ds())?;
     Ok(Column(col))
 }
 
@@ -49,7 +54,7 @@ pub fn is_sorted(
 ) -> Result<bool> {
     let orders_i32: Vec<i32> = column_orders.iter().map(|o| o.repr).collect();
     let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    cudf_sys::ffi::is_sorted_table(&table.0, &orders_i32, &nulls_i32).map_err(Into::into)
+    cudf_sys::ffi::is_sorted_table(&table.0, &orders_i32, &nulls_i32, ds()).map_err(Into::into)
 }
 
 #[cfg(test)]

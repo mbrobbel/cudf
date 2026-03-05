@@ -3,6 +3,11 @@
 
 use crate::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Performs an inner join between two tables.
 ///
 /// Returns a table containing all columns from both `left` and `right` for rows
@@ -12,7 +17,7 @@ pub fn inner_join(left: &Table, right: &Table, left_on: &[usize], right_on: &[us
     let left_keys: Vec<i32> = left_on.iter().map(|&i| i as i32).collect();
     let right_keys: Vec<i32> = right_on.iter().map(|&i| i as i32).collect();
     Table(
-        cudf_sys::ffi::inner_join(&left.0, &right.0, &left_keys, &right_keys)
+        cudf_sys::ffi::inner_join(&left.0, &right.0, &left_keys, &right_keys, ds())
             .expect("inner_join failed"),
     )
 }
@@ -25,7 +30,7 @@ pub fn left_join(left: &Table, right: &Table, left_on: &[usize], right_on: &[usi
     let left_keys: Vec<i32> = left_on.iter().map(|&i| i as i32).collect();
     let right_keys: Vec<i32> = right_on.iter().map(|&i| i as i32).collect();
     Table(
-        cudf_sys::ffi::left_join(&left.0, &right.0, &left_keys, &right_keys)
+        cudf_sys::ffi::left_join(&left.0, &right.0, &left_keys, &right_keys, ds())
             .expect("left_join failed"),
     )
 }
@@ -38,7 +43,7 @@ pub fn full_join(left: &Table, right: &Table, left_on: &[usize], right_on: &[usi
     let left_keys: Vec<i32> = left_on.iter().map(|&i| i as i32).collect();
     let right_keys: Vec<i32> = right_on.iter().map(|&i| i as i32).collect();
     Table(
-        cudf_sys::ffi::full_join(&left.0, &right.0, &left_keys, &right_keys)
+        cudf_sys::ffi::full_join(&left.0, &right.0, &left_keys, &right_keys, ds())
             .expect("full_join failed"),
     )
 }
@@ -56,7 +61,7 @@ pub fn left_semi_join(
     let left_keys: Vec<i32> = left_on.iter().map(|&i| i as i32).collect();
     let right_keys: Vec<i32> = right_on.iter().map(|&i| i as i32).collect();
     Table(
-        cudf_sys::ffi::left_semi_join(&left.0, &right.0, &left_keys, &right_keys)
+        cudf_sys::ffi::left_semi_join(&left.0, &right.0, &left_keys, &right_keys, ds())
             .expect("left_semi_join failed"),
     )
 }
@@ -74,7 +79,7 @@ pub fn left_anti_join(
     let left_keys: Vec<i32> = left_on.iter().map(|&i| i as i32).collect();
     let right_keys: Vec<i32> = right_on.iter().map(|&i| i as i32).collect();
     Table(
-        cudf_sys::ffi::left_anti_join(&left.0, &right.0, &left_keys, &right_keys)
+        cudf_sys::ffi::left_anti_join(&left.0, &right.0, &left_keys, &right_keys, ds())
             .expect("left_anti_join failed"),
     )
 }

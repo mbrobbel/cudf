@@ -7,13 +7,17 @@ use crate::column::Column;
 use crate::error::Result;
 use crate::table::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Converts NaN values to null in a floating-point column.
 ///
 /// Returns a new column where NaN values are replaced with null entries.
 pub fn nans_to_nulls(col: &Column) -> Result<Column> {
-    let view = cudf_sys::ffi::column_view_of(&col.0)
-        .expect("column_view_of should not fail");
-    let result = cudf_sys::ffi::nans_to_nulls(view)?;
+    let view = cudf_sys::ffi::column_view_of(&col.0);
+    let result = cudf_sys::ffi::nans_to_nulls(view, ds())?;
     Ok(Column(result))
 }
 
@@ -21,13 +25,13 @@ pub fn nans_to_nulls(col: &Column) -> Result<Column> {
 ///
 /// Returns a column of INT32 indices such that `keys[result[i]] == input[i]`.
 pub fn encode(table: &Table) -> Result<Column> {
-    let col = cudf_sys::ffi::encode_table(&table.0)?;
+    let col = cudf_sys::ffi::encode_table(&table.0, ds())?;
     Ok(Column(col))
 }
 
 /// Returns the sorted distinct key rows from encoding.
 pub fn encode_keys(table: &Table) -> Result<Table> {
-    let tbl = cudf_sys::ffi::encode_keys(&table.0)?;
+    let tbl = cudf_sys::ffi::encode_keys(&table.0, ds())?;
     Ok(Table(tbl))
 }
 

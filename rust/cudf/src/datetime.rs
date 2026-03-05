@@ -6,75 +6,80 @@
 use crate::column::{Column, ColumnView};
 use crate::error::Result;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Extracts the year component from a timestamp column (returns INT16).
 pub fn extract_year(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_extract_year(col.0)?;
+    let c = cudf_sys::ffi::datetime_extract_year(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Extracts the month component from a timestamp column (returns INT16).
 pub fn extract_month(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_extract_month(col.0)?;
+    let c = cudf_sys::ffi::datetime_extract_month(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Extracts the day component from a timestamp column (returns INT16).
 pub fn extract_day(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_extract_day(col.0)?;
+    let c = cudf_sys::ffi::datetime_extract_day(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Extracts the weekday component from a timestamp column (returns INT16).
 pub fn extract_weekday(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_extract_weekday(col.0)?;
+    let c = cudf_sys::ffi::datetime_extract_weekday(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Extracts the hour component from a timestamp column (returns INT16).
 pub fn extract_hour(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_extract_hour(col.0)?;
+    let c = cudf_sys::ffi::datetime_extract_hour(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Extracts the minute component from a timestamp column (returns INT16).
 pub fn extract_minute(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_extract_minute(col.0)?;
+    let c = cudf_sys::ffi::datetime_extract_minute(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Extracts the second component from a timestamp column (returns INT16).
 pub fn extract_second(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_extract_second(col.0)?;
+    let c = cudf_sys::ffi::datetime_extract_second(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Returns the day of year (1-366) for each timestamp (returns INT16).
 pub fn day_of_year(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_day_of_year(col.0)?;
+    let c = cudf_sys::ffi::datetime_day_of_year(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Returns whether each timestamp's year is a leap year (returns BOOL8).
 pub fn is_leap_year(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_is_leap_year(col.0)?;
+    let c = cudf_sys::ffi::datetime_is_leap_year(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Returns the number of days in the month for each timestamp (returns INT16).
 pub fn days_in_month(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_days_in_month(col.0)?;
+    let c = cudf_sys::ffi::datetime_days_in_month(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Returns the last day of the month for each timestamp (returns TIMESTAMP_DAYS).
 pub fn last_day_of_month(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_last_day_of_month(col.0)?;
+    let c = cudf_sys::ffi::datetime_last_day_of_month(col.0, ds())?;
     Ok(Column(c))
 }
 
 /// Returns the quarter (1-4) for each timestamp (returns INT16).
 pub fn extract_quarter(col: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::datetime_extract_quarter(col.0)?;
+    let c = cudf_sys::ffi::datetime_extract_quarter(col.0, ds())?;
     Ok(Column(c))
 }
 

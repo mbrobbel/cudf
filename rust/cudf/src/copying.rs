@@ -7,11 +7,16 @@ use crate::column::{Column, ColumnView};
 use crate::error::Result;
 use crate::table::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Gathers rows from a table using an index column.
 ///
 /// Row `i` of the result will be row `indices[i]` of the input table.
 pub fn gather(table: &Table, indices: &ColumnView<'_>) -> Result<Table> {
-    let t = cudf_sys::ffi::gather_table(&table.0, indices.0)?;
+    let t = cudf_sys::ffi::gather_table(&table.0, indices.0, ds())?;
     Ok(Table(t))
 }
 

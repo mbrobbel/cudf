@@ -7,25 +7,30 @@ use crate::column::{Column, ColumnView};
 use crate::data_type::TypeId;
 use crate::scalar::Scalar;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Converts each string to lower case.
 pub fn to_lower(col: &ColumnView) -> Column {
-    Column(cudf_sys::ffi::strings_to_lower(col.0).expect("strings_to_lower failed"))
+    Column(cudf_sys::ffi::strings_to_lower(col.0, ds()).expect("strings_to_lower failed"))
 }
 
 /// Converts each string to upper case.
 pub fn to_upper(col: &ColumnView) -> Column {
-    Column(cudf_sys::ffi::strings_to_upper(col.0).expect("strings_to_upper failed"))
+    Column(cudf_sys::ffi::strings_to_upper(col.0, ds()).expect("strings_to_upper failed"))
 }
 
 /// Returns a BOOL8 column indicating whether each string contains the target.
 pub fn contains(col: &ColumnView, target: &Scalar) -> Column {
-    Column(cudf_sys::ffi::strings_contains(col.0, &target.0).expect("strings_contains failed"))
+    Column(cudf_sys::ffi::strings_contains(col.0, &target.0, ds()).expect("strings_contains failed"))
 }
 
 /// Returns a BOOL8 column indicating whether each string starts with the target.
 pub fn starts_with(col: &ColumnView, target: &Scalar) -> Column {
     Column(
-        cudf_sys::ffi::strings_starts_with(col.0, &target.0)
+        cudf_sys::ffi::strings_starts_with(col.0, &target.0, ds())
             .expect("strings_starts_with failed"),
     )
 }
@@ -33,73 +38,73 @@ pub fn starts_with(col: &ColumnView, target: &Scalar) -> Column {
 /// Returns a BOOL8 column indicating whether each string ends with the target.
 pub fn ends_with(col: &ColumnView, target: &Scalar) -> Column {
     Column(
-        cudf_sys::ffi::strings_ends_with(col.0, &target.0).expect("strings_ends_with failed"),
+        cudf_sys::ffi::strings_ends_with(col.0, &target.0, ds()).expect("strings_ends_with failed"),
     )
 }
 
 /// Returns an INT32 column with the position of the first occurrence of target in each string.
 /// Returns -1 if not found.
 pub fn find(col: &ColumnView, target: &Scalar) -> Column {
-    Column(cudf_sys::ffi::strings_find(col.0, &target.0).expect("strings_find failed"))
+    Column(cudf_sys::ffi::strings_find(col.0, &target.0, ds()).expect("strings_find failed"))
 }
 
 /// Replaces all occurrences of `target` with `replacement` in each string.
 pub fn replace(col: &ColumnView, target: &Scalar, replacement: &Scalar) -> Column {
     Column(
-        cudf_sys::ffi::strings_replace(col.0, &target.0, &replacement.0)
+        cudf_sys::ffi::strings_replace(col.0, &target.0, &replacement.0, ds())
             .expect("strings_replace failed"),
     )
 }
 
 /// Strips whitespace from both sides of each string.
 pub fn strip(col: &ColumnView) -> Column {
-    Column(cudf_sys::ffi::strings_strip(col.0).expect("strings_strip failed"))
+    Column(cudf_sys::ffi::strings_strip(col.0, ds()).expect("strings_strip failed"))
 }
 
 /// Strips whitespace from the left side of each string.
 pub fn lstrip(col: &ColumnView) -> Column {
-    Column(cudf_sys::ffi::strings_lstrip(col.0).expect("strings_lstrip failed"))
+    Column(cudf_sys::ffi::strings_lstrip(col.0, ds()).expect("strings_lstrip failed"))
 }
 
 /// Strips whitespace from the right side of each string.
 pub fn rstrip(col: &ColumnView) -> Column {
-    Column(cudf_sys::ffi::strings_rstrip(col.0).expect("strings_rstrip failed"))
+    Column(cudf_sys::ffi::strings_rstrip(col.0, ds()).expect("strings_rstrip failed"))
 }
 
 /// Returns an INT32 column with the character count of each string.
 pub fn count_characters(col: &ColumnView) -> Column {
     Column(
-        cudf_sys::ffi::strings_count_characters(col.0).expect("strings_count_characters failed"),
+        cudf_sys::ffi::strings_count_characters(col.0, ds()).expect("strings_count_characters failed"),
     )
 }
 
 /// Returns an INT32 column with the byte count of each string.
 pub fn count_bytes(col: &ColumnView) -> Column {
-    Column(cudf_sys::ffi::strings_count_bytes(col.0).expect("strings_count_bytes failed"))
+    Column(cudf_sys::ffi::strings_count_bytes(col.0, ds()).expect("strings_count_bytes failed"))
 }
 
 /// Converts an integer column to a string column.
 pub fn from_integers(col: &ColumnView) -> Column {
-    Column(cudf_sys::ffi::strings_from_integers(col.0).expect("strings_from_integers failed"))
+    Column(cudf_sys::ffi::strings_from_integers(col.0, ds()).expect("strings_from_integers failed"))
 }
 
 /// Converts a string column to an integer column of the specified type.
 pub fn to_integers(col: &ColumnView, output_type: TypeId) -> Column {
     Column(
-        cudf_sys::ffi::strings_to_integers(col.0, output_type.repr)
+        cudf_sys::ffi::strings_to_integers(col.0, output_type.repr, ds())
             .expect("strings_to_integers failed"),
     )
 }
 
 /// Converts a float column to a string column.
 pub fn from_floats(col: &ColumnView) -> Column {
-    Column(cudf_sys::ffi::strings_from_floats(col.0).expect("strings_from_floats failed"))
+    Column(cudf_sys::ffi::strings_from_floats(col.0, ds()).expect("strings_from_floats failed"))
 }
 
 /// Converts a string column to a float column of the specified type.
 pub fn to_floats(col: &ColumnView, output_type: TypeId) -> Column {
     Column(
-        cudf_sys::ffi::strings_to_floats(col.0, output_type.repr)
+        cudf_sys::ffi::strings_to_floats(col.0, output_type.repr, ds())
             .expect("strings_to_floats failed"),
     )
 }

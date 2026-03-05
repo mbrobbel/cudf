@@ -6,6 +6,11 @@
 use crate::error::Result;
 use crate::table::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Hash-partitions a table into `num_partitions` partitions.
 ///
 /// Rows are rearranged so that rows in the same partition are contiguous.
@@ -13,7 +18,7 @@ use crate::table::Table;
 pub fn hash_partition(table: &Table, columns: &[usize], num_partitions: usize) -> Result<Table> {
     let cols_i32: Vec<i32> = columns.iter().map(|&c| c as i32).collect();
     let tbl =
-        cudf_sys::ffi::hash_partition_table(&table.0, &cols_i32, num_partitions as i32)?;
+        cudf_sys::ffi::hash_partition_table(&table.0, &cols_i32, num_partitions as i32, ds())?;
     Ok(Table(tbl))
 }
 
@@ -28,7 +33,7 @@ pub fn hash_partition_offsets(
 ) -> Result<Vec<usize>> {
     let cols_i32: Vec<i32> = columns.iter().map(|&c| c as i32).collect();
     let offsets =
-        cudf_sys::ffi::hash_partition_offsets(&table.0, &cols_i32, num_partitions as i32)?;
+        cudf_sys::ffi::hash_partition_offsets(&table.0, &cols_i32, num_partitions as i32, ds())?;
     Ok(offsets.into_iter().map(|o| o as usize).collect())
 }
 
@@ -45,6 +50,7 @@ pub fn round_robin(
         &table.0,
         num_partitions as i32,
         start_partition as i32,
+        ds(),
     )?;
     Ok(Table(tbl))
 }
@@ -59,6 +65,7 @@ pub fn round_robin_offsets(
         &table.0,
         num_partitions as i32,
         start_partition as i32,
+        ds(),
     )?;
     Ok(offsets.into_iter().map(|o| o as usize).collect())
 }

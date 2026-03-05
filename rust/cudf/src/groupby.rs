@@ -8,6 +8,11 @@ use crate::table::Table;
 /// Aggregation operation kind for groupby.
 pub use cudf_sys::ffi::AggregationKind;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Performs a single groupby aggregation on one value column.
 ///
 /// Groups `table` by the columns at `key_columns` indices, then applies
@@ -26,6 +31,7 @@ pub fn groupby(
         &key_indices,
         value_column as i32,
         aggregation.repr,
+        ds(),
     )
     .expect("groupby_single failed");
     Table(result)
@@ -58,6 +64,7 @@ pub fn groupby_multi(
         &key_indices,
         &val_indices,
         &agg_kinds,
+        ds(),
     )
     .expect("groupby_multi failed");
     Table(result)
@@ -82,25 +89,25 @@ mod tests {
     /// Extract column data as i32 from a table column using unary_cast identity trick.
     fn col_to_host_i32(tbl: &Table, col_idx: i32) -> Vec<i32> {
         let view = cudf_sys::ffi::table_get_column_view(&tbl.0, col_idx).unwrap();
-        let col = cudf_sys::ffi::unary_cast(view, cudf_sys::ffi::column_view_type_id(view))
+        let col = cudf_sys::ffi::unary_cast(view, cudf_sys::ffi::column_view_type_id(view), ds())
             .unwrap();
-        cudf_sys::ffi::column_to_host_i32(&col)
+        cudf_sys::ffi::column_to_host_i32(&col, ds())
     }
 
     /// Extract column data as i64 from a table column.
     fn col_to_host_i64(tbl: &Table, col_idx: i32) -> Vec<i64> {
         let view = cudf_sys::ffi::table_get_column_view(&tbl.0, col_idx).unwrap();
-        let col = cudf_sys::ffi::unary_cast(view, cudf_sys::ffi::column_view_type_id(view))
+        let col = cudf_sys::ffi::unary_cast(view, cudf_sys::ffi::column_view_type_id(view), ds())
             .unwrap();
-        cudf_sys::ffi::column_to_host_i64(&col)
+        cudf_sys::ffi::column_to_host_i64(&col, ds())
     }
 
     /// Extract column data as f64 from a table column.
     fn col_to_host_f64(tbl: &Table, col_idx: i32) -> Vec<f64> {
         let view = cudf_sys::ffi::table_get_column_view(&tbl.0, col_idx).unwrap();
-        let col = cudf_sys::ffi::unary_cast(view, cudf_sys::ffi::column_view_type_id(view))
+        let col = cudf_sys::ffi::unary_cast(view, cudf_sys::ffi::column_view_type_id(view), ds())
             .unwrap();
-        cudf_sys::ffi::column_to_host_f64(&col)
+        cudf_sys::ffi::column_to_host_f64(&col, ds())
     }
 
     /// Sort a groupby result by first column and extract (keys_i32, vals_i32).

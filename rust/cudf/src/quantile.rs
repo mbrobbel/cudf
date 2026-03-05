@@ -8,6 +8,11 @@ use crate::error::Result;
 
 pub use cudf_sys::ffi::Interpolation;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Computes quantiles of a column.
 ///
 /// `quantiles` should contain values in the range [0, 1].
@@ -22,7 +27,7 @@ pub fn quantile_with_interp(
     quantiles: &[f64],
     interp: Interpolation,
 ) -> Result<Column> {
-    let c = cudf_sys::ffi::quantile_column(col.0, quantiles, interp.repr)?;
+    let c = cudf_sys::ffi::quantile_column(col.0, quantiles, interp.repr, ds())?;
     Ok(Column(c))
 }
 
@@ -33,7 +38,7 @@ mod tests {
 
     #[test]
     fn median_of_column() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4, 5]));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4, 5], ds()));
         let result = quantile(&col.view(), &[0.5]).unwrap();
         assert_eq!(result.len(), 1);
         let data = result.to_vec_f64();
@@ -42,7 +47,7 @@ mod tests {
 
     #[test]
     fn quartiles() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4, 5]));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4, 5], ds()));
         let result = quantile(&col.view(), &[0.25, 0.5, 0.75]).unwrap();
         assert_eq!(result.len(), 3);
         let data = result.to_vec_f64();

@@ -7,33 +7,38 @@ use crate::column::{Column, ColumnView};
 use crate::error::Result;
 use crate::scalar::Scalar;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Replaces null values with corresponding values from a replacement column.
 pub fn replace_nulls(col: &ColumnView<'_>, replacement: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::replace_nulls_column(col.0, replacement.0)?;
+    let c = cudf_sys::ffi::replace_nulls_column(col.0, replacement.0, ds())?;
     Ok(Column(c))
 }
 
 /// Replaces null values with a scalar.
 pub fn replace_nulls_scalar(col: &ColumnView<'_>, replacement: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::replace_nulls_scalar(col.0, &replacement.0)?;
+    let c = cudf_sys::ffi::replace_nulls_scalar(col.0, &replacement.0, ds())?;
     Ok(Column(c))
 }
 
 /// Replaces NaN values with corresponding values from a replacement column.
 pub fn replace_nans(col: &ColumnView<'_>, replacement: &ColumnView<'_>) -> Result<Column> {
-    let c = cudf_sys::ffi::replace_nans_column(col.0, replacement.0)?;
+    let c = cudf_sys::ffi::replace_nans_column(col.0, replacement.0, ds())?;
     Ok(Column(c))
 }
 
 /// Replaces NaN values with a scalar.
 pub fn replace_nans_scalar(col: &ColumnView<'_>, replacement: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::replace_nans_scalar(col.0, &replacement.0)?;
+    let c = cudf_sys::ffi::replace_nans_scalar(col.0, &replacement.0, ds())?;
     Ok(Column(c))
 }
 
 /// Clamps column values to the range [lo, hi].
 pub fn clamp(col: &ColumnView<'_>, lo: &Scalar, hi: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::clamp_column(col.0, &lo.0, &hi.0)?;
+    let c = cudf_sys::ffi::clamp_column(col.0, &lo.0, &hi.0, ds())?;
     Ok(Column(c))
 }
 
@@ -43,7 +48,7 @@ pub fn find_and_replace_all(
     old: &ColumnView<'_>,
     new: &ColumnView<'_>,
 ) -> Result<Column> {
-    let c = cudf_sys::ffi::find_and_replace_all(col.0, old.0, new.0)?;
+    let c = cudf_sys::ffi::find_and_replace_all(col.0, old.0, new.0, ds())?;
     Ok(Column(c))
 }
 
@@ -68,7 +73,7 @@ mod tests {
     #[test]
     fn replace_nans_with_scalar() {
         // Create f64 column with NaN by using make_column_from_host_f64
-        let nan_col = Column(cudf_sys::ffi::make_column_from_host_f64(&[1.0, f64::NAN, 3.0]));
+        let nan_col = Column(cudf_sys::ffi::make_column_from_host_f64(&[1.0, f64::NAN, 3.0], ds()));
         let replacement = Scalar::from_f64(0.0);
         let result = replace_nans_scalar(&nan_col.view(), &replacement).unwrap();
         let data = result.to_vec_f64();
@@ -81,7 +86,7 @@ mod tests {
     #[test]
     fn clamp_values() {
         // Create column [1, 5, 10]
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 5, 10]));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 5, 10], ds()));
         let lo = Scalar::from_i32(3);
         let hi = Scalar::from_i32(7);
         let result = clamp(&col.view(), &lo, &hi).unwrap();
@@ -91,9 +96,9 @@ mod tests {
     #[test]
     fn find_and_replace() {
         // Create column [1, 2, 3, 2, 1]
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 2, 1]));
-        let old_vals = Column(cudf_sys::ffi::make_column_from_host_i32(&[2]));
-        let new_vals = Column(cudf_sys::ffi::make_column_from_host_i32(&[99]));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 2, 1], ds()));
+        let old_vals = Column(cudf_sys::ffi::make_column_from_host_i32(&[2], ds()));
+        let new_vals = Column(cudf_sys::ffi::make_column_from_host_i32(&[99], ds()));
         let result =
             find_and_replace_all(&col.view(), &old_vals.view(), &new_vals.view()).unwrap();
         assert_eq!(result.to_vec_i32(), vec![1, 99, 3, 99, 1]);

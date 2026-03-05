@@ -7,17 +7,22 @@ use crate::column::ColumnView;
 use crate::error::Result;
 use crate::table::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Filters a table by a boolean mask column.
 ///
 /// Only rows where the mask is `true` (and non-null) are kept.
 pub fn apply_boolean_mask(table: &Table, mask: &ColumnView<'_>) -> Result<Table> {
-    let t = cudf_sys::ffi::apply_boolean_mask(&table.0, mask.0)?;
+    let t = cudf_sys::ffi::apply_boolean_mask(&table.0, mask.0, ds())?;
     Ok(Table(t))
 }
 
 /// Drops rows where all columns are null.
 pub fn drop_nulls(table: &Table) -> Result<Table> {
-    let t = cudf_sys::ffi::drop_nulls_all(&table.0)?;
+    let t = cudf_sys::ffi::drop_nulls_all(&table.0, ds())?;
     Ok(Table(t))
 }
 

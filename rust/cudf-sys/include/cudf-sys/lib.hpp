@@ -29,6 +29,10 @@ enum class Order : ::std::int32_t;
 enum class NullOrder : ::std::int32_t;
 enum class NullPolicy : ::std::int32_t;
 
+// -- Stream --
+
+std::size_t get_default_stream();
+
 // -- DataType --
 
 /// Opaque wrapper around cudf::data_type for CXX compatibility.
@@ -68,7 +72,7 @@ bool column_nullable(Column const& col);
 int32_t column_num_children(Column const& col);
 int32_t column_type_id(Column const& col);
 int32_t column_type_scale(Column const& col);
-cudf::column_view const& column_view_of(Column const& col);
+cudf::column_view const& column_view_of(Column const& col) noexcept;
 
 // column_view free functions
 int32_t column_view_size(cudf::column_view const& view);
@@ -136,18 +140,18 @@ bool scalar_to_bool(Scalar const& s);
 
 // -- Column factories --
 
-std::unique_ptr<Column> make_column_from_scalar(Scalar const& s, int32_t count);
+std::unique_ptr<Column> make_column_from_scalar(Scalar const& s, int32_t count, std::size_t stream);
 std::unique_ptr<Column> make_empty_column_by_type(int32_t type_id);
 
-// -- Column data extraction (device → host) --
+// -- Column data extraction (device -> host) --
 
-rust::Vec<int32_t> column_to_host_i32(Column const& col);
-rust::Vec<int64_t> column_to_host_i64(Column const& col);
-rust::Vec<float> column_to_host_f32(Column const& col);
-rust::Vec<double> column_to_host_f64(Column const& col);
-rust::Vec<int16_t> column_to_host_i16(Column const& col);
-rust::Vec<bool> column_to_host_bool(Column const& col);
-rust::Vec<bool> column_null_mask_to_host(Column const& col);
+rust::Vec<int32_t> column_to_host_i32(Column const& col, std::size_t stream);
+rust::Vec<int64_t> column_to_host_i64(Column const& col, std::size_t stream);
+rust::Vec<float> column_to_host_f32(Column const& col, std::size_t stream);
+rust::Vec<double> column_to_host_f64(Column const& col, std::size_t stream);
+rust::Vec<int16_t> column_to_host_i16(Column const& col, std::size_t stream);
+rust::Vec<bool> column_to_host_bool(Column const& col, std::size_t stream);
+rust::Vec<bool> column_null_mask_to_host(Column const& col, std::size_t stream);
 
 // -- TableBuilder --
 
@@ -174,69 +178,76 @@ std::unique_ptr<Column> binary_operation_columns(
     cudf::column_view const& lhs,
     cudf::column_view const& rhs,
     BinaryOperator op,
-    int32_t output_type_id);
+    int32_t output_type_id,
+    std::size_t stream);
 
 std::unique_ptr<Column> binary_operation_column_scalar(
     cudf::column_view const& lhs,
     Scalar const& rhs,
     BinaryOperator op,
-    int32_t output_type_id);
+    int32_t output_type_id,
+    std::size_t stream);
 
 std::unique_ptr<Column> binary_operation_scalar_column(
     Scalar const& lhs,
     cudf::column_view const& rhs,
     BinaryOperator op,
-    int32_t output_type_id);
+    int32_t output_type_id,
+    std::size_t stream);
 
 // -- Unary operations --
 
-std::unique_ptr<Column> unary_cast(cudf::column_view const& col, int32_t target_type_id);
-std::unique_ptr<Column> unary_is_null(cudf::column_view const& col);
-std::unique_ptr<Column> unary_is_valid(cudf::column_view const& col);
-std::unique_ptr<Column> unary_is_nan(cudf::column_view const& col);
-std::unique_ptr<Column> unary_negate(cudf::column_view const& col);
-std::unique_ptr<Column> unary_abs(cudf::column_view const& col);
+std::unique_ptr<Column> unary_cast(cudf::column_view const& col, int32_t target_type_id, std::size_t stream);
+std::unique_ptr<Column> unary_is_null(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> unary_is_valid(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> unary_is_nan(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> unary_negate(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> unary_abs(cudf::column_view const& col, std::size_t stream);
 
 // -- Reduction --
 
-std::unique_ptr<Scalar> reduce_sum(cudf::column_view const& col, int32_t output_type_id);
-std::unique_ptr<Scalar> reduce_min(cudf::column_view const& col, int32_t output_type_id);
-std::unique_ptr<Scalar> reduce_max(cudf::column_view const& col, int32_t output_type_id);
-std::unique_ptr<Scalar> reduce_product(cudf::column_view const& col, int32_t output_type_id);
-std::unique_ptr<Scalar> reduce_any(cudf::column_view const& col);
-std::unique_ptr<Scalar> reduce_all(cudf::column_view const& col);
+std::unique_ptr<Scalar> reduce_sum(cudf::column_view const& col, int32_t output_type_id, std::size_t stream);
+std::unique_ptr<Scalar> reduce_min(cudf::column_view const& col, int32_t output_type_id, std::size_t stream);
+std::unique_ptr<Scalar> reduce_max(cudf::column_view const& col, int32_t output_type_id, std::size_t stream);
+std::unique_ptr<Scalar> reduce_product(cudf::column_view const& col, int32_t output_type_id, std::size_t stream);
+std::unique_ptr<Scalar> reduce_any(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Scalar> reduce_all(cudf::column_view const& col, std::size_t stream);
 
 // -- Sorting --
 
 std::unique_ptr<Table> sort_table(
     Table const& tbl,
     rust::Slice<int32_t const> column_orders,
-    rust::Slice<int32_t const> null_orders);
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
 
 std::unique_ptr<Column> sorted_order(
     Table const& tbl,
     rust::Slice<int32_t const> column_orders,
-    rust::Slice<int32_t const> null_orders);
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
 
 bool is_sorted_table(
     Table const& tbl,
     rust::Slice<int32_t const> column_orders,
-    rust::Slice<int32_t const> null_orders);
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
 
 // -- Filtering --
 
 std::unique_ptr<Table> apply_boolean_mask(
     Table const& tbl,
-    cudf::column_view const& mask);
+    cudf::column_view const& mask,
+    std::size_t stream);
 
-std::unique_ptr<Table> drop_nulls_all(Table const& tbl);
+std::unique_ptr<Table> drop_nulls_all(Table const& tbl, std::size_t stream);
 
 // -- Concatenation --
 
 class ColumnConcatenator {
  public:
   void add(cudf::column_view const& v);
-  std::unique_ptr<Column> finish();
+  std::unique_ptr<Column> finish(std::size_t stream);
 
  private:
   std::vector<cudf::column_view> views_;
@@ -245,7 +256,7 @@ class ColumnConcatenator {
 class TableConcatenator {
  public:
   void add_table(Table const& t);
-  std::unique_ptr<Table> finish();
+  std::unique_ptr<Table> finish(std::size_t stream);
 
  private:
   std::vector<cudf::table_view> views_;
@@ -253,28 +264,29 @@ class TableConcatenator {
 
 std::unique_ptr<ColumnConcatenator> new_column_concatenator();
 void column_concatenator_add(ColumnConcatenator& cat, cudf::column_view const& v);
-std::unique_ptr<Column> column_concatenator_finish(ColumnConcatenator& cat);
+std::unique_ptr<Column> column_concatenator_finish(ColumnConcatenator& cat, std::size_t stream);
 
 std::unique_ptr<TableConcatenator> new_table_concatenator();
 void table_concatenator_add(TableConcatenator& cat, Table const& t);
-std::unique_ptr<Table> table_concatenator_finish(TableConcatenator& cat);
+std::unique_ptr<Table> table_concatenator_finish(TableConcatenator& cat, std::size_t stream);
 
 // -- Copying --
 
 std::unique_ptr<Table> gather_table(
     Table const& tbl,
-    cudf::column_view const& indices);
+    cudf::column_view const& indices,
+    std::size_t stream);
 
 std::unique_ptr<Column> empty_like_column(cudf::column_view const& col);
 std::unique_ptr<Table> empty_like_table(Table const& tbl);
 
 // -- Column factories from host data --
 
-std::unique_ptr<Column> make_column_from_host_i32(rust::Slice<int32_t const> data);
-std::unique_ptr<Column> make_column_from_host_i64(rust::Slice<int64_t const> data);
-std::unique_ptr<Column> make_column_from_host_f64(rust::Slice<double const> data);
-std::unique_ptr<Column> make_column_from_host_bool(rust::Slice<bool const> data);
-std::unique_ptr<Column> make_column_from_host_timestamp_s(rust::Slice<int64_t const> data);
+std::unique_ptr<Column> make_column_from_host_i32(rust::Slice<int32_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_i64(rust::Slice<int64_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_f64(rust::Slice<double const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_bool(rust::Slice<bool const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_timestamp_s(rust::Slice<int64_t const> data, std::size_t stream);
 
 // -- CXX shared enum (generated from Rust bridge) --
 enum class Interpolation : ::std::int32_t;
@@ -283,29 +295,35 @@ enum class Interpolation : ::std::int32_t;
 
 std::unique_ptr<Column> replace_nulls_column(
     cudf::column_view const& col,
-    cudf::column_view const& replacement);
+    cudf::column_view const& replacement,
+    std::size_t stream);
 
 std::unique_ptr<Column> replace_nulls_scalar(
     cudf::column_view const& col,
-    Scalar const& replacement);
+    Scalar const& replacement,
+    std::size_t stream);
 
 std::unique_ptr<Column> replace_nans_column(
     cudf::column_view const& col,
-    cudf::column_view const& replacement);
+    cudf::column_view const& replacement,
+    std::size_t stream);
 
 std::unique_ptr<Column> replace_nans_scalar(
     cudf::column_view const& col,
-    Scalar const& replacement);
+    Scalar const& replacement,
+    std::size_t stream);
 
 std::unique_ptr<Column> clamp_column(
     cudf::column_view const& col,
     Scalar const& lo,
-    Scalar const& hi);
+    Scalar const& hi,
+    std::size_t stream);
 
 std::unique_ptr<Column> find_and_replace_all(
     cudf::column_view const& col,
     cudf::column_view const& values_to_replace,
-    cudf::column_view const& replacement_values);
+    cudf::column_view const& replacement_values,
+    std::size_t stream);
 
 // -- Fill operations --
 
@@ -313,118 +331,136 @@ std::unique_ptr<Column> fill_column(
     cudf::column_view const& col,
     int32_t begin,
     int32_t end,
-    Scalar const& value);
+    Scalar const& value,
+    std::size_t stream);
 
 std::unique_ptr<Table> repeat_table(
     Table const& tbl,
-    int32_t count);
+    int32_t count,
+    std::size_t stream);
 
 std::unique_ptr<Column> sequence_column(
     int32_t count,
     Scalar const& init,
-    Scalar const& step);
+    Scalar const& step,
+    std::size_t stream);
 
 // -- Search operations --
 
 bool contains_scalar(
     cudf::column_view const& haystack,
-    Scalar const& needle);
+    Scalar const& needle,
+    std::size_t stream);
 
 std::unique_ptr<Column> contains_column(
     cudf::column_view const& haystack,
-    cudf::column_view const& needles);
+    cudf::column_view const& needles,
+    std::size_t stream);
 
 std::unique_ptr<Column> lower_bound(
     Table const& haystack,
     Table const& needles,
     rust::Slice<int32_t const> column_orders,
-    rust::Slice<int32_t const> null_orders);
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
 
 std::unique_ptr<Column> upper_bound(
     Table const& haystack,
     Table const& needles,
     rust::Slice<int32_t const> column_orders,
-    rust::Slice<int32_t const> null_orders);
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
 
 // -- Quantile operations --
 
 std::unique_ptr<Column> quantile_column(
     cudf::column_view const& col,
     rust::Slice<double const> quantiles,
-    int32_t interp);
+    int32_t interp,
+    std::size_t stream);
 
 // -- Join operations --
 
 std::unique_ptr<Table> inner_join(
     Table const& left, Table const& right,
     rust::Slice<int32_t const> left_on,
-    rust::Slice<int32_t const> right_on);
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
 
 std::unique_ptr<Table> left_join(
     Table const& left, Table const& right,
     rust::Slice<int32_t const> left_on,
-    rust::Slice<int32_t const> right_on);
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
 
 std::unique_ptr<Table> full_join(
     Table const& left, Table const& right,
     rust::Slice<int32_t const> left_on,
-    rust::Slice<int32_t const> right_on);
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
 
 std::unique_ptr<Table> left_semi_join(
     Table const& left, Table const& right,
     rust::Slice<int32_t const> left_on,
-    rust::Slice<int32_t const> right_on);
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
 
 std::unique_ptr<Table> left_anti_join(
     Table const& left, Table const& right,
     rust::Slice<int32_t const> left_on,
-    rust::Slice<int32_t const> right_on);
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
 
 // -- String operations --
 
-std::unique_ptr<Column> strings_to_lower(cudf::column_view const& col);
-std::unique_ptr<Column> strings_to_upper(cudf::column_view const& col);
+std::unique_ptr<Column> strings_to_lower(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_to_upper(cudf::column_view const& col, std::size_t stream);
 
 std::unique_ptr<Column> strings_contains(
     cudf::column_view const& col,
-    Scalar const& target);
+    Scalar const& target,
+    std::size_t stream);
 
 std::unique_ptr<Column> strings_starts_with(
     cudf::column_view const& col,
-    Scalar const& target);
+    Scalar const& target,
+    std::size_t stream);
 
 std::unique_ptr<Column> strings_ends_with(
     cudf::column_view const& col,
-    Scalar const& target);
+    Scalar const& target,
+    std::size_t stream);
 
 std::unique_ptr<Column> strings_find(
     cudf::column_view const& col,
-    Scalar const& target);
+    Scalar const& target,
+    std::size_t stream);
 
 std::unique_ptr<Column> strings_replace(
     cudf::column_view const& col,
     Scalar const& target,
-    Scalar const& replacement);
+    Scalar const& replacement,
+    std::size_t stream);
 
-std::unique_ptr<Column> strings_strip(cudf::column_view const& col);
-std::unique_ptr<Column> strings_lstrip(cudf::column_view const& col);
-std::unique_ptr<Column> strings_rstrip(cudf::column_view const& col);
+std::unique_ptr<Column> strings_strip(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_lstrip(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_rstrip(cudf::column_view const& col, std::size_t stream);
 
-std::unique_ptr<Column> strings_count_characters(cudf::column_view const& col);
-std::unique_ptr<Column> strings_count_bytes(cudf::column_view const& col);
+std::unique_ptr<Column> strings_count_characters(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_count_bytes(cudf::column_view const& col, std::size_t stream);
 
-std::unique_ptr<Column> strings_from_integers(cudf::column_view const& col);
-std::unique_ptr<Column> strings_to_integers(cudf::column_view const& col, int32_t output_type_id);
-std::unique_ptr<Column> strings_from_floats(cudf::column_view const& col);
-std::unique_ptr<Column> strings_to_floats(cudf::column_view const& col, int32_t output_type_id);
+std::unique_ptr<Column> strings_from_integers(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_to_integers(cudf::column_view const& col, int32_t output_type_id, std::size_t stream);
+std::unique_ptr<Column> strings_from_floats(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_to_floats(cudf::column_view const& col, int32_t output_type_id, std::size_t stream);
 
 // -- String column construction --
 
-std::unique_ptr<Column> make_string_column(rust::Vec<rust::String> strings);
+std::unique_ptr<Column> make_string_column(rust::Vec<rust::String> strings, std::size_t stream);
 
 // -- String column extraction (device -> host) --
 
-rust::Vec<rust::String> column_to_host_strings(Column const& col);
+rust::Vec<rust::String> column_to_host_strings(Column const& col, std::size_t stream);
 
 // -- I/O --
 
@@ -448,36 +484,36 @@ void write_parquet(Table const& tbl, rust::Str filepath);
 
 // -- Datetime operations --
 
-std::unique_ptr<Column> datetime_extract_year(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_extract_month(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_extract_day(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_extract_weekday(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_extract_hour(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_extract_minute(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_extract_second(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_day_of_year(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_is_leap_year(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_days_in_month(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_last_day_of_month(cudf::column_view const& col);
-std::unique_ptr<Column> datetime_extract_quarter(cudf::column_view const& col);
+std::unique_ptr<Column> datetime_extract_year(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_extract_month(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_extract_day(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_extract_weekday(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_extract_hour(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_extract_minute(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_extract_second(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_day_of_year(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_is_leap_year(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_days_in_month(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_last_day_of_month(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_extract_quarter(cudf::column_view const& col, std::size_t stream);
 
 // -- Hashing --
 
-std::unique_ptr<Column> hash_murmur3(Table const& tbl, uint32_t seed);
-std::unique_ptr<Column> hash_xxhash64(Table const& tbl, uint64_t seed);
-std::unique_ptr<Column> hash_md5(Table const& tbl);
-std::unique_ptr<Column> hash_sha256(Table const& tbl);
+std::unique_ptr<Column> hash_murmur3(Table const& tbl, uint32_t seed, std::size_t stream);
+std::unique_ptr<Column> hash_xxhash64(Table const& tbl, uint64_t seed, std::size_t stream);
+std::unique_ptr<Column> hash_md5(Table const& tbl, std::size_t stream);
+std::unique_ptr<Column> hash_sha256(Table const& tbl, std::size_t stream);
 
 // -- Reshape --
 
-std::unique_ptr<Column> interleave_columns(Table const& tbl);
-std::unique_ptr<Table> tile_table(Table const& tbl, int32_t count);
+std::unique_ptr<Column> interleave_columns(Table const& tbl, std::size_t stream);
+std::unique_ptr<Table> tile_table(Table const& tbl, int32_t count, std::size_t stream);
 
 // -- Transform --
 
-std::unique_ptr<Column> nans_to_nulls(cudf::column_view const& col);
-std::unique_ptr<Column> encode_table(Table const& tbl);
-std::unique_ptr<Table> encode_keys(Table const& tbl);
+std::unique_ptr<Column> nans_to_nulls(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> encode_table(Table const& tbl, std::size_t stream);
+std::unique_ptr<Table> encode_keys(Table const& tbl, std::size_t stream);
 
 // -- Merge --
 
@@ -485,29 +521,34 @@ std::unique_ptr<Table> merge_tables(
     Table const& left, Table const& right,
     rust::Slice<int32_t const> key_indices,
     rust::Slice<int32_t const> column_orders,
-    rust::Slice<int32_t const> null_orders);
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
 
 // -- Partitioning --
 
 std::unique_ptr<Table> hash_partition_table(
     Table const& tbl,
     rust::Slice<int32_t const> columns_to_hash,
-    int32_t num_partitions);
+    int32_t num_partitions,
+    std::size_t stream);
 
 rust::Vec<int32_t> hash_partition_offsets(
     Table const& tbl,
     rust::Slice<int32_t const> columns_to_hash,
-    int32_t num_partitions);
+    int32_t num_partitions,
+    std::size_t stream);
 
 std::unique_ptr<Table> round_robin_partition_table(
     Table const& tbl,
     int32_t num_partitions,
-    int32_t start_partition);
+    int32_t start_partition,
+    std::size_t stream);
 
 rust::Vec<int32_t> round_robin_partition_offsets(
     Table const& tbl,
     int32_t num_partitions,
-    int32_t start_partition);
+    int32_t start_partition,
+    std::size_t stream);
 
 // -- CXX shared enum (generated from Rust bridge) --
 enum class AggregationKind : ::std::int32_t;
@@ -518,12 +559,14 @@ std::unique_ptr<Table> groupby_single(
     Table const& tbl,
     rust::Slice<int32_t const> key_indices,
     int32_t value_index,
-    int32_t agg_kind);
+    int32_t agg_kind,
+    std::size_t stream);
 
 std::unique_ptr<Table> groupby_multi(
     Table const& tbl,
     rust::Slice<int32_t const> key_indices,
     rust::Slice<int32_t const> value_indices,
-    rust::Slice<int32_t const> agg_kinds);
+    rust::Slice<int32_t const> agg_kinds,
+    std::size_t stream);
 
 }  // namespace cudf_sys

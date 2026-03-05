@@ -6,32 +6,37 @@
 use crate::column::Column;
 use crate::table::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Computes MurmurHash3 32-bit hash of each row in the table.
 ///
 /// Returns a UINT32 column containing one hash value per row.
 pub fn murmur3(table: &Table, seed: u32) -> Column {
-    Column(cudf_sys::ffi::hash_murmur3(&table.0, seed))
+    Column(cudf_sys::ffi::hash_murmur3(&table.0, seed, ds()))
 }
 
 /// Computes XXHash64 hash of each row in the table.
 ///
 /// Returns a UINT64 column containing one hash value per row.
 pub fn xxhash64(table: &Table, seed: u64) -> Column {
-    Column(cudf_sys::ffi::hash_xxhash64(&table.0, seed))
+    Column(cudf_sys::ffi::hash_xxhash64(&table.0, seed, ds()))
 }
 
 /// Computes MD5 hash of each row in the table.
 ///
 /// Returns a STRING column containing hex-encoded hash values.
 pub fn md5(table: &Table) -> Column {
-    Column(cudf_sys::ffi::hash_md5(&table.0))
+    Column(cudf_sys::ffi::hash_md5(&table.0, ds()))
 }
 
 /// Computes SHA-256 hash of each row in the table.
 ///
 /// Returns a STRING column containing hex-encoded hash values.
 pub fn sha256(table: &Table) -> Column {
-    Column(cudf_sys::ffi::hash_sha256(&table.0))
+    Column(cudf_sys::ffi::hash_sha256(&table.0, ds()))
 }
 
 #[cfg(test)]

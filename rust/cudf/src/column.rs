@@ -6,6 +6,11 @@ use cxx::UniquePtr;
 use crate::data_type::TypeId;
 use crate::scalar::Scalar;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// An owning GPU column.
 ///
 /// Wraps a `cudf::column` via the CXX FFI layer. Dropping this value
@@ -22,6 +27,7 @@ impl Column {
         Self(cudf_sys::ffi::make_column_from_scalar(
             &scalar.0,
             count as i32,
+            ds(),
         ))
     }
 
@@ -59,81 +65,78 @@ impl Column {
 
     /// Returns an immutable view of the column.
     pub fn view(&self) -> ColumnView<'_> {
-        ColumnView(
-            cudf_sys::ffi::column_view_of(&self.0)
-                .expect("column_view_of should not fail"),
-        )
+        ColumnView(cudf_sys::ffi::column_view_of(&self.0))
     }
 
     /// Copies the column data to host as `Vec<i16>`.
     pub fn to_vec_i16(&self) -> Vec<i16> {
-        cudf_sys::ffi::column_to_host_i16(&self.0)
+        cudf_sys::ffi::column_to_host_i16(&self.0, ds())
     }
 
     /// Copies the column data to host as `Vec<i32>`.
     pub fn to_vec_i32(&self) -> Vec<i32> {
-        cudf_sys::ffi::column_to_host_i32(&self.0)
+        cudf_sys::ffi::column_to_host_i32(&self.0, ds())
     }
 
     /// Copies the column data to host as `Vec<i64>`.
     pub fn to_vec_i64(&self) -> Vec<i64> {
-        cudf_sys::ffi::column_to_host_i64(&self.0)
+        cudf_sys::ffi::column_to_host_i64(&self.0, ds())
     }
 
     /// Copies the column data to host as `Vec<f32>`.
     pub fn to_vec_f32(&self) -> Vec<f32> {
-        cudf_sys::ffi::column_to_host_f32(&self.0)
+        cudf_sys::ffi::column_to_host_f32(&self.0, ds())
     }
 
     /// Copies the column data to host as `Vec<f64>`.
     pub fn to_vec_f64(&self) -> Vec<f64> {
-        cudf_sys::ffi::column_to_host_f64(&self.0)
+        cudf_sys::ffi::column_to_host_f64(&self.0, ds())
     }
 
     /// Copies the column data to host as `Vec<bool>`.
     pub fn to_vec_bool(&self) -> Vec<bool> {
-        cudf_sys::ffi::column_to_host_bool(&self.0)
+        cudf_sys::ffi::column_to_host_bool(&self.0, ds())
     }
 
     /// Returns per-element validity as a host vector of bools.
     pub fn null_mask_to_host(&self) -> Vec<bool> {
-        cudf_sys::ffi::column_null_mask_to_host(&self.0)
+        cudf_sys::ffi::column_null_mask_to_host(&self.0, ds())
     }
 
     /// Copies string column data to a host vector of strings.
     pub fn to_vec_string(&self) -> Vec<String> {
-        cudf_sys::ffi::column_to_host_strings(&self.0)
+        cudf_sys::ffi::column_to_host_strings(&self.0, ds())
     }
 
     /// Creates an INT32 column from a host slice.
     pub fn from_slice_i32(data: &[i32]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_i32(data))
+        Self(cudf_sys::ffi::make_column_from_host_i32(data, ds()))
     }
 
     /// Creates an INT64 column from a host slice.
     pub fn from_slice_i64(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_i64(data))
+        Self(cudf_sys::ffi::make_column_from_host_i64(data, ds()))
     }
 
     /// Creates a FLOAT64 column from a host slice.
     pub fn from_slice_f64(data: &[f64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_f64(data))
+        Self(cudf_sys::ffi::make_column_from_host_f64(data, ds()))
     }
 
     /// Creates a BOOL8 column from a host slice.
     pub fn from_slice_bool(data: &[bool]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_bool(data))
+        Self(cudf_sys::ffi::make_column_from_host_bool(data, ds()))
     }
 
     /// Creates a TIMESTAMP_SECONDS column from epoch-second values.
     pub fn from_timestamps_s(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_timestamp_s(data))
+        Self(cudf_sys::ffi::make_column_from_host_timestamp_s(data, ds()))
     }
 
     /// Creates a string column from a slice of strings.
     pub fn from_strings(values: &[&str]) -> Self {
         let strings: Vec<String> = values.iter().map(|s| s.to_string()).collect();
-        Self(cudf_sys::ffi::make_string_column(strings))
+        Self(cudf_sys::ffi::make_string_column(strings, ds()))
     }
 }
 

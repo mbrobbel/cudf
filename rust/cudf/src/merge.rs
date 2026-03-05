@@ -7,6 +7,11 @@ use crate::error::Result;
 use crate::sorting::{NullOrder, Order};
 use crate::table::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Merges two sorted tables maintaining sort order.
 ///
 /// Both input tables must be sorted by the key columns according to
@@ -22,7 +27,7 @@ pub fn merge(
     let keys_i32: Vec<i32> = key_columns.iter().map(|&k| k as i32).collect();
     let orders_i32: Vec<i32> = orders.iter().map(|o| o.repr).collect();
     let nulls_i32: Vec<i32> = null_orders.iter().map(|n| n.repr).collect();
-    let tbl = cudf_sys::ffi::merge_tables(&left.0, &right.0, &keys_i32, &orders_i32, &nulls_i32)?;
+    let tbl = cudf_sys::ffi::merge_tables(&left.0, &right.0, &keys_i32, &orders_i32, &nulls_i32, ds())?;
     Ok(Table(tbl))
 }
 

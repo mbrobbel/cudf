@@ -8,21 +8,26 @@ use crate::error::Result;
 use crate::scalar::Scalar;
 use crate::table::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Fills the range [begin, end) in a column with a scalar value (out-of-place).
 pub fn fill(col: &ColumnView<'_>, begin: usize, end: usize, value: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::fill_column(col.0, begin as i32, end as i32, &value.0)?;
+    let c = cudf_sys::ffi::fill_column(col.0, begin as i32, end as i32, &value.0, ds())?;
     Ok(Column(c))
 }
 
 /// Repeats each row of a table `count` times.
 pub fn repeat(table: &Table, count: usize) -> Result<Table> {
-    let t = cudf_sys::ffi::repeat_table(&table.0, count as i32)?;
+    let t = cudf_sys::ffi::repeat_table(&table.0, count as i32, ds())?;
     Ok(Table(t))
 }
 
 /// Generates an arithmetic sequence: [init, init+step, init+2*step, ...].
 pub fn sequence(count: usize, init: &Scalar, step: &Scalar) -> Result<Column> {
-    let c = cudf_sys::ffi::sequence_column(count as i32, &init.0, &step.0)?;
+    let c = cudf_sys::ffi::sequence_column(count as i32, &init.0, &step.0, ds())?;
     Ok(Column(c))
 }
 
@@ -44,7 +49,7 @@ mod tests {
 
     #[test]
     fn repeat_table_test() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30]));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30], ds()));
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build();

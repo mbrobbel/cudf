@@ -8,39 +8,44 @@ use crate::data_type::TypeId;
 use crate::error::Result;
 use crate::scalar::Scalar;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Computes the sum of all elements in a column.
 pub fn sum(col: &ColumnView<'_>, output_type: TypeId) -> Result<Scalar> {
-    let s = cudf_sys::ffi::reduce_sum(col.0, output_type.repr)?;
+    let s = cudf_sys::ffi::reduce_sum(col.0, output_type.repr, ds())?;
     Ok(Scalar(s))
 }
 
 /// Computes the minimum value in a column.
 pub fn min(col: &ColumnView<'_>, output_type: TypeId) -> Result<Scalar> {
-    let s = cudf_sys::ffi::reduce_min(col.0, output_type.repr)?;
+    let s = cudf_sys::ffi::reduce_min(col.0, output_type.repr, ds())?;
     Ok(Scalar(s))
 }
 
 /// Computes the maximum value in a column.
 pub fn max(col: &ColumnView<'_>, output_type: TypeId) -> Result<Scalar> {
-    let s = cudf_sys::ffi::reduce_max(col.0, output_type.repr)?;
+    let s = cudf_sys::ffi::reduce_max(col.0, output_type.repr, ds())?;
     Ok(Scalar(s))
 }
 
 /// Computes the product of all elements in a column.
 pub fn product(col: &ColumnView<'_>, output_type: TypeId) -> Result<Scalar> {
-    let s = cudf_sys::ffi::reduce_product(col.0, output_type.repr)?;
+    let s = cudf_sys::ffi::reduce_product(col.0, output_type.repr, ds())?;
     Ok(Scalar(s))
 }
 
 /// Returns true (as a BOOL8 scalar) if any element is non-zero.
 pub fn any(col: &ColumnView<'_>) -> Result<Scalar> {
-    let s = cudf_sys::ffi::reduce_any(col.0)?;
+    let s = cudf_sys::ffi::reduce_any(col.0, ds())?;
     Ok(Scalar(s))
 }
 
 /// Returns true (as a BOOL8 scalar) if all elements are non-zero.
 pub fn all(col: &ColumnView<'_>) -> Result<Scalar> {
-    let s = cudf_sys::ffi::reduce_all(col.0)?;
+    let s = cudf_sys::ffi::reduce_all(col.0, ds())?;
     Ok(Scalar(s))
 }
 

@@ -7,12 +7,17 @@ use crate::column::Column;
 use crate::error::Result;
 use crate::table::Table;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Interleaves columns of a table into a single column.
 ///
 /// All columns must have the same type. The result interleaves
 /// elements row-by-row: `[A1, B1, A2, B2, ...]`.
 pub fn interleave_columns(table: &Table) -> Result<Column> {
-    let col = cudf_sys::ffi::interleave_columns(&table.0)?;
+    let col = cudf_sys::ffi::interleave_columns(&table.0, ds())?;
     Ok(Column(col))
 }
 
@@ -20,7 +25,7 @@ pub fn interleave_columns(table: &Table) -> Result<Column> {
 ///
 /// The output has `table.len() * count` rows.
 pub fn tile(table: &Table, count: usize) -> Result<Table> {
-    let tbl = cudf_sys::ffi::tile_table(&table.0, count as i32)?;
+    let tbl = cudf_sys::ffi::tile_table(&table.0, count as i32, ds())?;
     Ok(Table(tbl))
 }
 

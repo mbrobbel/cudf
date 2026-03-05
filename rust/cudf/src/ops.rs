@@ -10,6 +10,11 @@ use crate::scalar::Scalar;
 
 pub use cudf_sys::ffi::BinaryOperator;
 
+/// Default stream shorthand for internal use.
+fn ds() -> usize {
+    crate::stream::Stream::default_stream().as_raw()
+}
+
 /// Binary operations between columns and scalars.
 pub mod binary {
     use super::*;
@@ -22,7 +27,7 @@ pub mod binary {
         output_type: TypeId,
     ) -> Result<Column> {
         let col =
-            cudf_sys::ffi::binary_operation_columns(lhs.0, rhs.0, op, output_type.repr)?;
+            cudf_sys::ffi::binary_operation_columns(lhs.0, rhs.0, op, output_type.repr, ds())?;
         Ok(Column(col))
     }
 
@@ -38,6 +43,7 @@ pub mod binary {
             &rhs.0,
             op,
             output_type.repr,
+            ds(),
         )?;
         Ok(Column(col))
     }
@@ -54,6 +60,7 @@ pub mod binary {
             rhs.0,
             op,
             output_type.repr,
+            ds(),
         )?;
         Ok(Column(col))
     }
@@ -158,37 +165,37 @@ pub mod unary {
 
     /// Casts a column to a different type.
     pub fn cast(col: &ColumnView<'_>, target: TypeId) -> Result<Column> {
-        let c = cudf_sys::ffi::unary_cast(col.0, target.repr)?;
+        let c = cudf_sys::ffi::unary_cast(col.0, target.repr, ds())?;
         Ok(Column(c))
     }
 
     /// Returns a BOOL8 column where `true` indicates a null value.
     pub fn is_null(col: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::unary_is_null(col.0)?;
+        let c = cudf_sys::ffi::unary_is_null(col.0, ds())?;
         Ok(Column(c))
     }
 
     /// Returns a BOOL8 column where `true` indicates a valid value.
     pub fn is_valid(col: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::unary_is_valid(col.0)?;
+        let c = cudf_sys::ffi::unary_is_valid(col.0, ds())?;
         Ok(Column(c))
     }
 
     /// Returns a BOOL8 column where `true` indicates NaN.
     pub fn is_nan(col: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::unary_is_nan(col.0)?;
+        let c = cudf_sys::ffi::unary_is_nan(col.0, ds())?;
         Ok(Column(c))
     }
 
     /// Negates every element of the column.
     pub fn negate(col: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::unary_negate(col.0)?;
+        let c = cudf_sys::ffi::unary_negate(col.0, ds())?;
         Ok(Column(c))
     }
 
     /// Returns the absolute value of every element.
     pub fn abs(col: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::unary_abs(col.0)?;
+        let c = cudf_sys::ffi::unary_abs(col.0, ds())?;
         Ok(Column(c))
     }
 }
