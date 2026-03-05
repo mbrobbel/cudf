@@ -495,6 +495,9 @@ pub mod ffi {
         /// Creates a BOOL8 column from host data.
         fn make_column_from_host_bool(data: &[bool]) -> UniquePtr<Column>;
 
+        /// Creates a TIMESTAMP_SECONDS column from host epoch-second data.
+        fn make_column_from_host_timestamp_s(data: &[i64]) -> UniquePtr<Column>;
+
         // -- Replace operations --
 
         /// Replaces null values with corresponding values from replacement column.

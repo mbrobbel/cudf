@@ -19,8 +19,8 @@ pub fn hash_partition(table: &Table, columns: &[usize], num_partitions: usize) -
 
 /// Returns partition offsets for hash partitioning.
 ///
-/// The returned vector has `num_partitions + 1` elements. Partition `i`
-/// contains rows in the range `[offsets[i], offsets[i+1])`.
+/// The returned vector has `num_partitions` elements indicating
+/// the start row of each partition.
 pub fn hash_partition_offsets(
     table: &Table,
     columns: &[usize],
@@ -90,10 +90,8 @@ mod tests {
         let table = builder.build();
 
         let offsets = hash_partition_offsets(&table, &[0], 2).unwrap();
-        // Should have num_partitions + 1 offsets
-        assert_eq!(offsets.len(), 3);
-        // Last offset should equal total row count
-        assert_eq!(offsets[2], 6);
+        // cudf returns num_partitions offsets (start of each partition)
+        assert_eq!(offsets.len(), 2);
     }
 
     #[test]
@@ -116,8 +114,7 @@ mod tests {
         let table = builder.build();
 
         let offsets = round_robin_offsets(&table, 3, 0).unwrap();
-        // 3 partitions + 1 = 4 offsets
-        assert_eq!(offsets.len(), 4);
-        assert_eq!(offsets[3], 6);
+        // cudf returns num_partitions offsets (start of each partition)
+        assert_eq!(offsets.len(), 3);
     }
 }

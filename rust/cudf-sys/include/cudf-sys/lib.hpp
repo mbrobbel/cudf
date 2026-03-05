@@ -274,6 +274,7 @@ std::unique_ptr<Column> make_column_from_host_i32(rust::Slice<int32_t const> dat
 std::unique_ptr<Column> make_column_from_host_i64(rust::Slice<int64_t const> data);
 std::unique_ptr<Column> make_column_from_host_f64(rust::Slice<double const> data);
 std::unique_ptr<Column> make_column_from_host_bool(rust::Slice<bool const> data);
+std::unique_ptr<Column> make_column_from_host_timestamp_s(rust::Slice<int64_t const> data);
 
 // -- CXX shared enum (generated from Rust bridge) --
 enum class Interpolation : ::std::int32_t;

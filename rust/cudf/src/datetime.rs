@@ -82,13 +82,10 @@ pub fn extract_quarter(col: &ColumnView<'_>) -> Result<Column> {
 mod tests {
     use super::*;
     use crate::data_type::TypeId;
-    use crate::ops;
 
     /// Helper: create a timestamp column from epoch seconds.
     fn make_timestamp_seconds(epochs: &[i64]) -> Column {
-        let int_col = Column::from_slice_i64(epochs);
-        let ts_col = ops::unary::cast(&int_col.view(), TypeId::TIMESTAMP_SECONDS).unwrap();
-        ts_col
+        Column::from_timestamps_s(epochs)
     }
 
     // Test dates (as epoch seconds):

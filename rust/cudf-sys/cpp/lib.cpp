@@ -753,6 +753,16 @@ std::unique_ptr<Column> make_column_from_host_bool(rust::Slice<bool const> data)
   return std::make_unique<Column>(std::move(col));
 }
 
+std::unique_ptr<Column> make_column_from_host_timestamp_s(rust::Slice<int64_t const> data) {
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), cudf::get_default_stream());
+  cudf::get_default_stream().synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::TIMESTAMP_SECONDS}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
 // -- Join operations --
 
 // Helper: build a table_view selecting only key columns from a full table view.

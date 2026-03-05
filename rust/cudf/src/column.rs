@@ -125,6 +125,11 @@ impl Column {
         Self(cudf_sys::ffi::make_column_from_host_bool(data))
     }
 
+    /// Creates a TIMESTAMP_SECONDS column from epoch-second values.
+    pub fn from_timestamps_s(data: &[i64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_timestamp_s(data))
+    }
+
     /// Creates a string column from a slice of strings.
     pub fn from_strings(values: &[&str]) -> Self {
         let strings: Vec<String> = values.iter().map(|s| s.to_string()).collect();
