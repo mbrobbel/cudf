@@ -1,7 +1,100 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
+use cxx::UniquePtr;
+
 use crate::data_type::TypeId;
+use crate::scalar::Scalar;
+
+/// An owning GPU column.
+///
+/// Wraps a `cudf::column` via the CXX FFI layer. Dropping this value
+/// frees the underlying GPU memory.
+pub struct Column(pub(crate) UniquePtr<cudf_sys::ffi::Column>);
+
+// GPU memory is globally accessible from any CPU thread.
+unsafe impl Send for Column {}
+unsafe impl Sync for Column {}
+
+impl Column {
+    /// Creates a column by repeating a scalar value `count` times.
+    pub fn from_scalar(scalar: &Scalar, count: usize) -> Self {
+        Self(cudf_sys::ffi::make_column_from_scalar(
+            &scalar.0,
+            count as i32,
+        ))
+    }
+
+    /// Creates an empty column of the given type.
+    pub fn empty(type_id: TypeId) -> Self {
+        Self(cudf_sys::ffi::make_empty_column_by_type(type_id.repr))
+    }
+
+    /// Returns the number of elements.
+    pub fn len(&self) -> usize {
+        cudf_sys::ffi::column_size(&self.0) as usize
+    }
+
+    /// Returns `true` if the column has no elements.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns the count of null elements.
+    pub fn null_count(&self) -> usize {
+        cudf_sys::ffi::column_null_count(&self.0) as usize
+    }
+
+    /// Returns `true` if the column contains any null elements.
+    pub fn has_nulls(&self) -> bool {
+        cudf_sys::ffi::column_has_nulls(&self.0)
+    }
+
+    /// Returns the type identifier of the column.
+    pub fn type_id(&self) -> TypeId {
+        let id = cudf_sys::ffi::column_type_id(&self.0);
+        // Safety: type_id values from C++ are valid TypeId discriminants
+        unsafe { std::mem::transmute::<i32, TypeId>(id) }
+    }
+
+    /// Returns an immutable view of the column.
+    pub fn view(&self) -> ColumnView<'_> {
+        ColumnView(
+            cudf_sys::ffi::column_view_of(&self.0)
+                .expect("column_view_of should not fail"),
+        )
+    }
+
+    /// Copies the column data to host as `Vec<i32>`.
+    pub fn to_vec_i32(&self) -> Vec<i32> {
+        cudf_sys::ffi::column_to_host_i32(&self.0)
+    }
+
+    /// Copies the column data to host as `Vec<i64>`.
+    pub fn to_vec_i64(&self) -> Vec<i64> {
+        cudf_sys::ffi::column_to_host_i64(&self.0)
+    }
+
+    /// Copies the column data to host as `Vec<f32>`.
+    pub fn to_vec_f32(&self) -> Vec<f32> {
+        cudf_sys::ffi::column_to_host_f32(&self.0)
+    }
+
+    /// Copies the column data to host as `Vec<f64>`.
+    pub fn to_vec_f64(&self) -> Vec<f64> {
+        cudf_sys::ffi::column_to_host_f64(&self.0)
+    }
+
+    /// Copies the column data to host as `Vec<bool>`.
+    pub fn to_vec_bool(&self) -> Vec<bool> {
+        cudf_sys::ffi::column_to_host_bool(&self.0)
+    }
+
+    /// Returns per-element validity as a host vector of bools.
+    pub fn null_mask_to_host(&self) -> Vec<bool> {
+        cudf_sys::ffi::column_null_mask_to_host(&self.0)
+    }
+}
 
 /// A non-owning, immutable view of a GPU column.
 ///
@@ -39,5 +132,62 @@ impl ColumnView<'_> {
         let id = cudf_sys::ffi::column_view_type_id(self.0);
         // Safety: type_id values from C++ are valid TypeId discriminants
         unsafe { std::mem::transmute::<i32, TypeId>(id) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn column_from_scalar_i32() {
+        let s = Scalar::from_i32(7);
+        let col = Column::from_scalar(&s, 5);
+        assert_eq!(col.len(), 5);
+        assert_eq!(col.type_id(), TypeId::INT32);
+        assert!(!col.has_nulls());
+        assert_eq!(col.to_vec_i32(), vec![7, 7, 7, 7, 7]);
+    }
+
+    #[test]
+    fn column_from_scalar_f64() {
+        let s = Scalar::from_f64(2.5);
+        let col = Column::from_scalar(&s, 3);
+        assert_eq!(col.len(), 3);
+        assert_eq!(col.to_vec_f64(), vec![2.5, 2.5, 2.5]);
+    }
+
+    #[test]
+    fn column_from_scalar_bool() {
+        let s = Scalar::from_bool(true);
+        let col = Column::from_scalar(&s, 4);
+        assert_eq!(col.len(), 4);
+        assert_eq!(col.to_vec_bool(), vec![true, true, true, true]);
+    }
+
+    #[test]
+    fn empty_column() {
+        let col = Column::empty(TypeId::INT32);
+        assert_eq!(col.len(), 0);
+        assert!(col.is_empty());
+        assert_eq!(col.type_id(), TypeId::INT32);
+    }
+
+    #[test]
+    fn column_view_matches() {
+        let s = Scalar::from_i32(10);
+        let col = Column::from_scalar(&s, 3);
+        let view = col.view();
+        assert_eq!(view.len(), 3);
+        assert_eq!(view.type_id(), TypeId::INT32);
+        assert!(!view.has_nulls());
+    }
+
+    #[test]
+    fn column_null_mask() {
+        let s = Scalar::from_i32(42);
+        let col = Column::from_scalar(&s, 3);
+        let mask = col.null_mask_to_host();
+        assert_eq!(mask, vec![true, true, true]);
     }
 }

@@ -4,20 +4,30 @@
 #pragma once
 
 #include <cudf/column/column.hpp>
+#include <cudf/column/column_factories.hpp>
 #include <cudf/column/column_view.hpp>
+#include <cudf/scalar/scalar.hpp>
 #include <cudf/table/table.hpp>
 #include <cudf/table/table_view.hpp>
 #include <cudf/types.hpp>
+
+#include <cuda_runtime.h>
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <vector>
+
+#include "rust/cxx.h"
 
 namespace cudf_sys {
 
-// TypeId is a CXX shared enum — defined in the generated header.
+// CXX shared enums — defined in the generated header.
 enum class TypeId : ::std::int32_t;
+enum class Order : ::std::int32_t;
+enum class NullOrder : ::std::int32_t;
+enum class NullPolicy : ::std::int32_t;
 
 // -- DataType --
 
@@ -40,6 +50,9 @@ class Column {
 
   cudf::column const& inner() const { return *column_; }
   cudf::column_view const& cached_view() const;
+
+  /// Releases ownership of the inner column. The Column is left empty.
+  std::unique_ptr<cudf::column> release() { return std::move(column_); }
 
  private:
   std::unique_ptr<cudf::column> column_;
@@ -91,5 +104,166 @@ cudf::table_view const& table_view_of(Table const& tbl);
 // table_view free functions
 int32_t table_view_num_columns(cudf::table_view const& view);
 int32_t table_view_num_rows(cudf::table_view const& view);
+
+// -- Scalar --
+
+/// RAII wrapper around `cudf::scalar`.
+class Scalar {
+ public:
+  explicit Scalar(std::unique_ptr<cudf::scalar> s);
+  cudf::scalar const& inner() const { return *scalar_; }
+
+ private:
+  std::unique_ptr<cudf::scalar> scalar_;
+};
+
+// Scalar factory functions
+std::unique_ptr<Scalar> make_int32_scalar(int32_t value, bool valid);
+std::unique_ptr<Scalar> make_int64_scalar(int64_t value, bool valid);
+std::unique_ptr<Scalar> make_float32_scalar(float value, bool valid);
+std::unique_ptr<Scalar> make_float64_scalar(double value, bool valid);
+std::unique_ptr<Scalar> make_bool_scalar(bool value, bool valid);
+std::unique_ptr<Scalar> make_string_scalar(rust::Str value);
+
+bool scalar_is_valid(Scalar const& s);
+int32_t scalar_type_id(Scalar const& s);
+
+int32_t scalar_to_i32(Scalar const& s);
+int64_t scalar_to_i64(Scalar const& s);
+float scalar_to_f32(Scalar const& s);
+double scalar_to_f64(Scalar const& s);
+bool scalar_to_bool(Scalar const& s);
+
+// -- Column factories --
+
+std::unique_ptr<Column> make_column_from_scalar(Scalar const& s, int32_t count);
+std::unique_ptr<Column> make_empty_column_by_type(int32_t type_id);
+
+// -- Column data extraction (device → host) --
+
+rust::Vec<int32_t> column_to_host_i32(Column const& col);
+rust::Vec<int64_t> column_to_host_i64(Column const& col);
+rust::Vec<float> column_to_host_f32(Column const& col);
+rust::Vec<double> column_to_host_f64(Column const& col);
+rust::Vec<bool> column_to_host_bool(Column const& col);
+rust::Vec<bool> column_null_mask_to_host(Column const& col);
+
+// -- TableBuilder --
+
+class TableBuilder {
+ public:
+  void add_column(std::unique_ptr<Column> wrapper);
+  std::unique_ptr<Table> build();
+
+ private:
+  std::vector<std::unique_ptr<cudf::column>> cudf_columns_;
+};
+
+std::unique_ptr<TableBuilder> new_table_builder();
+void table_builder_add_column(TableBuilder& builder, std::unique_ptr<Column> col);
+std::unique_ptr<Table> table_builder_build(TableBuilder& builder);
+
+// -- CXX shared enums (generated from Rust bridge) --
+enum class BinaryOperator : ::std::int32_t;
+
+// -- Binary operations --
+
+std::unique_ptr<Column> binary_operation_columns(
+    cudf::column_view const& lhs,
+    cudf::column_view const& rhs,
+    BinaryOperator op,
+    int32_t output_type_id);
+
+std::unique_ptr<Column> binary_operation_column_scalar(
+    cudf::column_view const& lhs,
+    Scalar const& rhs,
+    BinaryOperator op,
+    int32_t output_type_id);
+
+std::unique_ptr<Column> binary_operation_scalar_column(
+    Scalar const& lhs,
+    cudf::column_view const& rhs,
+    BinaryOperator op,
+    int32_t output_type_id);
+
+// -- Unary operations --
+
+std::unique_ptr<Column> unary_cast(cudf::column_view const& col, int32_t target_type_id);
+std::unique_ptr<Column> unary_is_null(cudf::column_view const& col);
+std::unique_ptr<Column> unary_is_valid(cudf::column_view const& col);
+std::unique_ptr<Column> unary_is_nan(cudf::column_view const& col);
+std::unique_ptr<Column> unary_negate(cudf::column_view const& col);
+std::unique_ptr<Column> unary_abs(cudf::column_view const& col);
+
+// -- Reduction --
+
+std::unique_ptr<Scalar> reduce_sum(cudf::column_view const& col, int32_t output_type_id);
+std::unique_ptr<Scalar> reduce_min(cudf::column_view const& col, int32_t output_type_id);
+std::unique_ptr<Scalar> reduce_max(cudf::column_view const& col, int32_t output_type_id);
+std::unique_ptr<Scalar> reduce_product(cudf::column_view const& col, int32_t output_type_id);
+std::unique_ptr<Scalar> reduce_any(cudf::column_view const& col);
+std::unique_ptr<Scalar> reduce_all(cudf::column_view const& col);
+
+// -- Sorting --
+
+std::unique_ptr<Table> sort_table(
+    Table const& tbl,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders);
+
+std::unique_ptr<Column> sorted_order(
+    Table const& tbl,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders);
+
+bool is_sorted_table(
+    Table const& tbl,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders);
+
+// -- Filtering --
+
+std::unique_ptr<Table> apply_boolean_mask(
+    Table const& tbl,
+    cudf::column_view const& mask);
+
+std::unique_ptr<Table> drop_nulls_all(Table const& tbl);
+
+// -- Concatenation --
+
+class ColumnConcatenator {
+ public:
+  void add(cudf::column_view const& v);
+  std::unique_ptr<Column> finish();
+
+ private:
+  std::vector<cudf::column_view> views_;
+};
+
+class TableConcatenator {
+ public:
+  void add_table(Table const& t);
+  std::unique_ptr<Table> finish();
+
+ private:
+  std::vector<cudf::table_view> views_;
+};
+
+std::unique_ptr<ColumnConcatenator> new_column_concatenator();
+void column_concatenator_add(ColumnConcatenator& cat, cudf::column_view const& v);
+std::unique_ptr<Column> column_concatenator_finish(ColumnConcatenator& cat);
+
+std::unique_ptr<TableConcatenator> new_table_concatenator();
+void table_concatenator_add(TableConcatenator& cat, Table const& t);
+std::unique_ptr<Table> table_concatenator_finish(TableConcatenator& cat);
+
+// -- Copying --
+
+std::unique_ptr<Table> gather_table(
+    Table const& tbl,
+    cudf::column_view const& indices);
+
+std::unique_ptr<Column> empty_like_column(cudf::column_view const& col);
+std::unique_ptr<Table> empty_like_table(Table const& tbl);
 
 }  // namespace cudf_sys

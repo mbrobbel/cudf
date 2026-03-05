@@ -55,6 +55,7 @@ fn discover_lib_paths(root_env: &str) -> Vec<PathBuf> {
 
 fn main() {
     println!("cargo:rustc-link-lib=cudf");
+    println!("cargo:rustc-link-lib=cudart");
 
     let include_paths = discover_include_paths("CUDF_ROOT");
     let lib_paths = discover_lib_paths("CUDF_ROOT");

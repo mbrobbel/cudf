@@ -14,12 +14,22 @@
 //! and exposed via the [`rmm`] module.
 
 pub mod column;
+pub mod concatenate;
+pub mod copying;
 pub mod data_type;
 pub mod error;
+pub mod filter;
+pub mod ops;
+pub mod reduction;
 pub mod rmm;
+pub mod scalar;
+pub mod sorting;
 pub mod table;
 
-pub use column::ColumnView;
+pub use column::{Column, ColumnView};
 pub use data_type::{DataType, TypeId};
 pub use error::{Error, Result};
-pub use table::Table;
+pub use ops::BinaryOperator;
+pub use scalar::Scalar;
+pub use sorting::{NullOrder, Order};
+pub use table::{Table, TableBuilder};

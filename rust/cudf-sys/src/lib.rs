@@ -41,6 +41,79 @@ pub mod ffi {
         NUM_TYPE_IDS = 29,
     }
 
+    /// Sort order for columns.
+    ///
+    /// Mirrors `cudf::order`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum Order {
+        ASCENDING = 0,
+        DESCENDING = 1,
+    }
+
+    /// Determines where null values appear in sorted output.
+    ///
+    /// Mirrors `cudf::null_order`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum NullOrder {
+        AFTER = 0,
+        BEFORE = 1,
+    }
+
+    /// Whether to include or exclude null elements.
+    ///
+    /// Mirrors `cudf::null_policy`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum NullPolicy {
+        EXCLUDE = 0,
+        INCLUDE = 1,
+    }
+
+    /// Binary operation types.
+    ///
+    /// Mirrors `cudf::binary_operator`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum BinaryOperator {
+        ADD = 0,
+        SUB = 1,
+        MUL = 2,
+        DIV = 3,
+        TRUE_DIV = 4,
+        FLOOR_DIV = 5,
+        MOD = 6,
+        PMOD = 7,
+        PYMOD = 8,
+        POW = 9,
+        INT_POW = 10,
+        LOG_BASE = 11,
+        ATAN2 = 12,
+        SHIFT_LEFT = 13,
+        SHIFT_RIGHT = 14,
+        SHIFT_RIGHT_UNSIGNED = 15,
+        BITWISE_AND = 16,
+        BITWISE_OR = 17,
+        BITWISE_XOR = 18,
+        LOGICAL_AND = 19,
+        LOGICAL_OR = 20,
+        EQUAL = 21,
+        NOT_EQUAL = 22,
+        LESS = 23,
+        GREATER = 24,
+        LESS_EQUAL = 25,
+        GREATER_EQUAL = 26,
+        NULL_EQUALS = 27,
+        NULL_NOT_EQUALS = 28,
+        NULL_MAX = 29,
+        NULL_MIN = 30,
+        GENERIC_BINARY = 31,
+        NULL_LOGICAL_AND = 32,
+        NULL_LOGICAL_OR = 33,
+        INVALID_BINARY = 34,
+    }
+
     unsafe extern "C++" {
         include!("cudf-sys/lib.hpp");
 
@@ -142,5 +215,229 @@ pub mod ffi {
 
         /// Returns an immutable table_view.
         fn table_view_of(tbl: &Table) -> Result<&table_view>;
+
+        // -- Scalar --
+
+        /// RAII wrapper around `cudf::scalar`.
+        type Scalar;
+
+        /// Creates an INT32 scalar.
+        fn make_int32_scalar(value: i32, valid: bool) -> UniquePtr<Scalar>;
+
+        /// Creates an INT64 scalar.
+        fn make_int64_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+
+        /// Creates a FLOAT32 scalar.
+        fn make_float32_scalar(value: f32, valid: bool) -> UniquePtr<Scalar>;
+
+        /// Creates a FLOAT64 scalar.
+        fn make_float64_scalar(value: f64, valid: bool) -> UniquePtr<Scalar>;
+
+        /// Creates a BOOL8 scalar.
+        fn make_bool_scalar(value: bool, valid: bool) -> UniquePtr<Scalar>;
+
+        /// Creates a STRING scalar.
+        fn make_string_scalar(value: &str) -> UniquePtr<Scalar>;
+
+        /// Returns whether the scalar holds a valid (non-null) value.
+        fn scalar_is_valid(s: &Scalar) -> bool;
+
+        /// Returns the type_id of the scalar as an i32.
+        fn scalar_type_id(s: &Scalar) -> i32;
+
+        /// Extracts an i32 value from a numeric scalar.
+        fn scalar_to_i32(s: &Scalar) -> i32;
+
+        /// Extracts an i64 value from a numeric scalar.
+        fn scalar_to_i64(s: &Scalar) -> i64;
+
+        /// Extracts an f32 value from a numeric scalar.
+        fn scalar_to_f32(s: &Scalar) -> f32;
+
+        /// Extracts an f64 value from a numeric scalar.
+        fn scalar_to_f64(s: &Scalar) -> f64;
+
+        /// Extracts a bool value from a numeric scalar.
+        fn scalar_to_bool(s: &Scalar) -> bool;
+
+        // -- Column factories --
+
+        /// Creates a column by repeating a scalar value `count` times.
+        fn make_column_from_scalar(s: &Scalar, count: i32) -> UniquePtr<Column>;
+
+        /// Creates an empty column of the given type_id.
+        fn make_empty_column_by_type(type_id: i32) -> UniquePtr<Column>;
+
+        // -- Column data extraction (device → host) --
+
+        /// Copies INT32 column data to a host vector.
+        fn column_to_host_i32(col: &Column) -> Vec<i32>;
+
+        /// Copies INT64 column data to a host vector.
+        fn column_to_host_i64(col: &Column) -> Vec<i64>;
+
+        /// Copies FLOAT32 column data to a host vector.
+        fn column_to_host_f32(col: &Column) -> Vec<f32>;
+
+        /// Copies FLOAT64 column data to a host vector.
+        fn column_to_host_f64(col: &Column) -> Vec<f64>;
+
+        /// Copies BOOL8 column data to a host vector of bools.
+        fn column_to_host_bool(col: &Column) -> Vec<bool>;
+
+        /// Extracts per-element null mask as a host vector of bools.
+        fn column_null_mask_to_host(col: &Column) -> Vec<bool>;
+
+        // -- TableBuilder --
+
+        /// Builder for constructing a Table from individual columns.
+        type TableBuilder;
+
+        /// Creates a new empty TableBuilder.
+        fn new_table_builder() -> UniquePtr<TableBuilder>;
+
+        /// Adds a column to the builder.
+        fn table_builder_add_column(builder: Pin<&mut TableBuilder>, col: UniquePtr<Column>);
+
+        /// Consumes the builder and returns a Table.
+        fn table_builder_build(builder: Pin<&mut TableBuilder>) -> Result<UniquePtr<Table>>;
+
+        // -- Binary operations --
+
+        /// Binary operation between two column_views.
+        fn binary_operation_columns(
+            lhs: &column_view,
+            rhs: &column_view,
+            op: BinaryOperator,
+            output_type_id: i32,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Binary operation between a column_view and a Scalar.
+        fn binary_operation_column_scalar(
+            lhs: &column_view,
+            rhs: &Scalar,
+            op: BinaryOperator,
+            output_type_id: i32,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Binary operation between a Scalar and a column_view.
+        fn binary_operation_scalar_column(
+            lhs: &Scalar,
+            rhs: &column_view,
+            op: BinaryOperator,
+            output_type_id: i32,
+        ) -> Result<UniquePtr<Column>>;
+
+        // -- Unary operations --
+
+        /// Casts a column to a different type.
+        fn unary_cast(col: &column_view, target_type_id: i32) -> Result<UniquePtr<Column>>;
+
+        /// Returns a BOOL8 column where true indicates a null value.
+        fn unary_is_null(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns a BOOL8 column where true indicates a valid value.
+        fn unary_is_valid(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns a BOOL8 column where true indicates NaN.
+        fn unary_is_nan(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Negates every element of the column.
+        fn unary_negate(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns the absolute value of every element.
+        fn unary_abs(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        // -- Reduction --
+
+        /// Computes the sum of all elements.
+        fn reduce_sum(col: &column_view, output_type_id: i32) -> Result<UniquePtr<Scalar>>;
+
+        /// Computes the minimum value.
+        fn reduce_min(col: &column_view, output_type_id: i32) -> Result<UniquePtr<Scalar>>;
+
+        /// Computes the maximum value.
+        fn reduce_max(col: &column_view, output_type_id: i32) -> Result<UniquePtr<Scalar>>;
+
+        /// Computes the product of all elements.
+        fn reduce_product(col: &column_view, output_type_id: i32) -> Result<UniquePtr<Scalar>>;
+
+        /// Returns true if any element is non-zero.
+        fn reduce_any(col: &column_view) -> Result<UniquePtr<Scalar>>;
+
+        /// Returns true if all elements are non-zero.
+        fn reduce_all(col: &column_view) -> Result<UniquePtr<Scalar>>;
+
+        // -- Sorting --
+
+        /// Sorts a table.
+        fn sort_table(
+            tbl: &Table,
+            column_orders: &[i32],
+            null_orders: &[i32],
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Returns the sorted row indices.
+        fn sorted_order(
+            tbl: &Table,
+            column_orders: &[i32],
+            null_orders: &[i32],
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Returns whether the table rows are sorted.
+        fn is_sorted_table(
+            tbl: &Table,
+            column_orders: &[i32],
+            null_orders: &[i32],
+        ) -> Result<bool>;
+
+        // -- Filtering --
+
+        /// Filters a table by a boolean mask column.
+        fn apply_boolean_mask(tbl: &Table, mask: &column_view) -> Result<UniquePtr<Table>>;
+
+        /// Drops rows where all columns are null.
+        fn drop_nulls_all(tbl: &Table) -> Result<UniquePtr<Table>>;
+
+        // -- Concatenation --
+
+        /// Accumulates column_views for concatenation.
+        type ColumnConcatenator;
+
+        /// Creates a new ColumnConcatenator.
+        fn new_column_concatenator() -> UniquePtr<ColumnConcatenator>;
+
+        /// Adds a column_view to the concatenator.
+        fn column_concatenator_add(cat: Pin<&mut ColumnConcatenator>, v: &column_view);
+
+        /// Concatenates all added column_views.
+        fn column_concatenator_finish(
+            cat: Pin<&mut ColumnConcatenator>,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Accumulates table views for concatenation.
+        type TableConcatenator;
+
+        /// Creates a new TableConcatenator.
+        fn new_table_concatenator() -> UniquePtr<TableConcatenator>;
+
+        /// Adds a table to the concatenator.
+        fn table_concatenator_add(cat: Pin<&mut TableConcatenator>, t: &Table);
+
+        /// Concatenates all added tables.
+        fn table_concatenator_finish(
+            cat: Pin<&mut TableConcatenator>,
+        ) -> Result<UniquePtr<Table>>;
+
+        // -- Copying --
+
+        /// Gathers rows from a table using index column.
+        fn gather_table(tbl: &Table, indices: &column_view) -> Result<UniquePtr<Table>>;
+
+        /// Creates an empty column with the same type as input.
+        fn empty_like_column(col: &column_view) -> UniquePtr<Column>;
+
+        /// Creates an empty table with the same schema as input.
+        fn empty_like_table(tbl: &Table) -> UniquePtr<Table>;
     }
 }
