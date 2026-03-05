@@ -52,10 +52,13 @@ pub(crate) unsafe fn enum_slice_as_i32<T>(slice: &[T]) -> &[i32] {
 
 pub use column::{Column, ColumnView};
 pub use data_type::{DataType, TypeId};
+pub use datetime::DatetimeExt;
 pub use error::{Error, Result};
 pub use groupby::AggregationKind;
-pub use ops::BinaryOperator;
+pub use ops::{BinaryOp, BinaryOperator};
+pub use replace::ReplaceNullsWith;
 pub use scalar::Scalar;
 pub use sorting::{NullOrder, Order};
 pub use stream::Stream;
+pub use strings::StringExt;
 pub use table::{Table, TableBuilder};

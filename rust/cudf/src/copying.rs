@@ -2,37 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Copying operations for GPU columns and tables.
-
-use crate::column::{Column, ColumnView};
-use crate::error::Result;
-use crate::table::Table;
-
-/// Default stream shorthand for internal use.
-fn ds() -> usize {
-    crate::stream::Stream::default_stream().as_raw()
-}
-
-/// Gathers rows from a table using an index column.
-///
-/// Row `i` of the result will be row `indices[i]` of the input table.
-pub fn gather(table: &Table, indices: &ColumnView<'_>) -> Result<Table> {
-    let t = cudf_sys::ffi::gather_table(&table.0, indices.0, ds())?;
-    Ok(Table(t))
-}
-
-/// Creates an empty column with the same type as the input.
-pub fn empty_like_column(col: &ColumnView<'_>) -> Column {
-    Column(cudf_sys::ffi::empty_like_column(col.0))
-}
-
-/// Creates an empty table with the same column types as the input.
-pub fn empty_like_table(table: &Table) -> Table {
-    Table(cudf_sys::ffi::empty_like_table(&table.0))
-}
+//!
+//! Available as methods: `table.gather(...)`, `table.empty_like()`,
+//! `column_view.empty_like()`.
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::column::Column as Col;
     use crate::data_type::TypeId;
     use crate::scalar::Scalar;
@@ -40,20 +15,19 @@ mod tests {
 
     #[test]
     fn gather_basic() {
-        // Create table with one column [10, 10, 10], gather with indices [0, 2]
         let col = Col::from_scalar(&Scalar::from_i32(10), 3);
         let indices = Col::from_scalar(&Scalar::from_i32(0), 2);
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let result = gather(&table, &indices.view()).unwrap();
+        let result = table.gather(&indices.view()).unwrap();
         assert_eq!(result.len(), 2);
     }
 
     #[test]
     fn empty_like_column_test() {
         let col = Col::from_scalar(&Scalar::from_i32(5), 3);
-        let empty = empty_like_column(&col.view());
+        let empty = col.view().empty_like();
         assert_eq!(empty.len(), 0);
         assert_eq!(empty.type_id(), TypeId::INT32);
     }
@@ -66,7 +40,7 @@ mod tests {
         builder.push_column(c1);
         builder.push_column(c2);
         let table = builder.build().unwrap();
-        let empty = empty_like_table(&table);
+        let empty = table.empty_like();
         assert_eq!(empty.len(), 0);
         assert_eq!(empty.columns_len(), 2);
     }
