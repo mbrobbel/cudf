@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
+# SPDX-License-Identifier: Apache-2.0
+
+[workspace]
+name = "cudf-rust"
+channels = ["rapidsai", "nvidia", "conda-forge"]
+platforms = ["linux-64"]
+
+[system-requirements]
+cuda = "13"
+
+[dependencies]
+cuda-version = "13.*"
+cuda-cccl = "*"
+cuda-crt = "*"
+cuda-cudart-dev = "*"
+cxx-compiler = "*"
+libcudf = "26.02.*"
+libcurl = "*"
