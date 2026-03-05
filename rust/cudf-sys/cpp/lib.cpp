@@ -786,7 +786,7 @@ std::unique_ptr<Column> quantile_column(
     std::size_t stream) {
   rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
   std::vector<double> q(quantiles.begin(), quantiles.end());
-  auto result = cudf::quantile(col, q, static_cast<cudf::interpolation>(interp), cudf::column_view{}, cudf::sorted::NO, s);
+  auto result = cudf::quantile(col, q, static_cast<cudf::interpolation>(interp), cudf::column_view{}, true, s);
   return std::make_unique<Column>(std::move(result));
 }
 
