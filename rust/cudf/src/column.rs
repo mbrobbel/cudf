@@ -94,6 +94,37 @@ impl Column {
     pub fn null_mask_to_host(&self) -> Vec<bool> {
         cudf_sys::ffi::column_null_mask_to_host(&self.0)
     }
+
+    /// Copies string column data to a host vector of strings.
+    pub fn to_vec_string(&self) -> Vec<String> {
+        cudf_sys::ffi::column_to_host_strings(&self.0)
+    }
+
+    /// Creates an INT32 column from a host slice.
+    pub fn from_slice_i32(data: &[i32]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_i32(data))
+    }
+
+    /// Creates an INT64 column from a host slice.
+    pub fn from_slice_i64(data: &[i64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_i64(data))
+    }
+
+    /// Creates a FLOAT64 column from a host slice.
+    pub fn from_slice_f64(data: &[f64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_f64(data))
+    }
+
+    /// Creates a BOOL8 column from a host slice.
+    pub fn from_slice_bool(data: &[bool]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_bool(data))
+    }
+
+    /// Creates a string column from a slice of strings.
+    pub fn from_strings(values: &[&str]) -> Self {
+        let strings: Vec<String> = values.iter().map(|s| s.to_string()).collect();
+        Self(cudf_sys::ffi::make_string_column(strings))
+    }
 }
 
 /// A non-owning, immutable view of a GPU column.

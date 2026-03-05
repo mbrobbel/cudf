@@ -114,6 +114,29 @@ pub mod ffi {
         INVALID_BINARY = 34,
     }
 
+    /// Whether null values compare equal in join operations.
+    ///
+    /// Mirrors `cudf::null_equality`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum NullEquality {
+        EQUAL = 0,
+        UNEQUAL = 1,
+    }
+
+    /// Interpolation strategy for quantile computation.
+    ///
+    /// Mirrors `cudf::interpolation`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum Interpolation {
+        LINEAR = 0,
+        LOWER = 1,
+        HIGHER = 2,
+        MIDPOINT = 3,
+        NEAREST = 4,
+    }
+
     unsafe extern "C++" {
         include!("cudf-sys/lib.hpp");
 
@@ -439,5 +462,257 @@ pub mod ffi {
 
         /// Creates an empty table with the same schema as input.
         fn empty_like_table(tbl: &Table) -> UniquePtr<Table>;
+
+        // -- Column factories from host data --
+
+        /// Creates an INT32 column from host data.
+        fn make_column_from_host_i32(data: &[i32]) -> UniquePtr<Column>;
+
+        /// Creates an INT64 column from host data.
+        fn make_column_from_host_i64(data: &[i64]) -> UniquePtr<Column>;
+
+        /// Creates a FLOAT64 column from host data.
+        fn make_column_from_host_f64(data: &[f64]) -> UniquePtr<Column>;
+
+        /// Creates a BOOL8 column from host data.
+        fn make_column_from_host_bool(data: &[bool]) -> UniquePtr<Column>;
+
+        // -- Replace operations --
+
+        /// Replaces null values with corresponding values from replacement column.
+        fn replace_nulls_column(
+            col: &column_view,
+            replacement: &column_view,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Replaces null values with a scalar.
+        fn replace_nulls_scalar(
+            col: &column_view,
+            replacement: &Scalar,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Replaces NaN values with corresponding values from replacement column.
+        fn replace_nans_column(
+            col: &column_view,
+            replacement: &column_view,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Replaces NaN values with a scalar.
+        fn replace_nans_scalar(
+            col: &column_view,
+            replacement: &Scalar,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Clamps column values to [lo, hi] range.
+        fn clamp_column(
+            col: &column_view,
+            lo: &Scalar,
+            hi: &Scalar,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Finds and replaces all matching values in a column.
+        fn find_and_replace_all(
+            col: &column_view,
+            values_to_replace: &column_view,
+            replacement_values: &column_view,
+        ) -> Result<UniquePtr<Column>>;
+
+        // -- Fill operations --
+
+        /// Fills a range [begin, end) in a column with a scalar value.
+        fn fill_column(
+            col: &column_view,
+            begin: i32,
+            end: i32,
+            value: &Scalar,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Repeats each row of a table N times.
+        fn repeat_table(tbl: &Table, count: i32) -> Result<UniquePtr<Table>>;
+
+        /// Generates an arithmetic sequence column.
+        fn sequence_column(
+            count: i32,
+            init: &Scalar,
+            step: &Scalar,
+        ) -> Result<UniquePtr<Column>>;
+
+        // -- Search operations --
+
+        /// Checks if a scalar value exists in a column.
+        fn contains_scalar(haystack: &column_view, needle: &Scalar) -> Result<bool>;
+
+        /// Checks which values from needles exist in haystack.
+        fn contains_column(
+            haystack: &column_view,
+            needles: &column_view,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Finds lower bound insertion points in a sorted table.
+        fn lower_bound(
+            haystack: &Table,
+            needles: &Table,
+            column_orders: &[i32],
+            null_orders: &[i32],
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Finds upper bound insertion points in a sorted table.
+        fn upper_bound(
+            haystack: &Table,
+            needles: &Table,
+            column_orders: &[i32],
+            null_orders: &[i32],
+        ) -> Result<UniquePtr<Column>>;
+
+        // -- Quantile operations --
+
+        /// Computes quantiles of a column.
+        fn quantile_column(
+            col: &column_view,
+            quantiles: &[f64],
+            interp: i32,
+        ) -> Result<UniquePtr<Column>>;
+
+        // -- Join operations --
+
+        /// Inner join: returns a table with all columns from left and right
+        /// for matching rows.
+        fn inner_join(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Left join: returns all rows from left, with matching right rows
+        /// (nulls for unmatched).
+        fn left_join(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Full outer join: returns all rows from both sides.
+        fn full_join(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Left semi join: returns rows from left that have matches in right.
+        fn left_semi_join(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Left anti join: returns rows from left that have NO matches in right.
+        fn left_anti_join(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+        ) -> Result<UniquePtr<Table>>;
+
+        // -- String operations --
+
+        /// Converts strings to lower case.
+        fn strings_to_lower(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Converts strings to upper case.
+        fn strings_to_upper(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns BOOL8 column indicating whether each string contains the target.
+        fn strings_contains(col: &column_view, target: &Scalar) -> Result<UniquePtr<Column>>;
+
+        /// Returns BOOL8 column indicating whether each string starts with the target.
+        fn strings_starts_with(col: &column_view, target: &Scalar) -> Result<UniquePtr<Column>>;
+
+        /// Returns BOOL8 column indicating whether each string ends with the target.
+        fn strings_ends_with(col: &column_view, target: &Scalar) -> Result<UniquePtr<Column>>;
+
+        /// Returns INT32 column with position of first occurrence of target in each string.
+        fn strings_find(col: &column_view, target: &Scalar) -> Result<UniquePtr<Column>>;
+
+        /// Replaces occurrences of target with replacement in each string.
+        fn strings_replace(
+            col: &column_view,
+            target: &Scalar,
+            replacement: &Scalar,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Strips whitespace from both sides of each string.
+        fn strings_strip(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Strips whitespace from the left side of each string.
+        fn strings_lstrip(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Strips whitespace from the right side of each string.
+        fn strings_rstrip(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns INT32 column with character count of each string.
+        fn strings_count_characters(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Returns INT32 column with byte count of each string.
+        fn strings_count_bytes(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Converts an integer column to a string column.
+        fn strings_from_integers(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Converts a string column to an integer column.
+        fn strings_to_integers(col: &column_view, output_type_id: i32)
+            -> Result<UniquePtr<Column>>;
+
+        /// Converts a float column to a string column.
+        fn strings_from_floats(col: &column_view) -> Result<UniquePtr<Column>>;
+
+        /// Converts a string column to a float column.
+        fn strings_to_floats(col: &column_view, output_type_id: i32)
+            -> Result<UniquePtr<Column>>;
+
+        // -- String column construction --
+
+        /// Creates a string column from a vector of strings.
+        fn make_string_column(strings: Vec<String>) -> UniquePtr<Column>;
+
+        // -- String column extraction (device -> host) --
+
+        /// Copies string column data to a host vector of strings.
+        fn column_to_host_strings(col: &Column) -> Vec<String>;
+
+        // -- I/O --
+
+        /// Reads a CSV file and returns a Table.
+        fn read_csv(filepath: &str) -> Result<UniquePtr<Table>>;
+
+        /// Reads a CSV file with options and returns a Table.
+        fn read_csv_with_options(
+            filepath: &str,
+            delimiter: u8,
+            header: bool,
+            skip_rows: i32,
+            num_rows: i32,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Writes a Table to a CSV file.
+        fn write_csv(tbl: &Table, filepath: &str) -> Result<()>;
+
+        /// Writes a Table to a CSV file with options.
+        fn write_csv_with_options(
+            tbl: &Table,
+            filepath: &str,
+            delimiter: u8,
+            include_header: bool,
+            na_rep: &str,
+        ) -> Result<()>;
+
+        /// Reads a Parquet file and returns a Table.
+        fn read_parquet(filepath: &str) -> Result<UniquePtr<Table>>;
+
+        /// Writes a Table to a Parquet file.
+        fn write_parquet(tbl: &Table, filepath: &str) -> Result<()>;
     }
 }

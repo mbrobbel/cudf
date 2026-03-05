@@ -165,6 +165,7 @@ std::unique_ptr<Table> table_builder_build(TableBuilder& builder);
 
 // -- CXX shared enums (generated from Rust bridge) --
 enum class BinaryOperator : ::std::int32_t;
+enum class NullEquality : ::std::int32_t;
 
 // -- Binary operations --
 
@@ -265,5 +266,182 @@ std::unique_ptr<Table> gather_table(
 
 std::unique_ptr<Column> empty_like_column(cudf::column_view const& col);
 std::unique_ptr<Table> empty_like_table(Table const& tbl);
+
+// -- Column factories from host data --
+
+std::unique_ptr<Column> make_column_from_host_i32(rust::Slice<int32_t const> data);
+std::unique_ptr<Column> make_column_from_host_i64(rust::Slice<int64_t const> data);
+std::unique_ptr<Column> make_column_from_host_f64(rust::Slice<double const> data);
+std::unique_ptr<Column> make_column_from_host_bool(rust::Slice<bool const> data);
+
+// -- CXX shared enum (generated from Rust bridge) --
+enum class Interpolation : ::std::int32_t;
+
+// -- Replace operations --
+
+std::unique_ptr<Column> replace_nulls_column(
+    cudf::column_view const& col,
+    cudf::column_view const& replacement);
+
+std::unique_ptr<Column> replace_nulls_scalar(
+    cudf::column_view const& col,
+    Scalar const& replacement);
+
+std::unique_ptr<Column> replace_nans_column(
+    cudf::column_view const& col,
+    cudf::column_view const& replacement);
+
+std::unique_ptr<Column> replace_nans_scalar(
+    cudf::column_view const& col,
+    Scalar const& replacement);
+
+std::unique_ptr<Column> clamp_column(
+    cudf::column_view const& col,
+    Scalar const& lo,
+    Scalar const& hi);
+
+std::unique_ptr<Column> find_and_replace_all(
+    cudf::column_view const& col,
+    cudf::column_view const& values_to_replace,
+    cudf::column_view const& replacement_values);
+
+// -- Fill operations --
+
+std::unique_ptr<Column> fill_column(
+    cudf::column_view const& col,
+    int32_t begin,
+    int32_t end,
+    Scalar const& value);
+
+std::unique_ptr<Table> repeat_table(
+    Table const& tbl,
+    int32_t count);
+
+std::unique_ptr<Column> sequence_column(
+    int32_t count,
+    Scalar const& init,
+    Scalar const& step);
+
+// -- Search operations --
+
+bool contains_scalar(
+    cudf::column_view const& haystack,
+    Scalar const& needle);
+
+std::unique_ptr<Column> contains_column(
+    cudf::column_view const& haystack,
+    cudf::column_view const& needles);
+
+std::unique_ptr<Column> lower_bound(
+    Table const& haystack,
+    Table const& needles,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders);
+
+std::unique_ptr<Column> upper_bound(
+    Table const& haystack,
+    Table const& needles,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders);
+
+// -- Quantile operations --
+
+std::unique_ptr<Column> quantile_column(
+    cudf::column_view const& col,
+    rust::Slice<double const> quantiles,
+    int32_t interp);
+
+// -- Join operations --
+
+std::unique_ptr<Table> inner_join(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on);
+
+std::unique_ptr<Table> left_join(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on);
+
+std::unique_ptr<Table> full_join(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on);
+
+std::unique_ptr<Table> left_semi_join(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on);
+
+std::unique_ptr<Table> left_anti_join(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on);
+
+// -- String operations --
+
+std::unique_ptr<Column> strings_to_lower(cudf::column_view const& col);
+std::unique_ptr<Column> strings_to_upper(cudf::column_view const& col);
+
+std::unique_ptr<Column> strings_contains(
+    cudf::column_view const& col,
+    Scalar const& target);
+
+std::unique_ptr<Column> strings_starts_with(
+    cudf::column_view const& col,
+    Scalar const& target);
+
+std::unique_ptr<Column> strings_ends_with(
+    cudf::column_view const& col,
+    Scalar const& target);
+
+std::unique_ptr<Column> strings_find(
+    cudf::column_view const& col,
+    Scalar const& target);
+
+std::unique_ptr<Column> strings_replace(
+    cudf::column_view const& col,
+    Scalar const& target,
+    Scalar const& replacement);
+
+std::unique_ptr<Column> strings_strip(cudf::column_view const& col);
+std::unique_ptr<Column> strings_lstrip(cudf::column_view const& col);
+std::unique_ptr<Column> strings_rstrip(cudf::column_view const& col);
+
+std::unique_ptr<Column> strings_count_characters(cudf::column_view const& col);
+std::unique_ptr<Column> strings_count_bytes(cudf::column_view const& col);
+
+std::unique_ptr<Column> strings_from_integers(cudf::column_view const& col);
+std::unique_ptr<Column> strings_to_integers(cudf::column_view const& col, int32_t output_type_id);
+std::unique_ptr<Column> strings_from_floats(cudf::column_view const& col);
+std::unique_ptr<Column> strings_to_floats(cudf::column_view const& col, int32_t output_type_id);
+
+// -- String column construction --
+
+std::unique_ptr<Column> make_string_column(rust::Vec<rust::String> strings);
+
+// -- String column extraction (device -> host) --
+
+rust::Vec<rust::String> column_to_host_strings(Column const& col);
+
+// -- I/O --
+
+std::unique_ptr<Table> read_csv(rust::Str filepath);
+std::unique_ptr<Table> read_csv_with_options(
+    rust::Str filepath,
+    uint8_t delimiter,
+    bool header,
+    int32_t skip_rows,
+    int32_t num_rows);
+void write_csv(Table const& tbl, rust::Str filepath);
+void write_csv_with_options(
+    Table const& tbl,
+    rust::Str filepath,
+    uint8_t delimiter,
+    bool include_header,
+    rust::Str na_rep);
+
+std::unique_ptr<Table> read_parquet(rust::Str filepath);
+void write_parquet(Table const& tbl, rust::Str filepath);
 
 }  // namespace cudf_sys
