@@ -59,6 +59,10 @@
 #include <cudf/strings/capitalize.hpp>
 #include <cudf/strings/wrap.hpp>
 #include <cudf/strings/convert/convert_lists.hpp>
+#include <cudf/strings/translate.hpp>
+#include <cudf/strings/convert/int_cast.hpp>
+
+#include <cudf/lists/combine.hpp>
 
 #include <cudf/lists/contains.hpp>
 #include <cudf/lists/gather.hpp>
@@ -2979,6 +2983,213 @@ std::unique_ptr<Column> strings_format_list_column(cudf::column_view const& col,
   auto na = std::string(na_rep.data(), na_rep.size());
   cudf::string_scalar na_scalar(na, true, s);
   auto result = cudf::strings::format_list_column(lcv, na_scalar, cudf::strings_column_view(cudf::column_view{cudf::data_type{cudf::type_id::STRING}, 0, nullptr, nullptr, 0}), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Strings: replace_slice / replace_multiple --
+
+std::unique_ptr<Column> strings_replace_slice(
+    cudf::column_view const& col,
+    rust::Str repl,
+    int32_t start,
+    int32_t stop,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto repl_str = std::string(repl.data(), repl.size());
+  cudf::string_scalar repl_scalar(repl_str, true, s);
+  auto result = cudf::strings::replace_slice(scv, repl_scalar, start, stop, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_replace_multiple(
+    cudf::column_view const& col,
+    cudf::column_view const& targets,
+    cudf::column_view const& repls,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  cudf::strings_column_view tcv(targets);
+  cudf::strings_column_view rcv(repls);
+  auto result = cudf::strings::replace_multiple(scv, tcv, rcv, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Strings: split_record / rsplit_record --
+
+std::unique_ptr<Column> strings_split_record(
+    cudf::column_view const& col,
+    Scalar const& delimiter,
+    int32_t maxsplit,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto const& str_scalar = static_cast<cudf::string_scalar const&>(delimiter.inner());
+  auto result = cudf::strings::split_record(scv, str_scalar, maxsplit, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_rsplit_record(
+    cudf::column_view const& col,
+    Scalar const& delimiter,
+    int32_t maxsplit,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto const& str_scalar = static_cast<cudf::string_scalar const&>(delimiter.inner());
+  auto result = cudf::strings::rsplit_record(scv, str_scalar, maxsplit, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Lists: apply_boolean_mask --
+
+std::unique_ptr<Column> lists_apply_boolean_mask(
+    cudf::column_view const& col,
+    cudf::column_view const& boolean_mask,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view lcv(col);
+  cudf::lists_column_view mcv(boolean_mask);
+  auto result = cudf::lists::apply_boolean_mask(lcv, mcv, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Strings: join_list_elements --
+
+std::unique_ptr<Column> strings_join_list_elements(
+    cudf::column_view const& col,
+    rust::Str separator,
+    rust::Str narep,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view lcv(col);
+  auto sep_str = std::string(separator.data(), separator.size());
+  auto na_str = std::string(narep.data(), narep.size());
+  cudf::string_scalar sep_scalar(sep_str, true, s);
+  cudf::string_scalar na_scalar(na_str, !na_str.empty(), s);
+  auto result = cudf::strings::join_list_elements(lcv, sep_scalar, na_scalar,
+      cudf::strings::separator_on_nulls::YES,
+      cudf::strings::output_if_empty_list::EMPTY_STRING, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Transform: segmented_row_bit_count --
+
+std::unique_ptr<Column> segmented_row_bit_count(Table const& tbl, int32_t segment_length, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::segmented_row_bit_count(tbl.cached_view(), segment_length, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Strings: code_points --
+
+std::unique_ptr<Column> strings_code_points(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::code_points(scv, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Strings: translate / filter_characters --
+
+std::unique_ptr<Column> strings_translate(
+    cudf::column_view const& col,
+    rust::Slice<uint32_t const> from_chars,
+    rust::Slice<uint32_t const> to_chars,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  std::vector<std::pair<cudf::char_utf8, cudf::char_utf8>> table;
+  table.reserve(from_chars.size());
+  for (size_t i = 0; i < from_chars.size(); ++i) {
+    table.emplace_back(static_cast<cudf::char_utf8>(from_chars[i]),
+                       static_cast<cudf::char_utf8>(to_chars[i]));
+  }
+  auto result = cudf::strings::translate(scv, table, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_filter_characters(
+    cudf::column_view const& col,
+    rust::Slice<uint32_t const> from_chars,
+    rust::Slice<uint32_t const> to_chars,
+    bool keep,
+    rust::Str replacement,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  std::vector<std::pair<cudf::char_utf8, cudf::char_utf8>> ranges;
+  ranges.reserve(from_chars.size());
+  for (size_t i = 0; i < from_chars.size(); ++i) {
+    ranges.emplace_back(static_cast<cudf::char_utf8>(from_chars[i]),
+                        static_cast<cudf::char_utf8>(to_chars[i]));
+  }
+  auto repl = std::string(replacement.data(), replacement.size());
+  cudf::string_scalar repl_scalar(repl, true, s);
+  auto ft = keep ? cudf::strings::filter_type::KEEP
+                 : cudf::strings::filter_type::REMOVE;
+  auto result = cudf::strings::filter_characters(scv, ranges, ft, repl_scalar, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Strings: cast_to_integer / cast_from_integer --
+
+std::unique_ptr<Column> strings_cast_to_integer(
+    cudf::column_view const& col,
+    int32_t output_type_id,
+    bool big_endian,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto swap = big_endian ? cudf::strings::endian::BIG
+                         : cudf::strings::endian::LITTLE;
+  auto result = cudf::strings::cast_to_integer(
+      scv, cudf::data_type{static_cast<cudf::type_id>(output_type_id)}, swap, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_cast_from_integer(
+    cudf::column_view const& col,
+    bool big_endian,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto swap = big_endian ? cudf::strings::endian::BIG
+                         : cudf::strings::endian::LITTLE;
+  auto result = cudf::strings::cast_from_integer(col, swap, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Lists: extract_element (column), stable_sort, concatenate_rows --
+
+std::unique_ptr<Column> lists_extract_element_column(
+    cudf::column_view const& col,
+    cudf::column_view const& indices,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view lcv(col);
+  auto result = cudf::lists::extract_list_element(lcv, indices, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> lists_stable_sort(
+    cudf::column_view const& col,
+    bool ascending,
+    bool nulls_last,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view lcv(col);
+  auto order = ascending ? cudf::order::ASCENDING : cudf::order::DESCENDING;
+  auto null_order = nulls_last ? cudf::null_order::AFTER : cudf::null_order::BEFORE;
+  auto result = cudf::lists::stable_sort_lists(lcv, order, null_order, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> lists_concatenate_rows(
+    Table const& tbl,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::lists::concatenate_rows(
+      tbl.cached_view(), cudf::lists::concatenate_null_policy::IGNORE, s);
   return std::make_unique<Column>(std::move(result));
 }
 

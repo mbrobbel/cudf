@@ -36,6 +36,12 @@ pub trait ListExt {
     fn list_segmented_gather(&self, gather_map: &ColumnView<'_>, nullify_oob: bool) -> Result<Column>;
     /// Format a list-of-strings column into formatted strings.
     fn list_format(&self, na_rep: &str) -> Result<Column>;
+    /// Extract element from each list using per-row column indices.
+    fn list_extract_element_column(&self, indices: &ColumnView<'_>) -> Result<Column>;
+    /// Stable sort elements within each list row.
+    fn list_stable_sort(&self, ascending: bool, nulls_last: bool) -> Result<Column>;
+    /// Filter elements within each list row using a boolean mask list column.
+    fn list_apply_boolean_mask(&self, boolean_mask: &ColumnView<'_>) -> Result<Column>;
 }
 
 /// Generate sequences as list column from starts and sizes columns.
@@ -99,6 +105,24 @@ impl ListExt for ColumnView<'_> {
         let c = cudf_sys::ffi::strings_format_list_column(self.0, na_rep, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
+    fn list_extract_element_column(&self, indices: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::lists_extract_element_column(self.0, indices.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_stable_sort(&self, ascending: bool, nulls_last: bool) -> Result<Column> {
+        let c = cudf_sys::ffi::lists_stable_sort(self.0, ascending, nulls_last, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_apply_boolean_mask(&self, boolean_mask: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::lists_apply_boolean_mask(self.0, boolean_mask.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+}
+
+/// Row-wise concatenation of list columns from a table into a single list column.
+pub fn lists_concatenate_rows(tbl: &crate::table::Table) -> Result<Column> {
+    let c = cudf_sys::ffi::lists_concatenate_rows(&tbl.0, Stream::default_stream().as_raw())?;
+    Ok(Column(c))
 }
 
 /// Check if two list columns have overlapping elements per row.

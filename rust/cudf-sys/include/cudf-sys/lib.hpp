@@ -877,4 +877,57 @@ std::unique_ptr<Column> strings_is_hex(cudf::column_view const& col, std::size_t
 std::unique_ptr<Column> strings_integers_to_hex(cudf::column_view const& col, std::size_t stream);
 std::unique_ptr<Column> strings_format_list_column(cudf::column_view const& col, rust::Str na_rep, std::size_t stream);
 
+// -- Strings: replace_slice / replace_multiple --
+
+std::unique_ptr<Column> strings_replace_slice(cudf::column_view const& col, rust::Str repl, int32_t start, int32_t stop, std::size_t stream);
+std::unique_ptr<Column> strings_replace_multiple(cudf::column_view const& col, cudf::column_view const& targets, cudf::column_view const& repls, std::size_t stream);
+
+// -- Strings: split_record / rsplit_record --
+
+std::unique_ptr<Column> strings_split_record(cudf::column_view const& col, Scalar const& delimiter, int32_t maxsplit, std::size_t stream);
+std::unique_ptr<Column> strings_rsplit_record(cudf::column_view const& col, Scalar const& delimiter, int32_t maxsplit, std::size_t stream);
+
+// -- Lists: apply_boolean_mask --
+
+std::unique_ptr<Column> lists_apply_boolean_mask(cudf::column_view const& col, cudf::column_view const& boolean_mask, std::size_t stream);
+
+// -- Strings: join_list_elements --
+
+std::unique_ptr<Column> strings_join_list_elements(cudf::column_view const& col, rust::Str separator, rust::Str narep, std::size_t stream);
+
+// -- Transform: segmented_row_bit_count --
+
+std::unique_ptr<Column> segmented_row_bit_count(Table const& tbl, int32_t segment_length, std::size_t stream);
+
+// -- Strings: code_points --
+
+std::unique_ptr<Column> strings_code_points(cudf::column_view const& col, std::size_t stream);
+
+// -- Strings: translate / filter_characters --
+
+std::unique_ptr<Column> strings_translate(
+    cudf::column_view const& col,
+    rust::Slice<uint32_t const> from_chars,
+    rust::Slice<uint32_t const> to_chars,
+    std::size_t stream);
+
+std::unique_ptr<Column> strings_filter_characters(
+    cudf::column_view const& col,
+    rust::Slice<uint32_t const> from_chars,
+    rust::Slice<uint32_t const> to_chars,
+    bool keep,
+    rust::Str replacement,
+    std::size_t stream);
+
+// -- Strings: cast_to_integer / cast_from_integer --
+
+std::unique_ptr<Column> strings_cast_to_integer(cudf::column_view const& col, int32_t output_type_id, bool big_endian, std::size_t stream);
+std::unique_ptr<Column> strings_cast_from_integer(cudf::column_view const& col, bool big_endian, std::size_t stream);
+
+// -- Lists: extract (column), stable sort, concatenate_rows --
+
+std::unique_ptr<Column> lists_extract_element_column(cudf::column_view const& col, cudf::column_view const& indices, std::size_t stream);
+std::unique_ptr<Column> lists_stable_sort(cudf::column_view const& col, bool ascending, bool nulls_last, std::size_t stream);
+std::unique_ptr<Column> lists_concatenate_rows(Table const& tbl, std::size_t stream);
+
 }  // namespace cudf_sys

@@ -1539,5 +1539,62 @@ pub mod ffi {
         /// Format a list-of-strings column into a single formatted strings column.
         fn strings_format_list_column(col: &column_view, na_rep: &str, stream: usize) -> Result<UniquePtr<Column>>;
 
+        // -- Strings: replace_slice / replace_multiple --
+
+        /// Replace substring positions [start, stop) with replacement string.
+        fn strings_replace_slice(col: &column_view, repl: &str, start: i32, stop: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Replace multiple target strings with corresponding replacements.
+        fn strings_replace_multiple(col: &column_view, targets: &column_view, repls: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Strings: split_record / rsplit_record --
+
+        /// Split strings by delimiter into lists column (left-to-right).
+        fn strings_split_record(col: &column_view, delimiter: &Scalar, maxsplit: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Split strings by delimiter into lists column (right-to-left).
+        fn strings_rsplit_record(col: &column_view, delimiter: &Scalar, maxsplit: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Lists: apply_boolean_mask --
+
+        /// Filter elements within each list row using a boolean mask list column.
+        fn lists_apply_boolean_mask(col: &column_view, boolean_mask: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Strings: join_list_elements --
+
+        /// Join lists of strings into a single string per row with separator.
+        fn strings_join_list_elements(col: &column_view, separator: &str, narep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Transform: segmented_row_bit_count --
+
+        /// Per-segment cumulative row bit count.
+        fn segmented_row_bit_count(tbl: &Table, segment_length: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Strings: code_points --
+
+        /// Returns INT32 column of Unicode code points for all characters.
+        fn strings_code_points(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Strings: translate / filter_characters --
+
+        /// Translate individual characters using from→to mapping (flat arrays of char_utf8 as u32).
+        fn strings_translate(col: &column_view, from_chars: &[u32], to_chars: &[u32], stream: usize) -> Result<UniquePtr<Column>>;
+        /// Filter character ranges. keep=true keeps ranges, false removes them.
+        fn strings_filter_characters(col: &column_view, from_chars: &[u32], to_chars: &[u32], keep: bool, replacement: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Strings: cast_to_integer / cast_from_integer --
+
+        /// Encode strings as integers (binary byte representation). big_endian controls byte order.
+        fn strings_cast_to_integer(col: &column_view, output_type_id: i32, big_endian: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Decode integer-encoded bytes back to strings.
+        fn strings_cast_from_integer(col: &column_view, big_endian: bool, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Lists: extract (column), stable sort, concatenate_rows --
+
+        /// Extract element from each list using per-row column indices.
+        fn lists_extract_element_column(col: &column_view, indices: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Stable sort elements within each list row.
+        fn lists_stable_sort(col: &column_view, ascending: bool, nulls_last: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Row-wise concatenation of list columns from a table into a single list column.
+        fn lists_concatenate_rows(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
+
     }
 }

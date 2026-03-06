@@ -216,6 +216,46 @@ pub trait StringExt {
     fn str_is_hex(&self) -> Result<Column>;
     /// Convert integers to hex strings.
     fn str_integers_to_hex(&self) -> Result<Column>;
+
+    // -- Replace slice / multiple --
+
+    /// Replace substring at positions [start, stop) with replacement string.
+    fn str_replace_slice(&self, repl: &str, start: i32, stop: i32) -> Result<Column>;
+    /// Replace multiple targets with corresponding replacement strings.
+    fn str_replace_multiple(&self, targets: &ColumnView<'_>, repls: &ColumnView<'_>) -> Result<Column>;
+
+    // -- Split to lists column (non-regex) --
+
+    /// Split strings by delimiter into a lists column (left-to-right).
+    fn str_split_record(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Column>;
+    /// Split strings by delimiter into a lists column (right-to-left).
+    fn str_rsplit_record(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Column>;
+
+    // -- Join list elements --
+
+    /// Join lists of strings into a single string per row with separator.
+    fn str_join_list_elements(&self, separator: &str, narep: &str) -> Result<Column>;
+
+    // -- Translate / filter characters --
+
+    /// Translate individual characters using from→to mapping.
+    /// `from_chars[i]` is replaced by `to_chars[i]`. Use 0 in to_chars to remove a character.
+    fn str_translate(&self, from_chars: &[u32], to_chars: &[u32]) -> Result<Column>;
+    /// Filter character ranges. `keep=true` keeps only characters in ranges, `false` removes them.
+    /// Each range is `[from_chars[i], to_chars[i]]`.
+    fn str_filter_characters(&self, from_chars: &[u32], to_chars: &[u32], keep: bool, replacement: &str) -> Result<Column>;
+
+    // -- Code points --
+
+    /// Returns an INT32 column of Unicode code points for all characters (concatenated).
+    fn code_points(&self) -> Result<Column>;
+
+    // -- Binary string↔integer encoding --
+
+    /// Encode strings as integers (binary byte representation).
+    fn str_cast_to_integer(&self, output_type: TypeId, big_endian: bool) -> Result<Column>;
+    /// Decode integer-encoded bytes back to strings.
+    fn str_cast_from_integer(&self, big_endian: bool) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -603,6 +643,48 @@ impl StringExt for ColumnView<'_> {
     }
     fn str_integers_to_hex(&self) -> Result<Column> {
         let c = cudf_sys::ffi::strings_integers_to_hex(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_replace_slice(&self, repl: &str, start: i32, stop: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_replace_slice(self.0, repl, start, stop, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_replace_multiple(&self, targets: &ColumnView<'_>, repls: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_replace_multiple(self.0, targets.0, repls.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_split_record(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Column> {
+        let ffi = crate::scalar::scalar_to_ffi(delimiter);
+        let c = cudf_sys::ffi::strings_split_record(self.0, &ffi, maxsplit, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_rsplit_record(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Column> {
+        let ffi = crate::scalar::scalar_to_ffi(delimiter);
+        let c = cudf_sys::ffi::strings_rsplit_record(self.0, &ffi, maxsplit, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_join_list_elements(&self, separator: &str, narep: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_join_list_elements(self.0, separator, narep, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_translate(&self, from_chars: &[u32], to_chars: &[u32]) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_translate(self.0, from_chars, to_chars, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_filter_characters(&self, from_chars: &[u32], to_chars: &[u32], keep: bool, replacement: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_filter_characters(self.0, from_chars, to_chars, keep, replacement, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn code_points(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_code_points(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_cast_to_integer(&self, output_type: TypeId, big_endian: bool) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_cast_to_integer(self.0, output_type.repr, big_endian, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_cast_from_integer(&self, big_endian: bool) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_cast_from_integer(self.0, big_endian, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

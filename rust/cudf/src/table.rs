@@ -426,6 +426,12 @@ impl Table {
         Ok(Column(c))
     }
 
+    /// Per-segment cumulative row bit count.
+    pub fn segmented_row_bit_count(&self, segment_length: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::segmented_row_bit_count(&self.0, segment_length, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
     /// Convert column elements to lists of bytes.
     pub fn byte_cast(col: &ColumnView<'_>, flip_endian: bool) -> Result<Column> {
         let c = cudf_sys::ffi::byte_cast_column(col.0, flip_endian, Stream::default_stream().as_raw())?;
