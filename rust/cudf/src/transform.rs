@@ -32,4 +32,15 @@ mod tests {
         let vals = indices.to_vec_i32();
         assert_eq!(vals, vec![2, 0, 1, 0, 2]);
     }
+
+    #[test]
+    fn encode_keys_basic() {
+        let c1 = Col::from_slice_i32(&[3, 1, 2, 1, 3]);
+        let mut builder = TableBuilder::new();
+        builder.push_column(c1);
+        let table = builder.build().unwrap();
+        let keys = table.encode_keys().unwrap();
+        assert_eq!(keys.len(), 3);
+        assert_eq!(keys.columns_len(), 1);
+    }
 }

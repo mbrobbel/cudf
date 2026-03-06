@@ -233,4 +233,53 @@ mod tests {
         let result = col.view().abs().unwrap();
         assert_eq!(result.to_vec_i32(), vec![7, 7]);
     }
+
+    #[test]
+    fn ne_columns() {
+        let c1 = Column::from_scalar(&Scalar::from_i32(5), 3);
+        let c2 = Column::from_scalar(&Scalar::from_i32(5), 3);
+        let result = c1.view().ne(&c2.view()).unwrap();
+        assert_eq!(result.type_id(), TypeId::BOOL8);
+        assert_eq!(result.to_vec_bool(), vec![false, false, false]);
+    }
+
+    #[test]
+    fn ge_columns() {
+        let c1 = Column::from_scalar(&Scalar::from_i32(5), 2);
+        let c2 = Column::from_scalar(&Scalar::from_i32(5), 2);
+        let result = c1.view().ge(&c2.view()).unwrap();
+        assert_eq!(result.to_vec_bool(), vec![true, true]);
+    }
+
+    #[test]
+    fn gt_columns() {
+        let c1 = Column::from_scalar(&Scalar::from_i32(5), 2);
+        let c2 = Column::from_scalar(&Scalar::from_i32(3), 2);
+        let result = c1.view().gt(&c2.view()).unwrap();
+        assert_eq!(result.to_vec_bool(), vec![true, true]);
+    }
+
+    #[test]
+    fn le_columns() {
+        let c1 = Column::from_scalar(&Scalar::from_i32(3), 2);
+        let c2 = Column::from_scalar(&Scalar::from_i32(3), 2);
+        let result = c1.view().le(&c2.view()).unwrap();
+        assert_eq!(result.to_vec_bool(), vec![true, true]);
+    }
+
+    #[test]
+    fn is_nan_basic() {
+        let ds = crate::stream::Stream::default_stream().as_raw();
+        let col = Column(cudf_sys::ffi::make_column_from_host_f64(&[1.0, f64::NAN, 3.0], ds));
+        let result = col.view().is_nan().unwrap();
+        assert_eq!(result.to_vec_bool(), vec![false, true, false]);
+    }
+
+    #[test]
+    fn scalar_column_binary_op() {
+        let s = Scalar::from_i32(10);
+        let col = Column::from_scalar(&Scalar::from_i32(3), 2);
+        let result = s.binary_op(&col.view(), BinaryOperator::SUB, TypeId::INT32).unwrap();
+        assert_eq!(result.to_vec_i32(), vec![7, 7]);
+    }
 }

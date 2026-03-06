@@ -36,4 +36,28 @@ mod tests {
         assert!((data[1] - 3.0).abs() < 1e-9);
         assert!((data[2] - 4.0).abs() < 1e-9);
     }
+
+    #[test]
+    fn quantile_with_interp_lower() {
+        use crate::quantile::Interpolation;
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4], ds()));
+        let result = col
+            .view()
+            .quantile_with_interp(&[0.5], Interpolation::LOWER)
+            .unwrap();
+        let data = result.to_vec_f64();
+        assert!((data[0] - 2.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn quantile_with_interp_higher() {
+        use crate::quantile::Interpolation;
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4], ds()));
+        let result = col
+            .view()
+            .quantile_with_interp(&[0.5], Interpolation::HIGHER)
+            .unwrap();
+        let data = result.to_vec_f64();
+        assert!((data[0] - 3.0).abs() < 1e-9);
+    }
 }

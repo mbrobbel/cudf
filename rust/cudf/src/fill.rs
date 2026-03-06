@@ -57,4 +57,24 @@ mod tests {
         let result = sequence(5, &init, &step).unwrap();
         assert_eq!(result.to_vec_i32(), vec![0, 2, 4, 6, 8]);
     }
+
+    #[test]
+    fn sequence_f64() {
+        let init = Scalar::from_f64(1.0);
+        let step = Scalar::from_f64(0.5);
+        let result = sequence(3, &init, &step).unwrap();
+        let data = result.to_vec_f64();
+        assert!((data[0] - 1.0).abs() < 1e-9);
+        assert!((data[1] - 1.5).abs() < 1e-9);
+        assert!((data[2] - 2.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn sequence_on_custom_stream() {
+        use crate::stream::Stream;
+        let init = Scalar::from_i32(10);
+        let step = Scalar::from_i32(5);
+        let result = sequence_on(3, &init, &step, Stream::default_stream()).unwrap();
+        assert_eq!(result.to_vec_i32(), vec![10, 15, 20]);
+    }
 }

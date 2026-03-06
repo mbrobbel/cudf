@@ -13,3 +13,6 @@ repository.workspace = true
 cudf-sys = { path = "../cudf-sys" }
 rmm-sys = { path = "../rmm-sys" }
 cxx = { workspace = true }
+
+[features]
+vendored = ["cudf-sys/vendored"]

@@ -16,3 +16,7 @@ rmm-sys = { path = "../rmm-sys" }
 
 [build-dependencies]
 cxx-build = { workspace = true }
+cmake = { workspace = true, optional = true }
+
+[features]
+vendored = ["dep:cmake", "rmm-sys/vendored"]

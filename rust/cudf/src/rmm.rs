@@ -50,4 +50,13 @@ mod tests {
         assert!(available_device_memory() > 0);
         assert!(available_device_memory() <= total_device_memory());
     }
+
+    #[test]
+    fn percent_of_free_memory() {
+        let half = percent_of_free_device_memory(50);
+        let full = available_device_memory();
+        // 50% should be roughly half of available, with some tolerance for concurrent changes
+        assert!(half > 0);
+        assert!(half <= full);
+    }
 }

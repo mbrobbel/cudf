@@ -314,4 +314,81 @@ mod tests {
         assert!(s.is_valid());
         assert_eq!(s.type_id(), TypeId::STRING);
     }
+
+    #[test]
+    fn scalar_null_i64() {
+        let s = Scalar::null_i64();
+        assert!(!s.is_valid());
+        assert_eq!(s.type_id(), TypeId::INT64);
+        assert_eq!(s.as_i64(), None);
+    }
+
+    #[test]
+    fn scalar_null_f32() {
+        let s = Scalar::null_f32();
+        assert!(!s.is_valid());
+        assert_eq!(s.type_id(), TypeId::FLOAT32);
+        assert_eq!(s.as_f32(), None);
+    }
+
+    #[test]
+    fn scalar_null_f64() {
+        let s = Scalar::null_f64();
+        assert!(!s.is_valid());
+        assert_eq!(s.type_id(), TypeId::FLOAT64);
+        assert_eq!(s.as_f64(), None);
+    }
+
+    #[test]
+    fn scalar_null_bool() {
+        let s = Scalar::null_bool();
+        assert!(!s.is_valid());
+        assert_eq!(s.type_id(), TypeId::BOOL8);
+        assert_eq!(s.as_bool(), None);
+    }
+
+    #[test]
+    fn scalar_timestamp_type_ids() {
+        assert_eq!(Scalar::TimestampSeconds(0).type_id(), TypeId::TIMESTAMP_SECONDS);
+        assert_eq!(Scalar::TimestampMilliseconds(0).type_id(), TypeId::TIMESTAMP_MILLISECONDS);
+        assert_eq!(Scalar::TimestampMicroseconds(0).type_id(), TypeId::TIMESTAMP_MICROSECONDS);
+        assert_eq!(Scalar::TimestampNanoseconds(0).type_id(), TypeId::TIMESTAMP_NANOSECONDS);
+    }
+
+    #[test]
+    fn scalar_duration_type_ids() {
+        assert_eq!(Scalar::DurationSeconds(0).type_id(), TypeId::DURATION_SECONDS);
+        assert_eq!(Scalar::DurationMilliseconds(0).type_id(), TypeId::DURATION_MILLISECONDS);
+        assert_eq!(Scalar::DurationMicroseconds(0).type_id(), TypeId::DURATION_MICROSECONDS);
+        assert_eq!(Scalar::DurationNanoseconds(0).type_id(), TypeId::DURATION_NANOSECONDS);
+    }
+
+    #[test]
+    fn scalar_unsigned_type_ids() {
+        assert_eq!(Scalar::UInt8(0).type_id(), TypeId::UINT8);
+        assert_eq!(Scalar::UInt16(0).type_id(), TypeId::UINT16);
+        assert_eq!(Scalar::UInt32(0).type_id(), TypeId::UINT32);
+        assert_eq!(Scalar::UInt64(0).type_id(), TypeId::UINT64);
+        assert_eq!(Scalar::Int8(0).type_id(), TypeId::INT8);
+        assert_eq!(Scalar::Int16(0).type_id(), TypeId::INT16);
+    }
+
+    #[test]
+    fn scalar_clone_eq() {
+        let s = Scalar::from_i32(42);
+        let s2 = s.clone();
+        assert_eq!(s, s2);
+    }
+
+    #[test]
+    fn scalar_all_valid() {
+        assert!(Scalar::Int8(1).is_valid());
+        assert!(Scalar::Int16(1).is_valid());
+        assert!(Scalar::UInt8(1).is_valid());
+        assert!(Scalar::UInt16(1).is_valid());
+        assert!(Scalar::UInt32(1).is_valid());
+        assert!(Scalar::UInt64(1).is_valid());
+        assert!(Scalar::TimestampSeconds(0).is_valid());
+        assert!(Scalar::DurationSeconds(0).is_valid());
+    }
 }

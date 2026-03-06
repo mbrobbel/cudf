@@ -56,24 +56,37 @@ fn discover_lib_paths(root_env: &str) -> Vec<PathBuf> {
 }
 
 fn main() {
-    println!("cargo:rustc-link-lib=rmm");
-    println!("cargo:rustc-link-lib=cudart");
+    let vendored = cfg!(feature = "vendored");
 
-    let include_paths = discover_include_paths("RMM_ROOT");
-    let lib_paths = discover_lib_paths("RMM_ROOT");
+    // In vendored mode, cudf-sys builds libcudf from source (which includes
+    // librmm via rapids_cpm_rmm). cudf-sys will emit the link directives for
+    // both libcudf and librmm. We skip linking here to avoid duplicate symbols.
+    if !vendored {
+        println!("cargo:rustc-link-lib=rmm");
+        println!("cargo:rustc-link-lib=cudart");
 
-    for p in &lib_paths {
-        println!("cargo:rustc-link-search=native={}", p.display());
-    }
+        let lib_paths = discover_lib_paths("RMM_ROOT");
+        for p in &lib_paths {
+            println!("cargo:rustc-link-search=native={}", p.display());
+        }
 
-    // Also check CUDA_ROOT / CUDA_PATH for cudart
-    for env in &["CUDA_ROOT", "CUDA_PATH", "CUDA_HOME"] {
-        if let Ok(root) = std::env::var(env) {
-            let root = PathBuf::from(root);
-            println!("cargo:rustc-link-search=native={}", root.join("lib64").display());
-            println!("cargo:rustc-link-search=native={}", root.join("lib").display());
+        // Also check CUDA_ROOT / CUDA_PATH for cudart
+        for env in &["CUDA_ROOT", "CUDA_PATH", "CUDA_HOME"] {
+            if let Ok(root) = std::env::var(env) {
+                let root = PathBuf::from(root);
+                println!(
+                    "cargo:rustc-link-search=native={}",
+                    root.join("lib64").display()
+                );
+                println!(
+                    "cargo:rustc-link-search=native={}",
+                    root.join("lib").display()
+                );
+            }
         }
     }
+
+    let include_paths = discover_include_paths("RMM_ROOT");
 
     let mut build = cxx_build::bridge("src/lib.rs");
     build.include("include");

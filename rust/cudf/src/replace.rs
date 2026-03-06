@@ -158,4 +158,31 @@ mod tests {
             .unwrap();
         assert_eq!(result.to_vec_i32(), vec![1, 99, 3, 99, 1]);
     }
+
+    #[test]
+    fn replace_nulls_with_column() {
+        let null_s = Scalar::null_i32();
+        let null_col = Column::from_scalar(&null_s, 3);
+        let replacement = Column::from_scalar(&Scalar::from_i32(42), 3);
+        let result = null_col
+            .view()
+            .replace_nulls(&replacement.view())
+            .unwrap();
+        assert_eq!(result.len(), 3);
+        assert!(!result.has_nulls());
+        assert_eq!(result.to_vec_i32(), vec![42, 42, 42]);
+    }
+
+    #[test]
+    fn replace_nans_with_column() {
+        let nan_col =
+            Column(cudf_sys::ffi::make_column_from_host_f64(&[1.0, f64::NAN, 3.0], ds()));
+        let replacement =
+            Column(cudf_sys::ffi::make_column_from_host_f64(&[10.0, 20.0, 30.0], ds()));
+        let result = nan_col.view().replace_nans(&replacement.view()).unwrap();
+        let data = result.to_vec_f64();
+        assert!((data[0] - 1.0).abs() < 1e-9);
+        assert!((data[1] - 20.0).abs() < 1e-9);
+        assert!((data[2] - 3.0).abs() < 1e-9);
+    }
 }

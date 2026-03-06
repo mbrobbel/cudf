@@ -780,4 +780,20 @@ mod tests {
         assert_eq!(cols[1].type_id(), TypeId::FLOAT64);
         assert_eq!(cols[2].type_id(), TypeId::BOOL8);
     }
+
+    #[test]
+    fn table_alloc_bytes() {
+        let c1 = Column::from_scalar(&Scalar::from_i32(1), 100);
+        let mut builder = TableBuilder::new();
+        builder.push_column(c1);
+        let table = builder.build().unwrap();
+        assert!(table.alloc_bytes() > 0);
+    }
+
+    #[test]
+    fn table_builder_default() {
+        let builder = TableBuilder::default();
+        let table = builder.build().unwrap();
+        assert_eq!(table.columns_len(), 0);
+    }
 }

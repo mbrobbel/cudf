@@ -53,7 +53,67 @@ fn discover_lib_paths(root_env: &str) -> Vec<PathBuf> {
     paths
 }
 
-fn main() {
+/// Build libcudf from source using cmake.
+///
+/// Returns `Some((lib_dir, include_dir))` on success, `None` if vendored
+/// build should be skipped (env escape hatch or missing source).
+#[cfg(feature = "vendored")]
+fn build_vendored() -> Option<(PathBuf, PathBuf)> {
+    // Escape hatch: CUDF_NO_VENDOR=1 forces system library usage
+    if std::env::var("CUDF_NO_VENDOR").unwrap_or_default() == "1" {
+        println!("cargo:warning=CUDF_NO_VENDOR=1, skipping vendored build");
+        return None;
+    }
+
+    // Locate the C++ source directory relative to this crate
+    let cpp_dir = PathBuf::from("../../cpp");
+    if !cpp_dir.join("CMakeLists.txt").exists() {
+        println!(
+            "cargo:warning=cpp/CMakeLists.txt not found at {}, falling back to system library",
+            cpp_dir.display()
+        );
+        return None;
+    }
+
+    let mut cfg = cmake::Config::new(&cpp_dir);
+    cfg.generator("Ninja")
+        .define("BUILD_TESTS", "OFF")
+        .define("BUILD_BENCHMARKS", "OFF")
+        .define("CUDF_BUILD_TESTUTIL", "OFF")
+        .define("CUDF_BUILD_STREAMS_TEST_UTIL", "OFF");
+
+    // Help cmake find the CUDA toolkit when inside conda/pixi environments
+    if let Ok(prefix) = std::env::var("CONDA_PREFIX") {
+        let cuda_toolkit = PathBuf::from(&prefix);
+        if cuda_toolkit.join("bin/nvcc").exists() {
+            cfg.define("CMAKE_CUDA_COMPILER", cuda_toolkit.join("bin/nvcc"));
+            cfg.define("CUDAToolkit_ROOT", &cuda_toolkit);
+        }
+    }
+
+    let dst = cfg.build();
+
+    let lib_dir = dst.join("lib");
+    let lib64_dir = dst.join("lib64");
+    let include_dir = dst.join("include");
+
+    // Emit search paths for both lib/ and lib64/ (cmake may use either)
+    if lib_dir.exists() {
+        println!("cargo:rustc-link-search=native={}", lib_dir.display());
+    }
+    if lib64_dir.exists() {
+        println!("cargo:rustc-link-search=native={}", lib64_dir.display());
+    }
+
+    // Link libcudf and librmm (rmm-sys skipped these in vendored mode)
+    println!("cargo:rustc-link-lib=cudf");
+    println!("cargo:rustc-link-lib=rmm");
+    println!("cargo:rustc-link-lib=cudart");
+
+    Some((lib_dir, include_dir))
+}
+
+fn build_system() -> (Vec<PathBuf>, Vec<PathBuf>) {
     println!("cargo:rustc-link-lib=cudf");
     println!("cargo:rustc-link-lib=cudart");
 
@@ -62,6 +122,29 @@ fn main() {
 
     for p in &lib_paths {
         println!("cargo:rustc-link-search=native={}", p.display());
+    }
+
+    (include_paths, lib_paths)
+}
+
+fn main() {
+    // Determine include paths based on build mode
+    let include_paths: Vec<PathBuf>;
+
+    #[cfg(feature = "vendored")]
+    {
+        if let Some((_lib_dir, vendored_include)) = build_vendored() {
+            include_paths = vec![vendored_include.clone(), vendored_include.join("rapids")];
+        } else {
+            let (sys_includes, _) = build_system();
+            include_paths = sys_includes;
+        }
+    }
+
+    #[cfg(not(feature = "vendored"))]
+    {
+        let (sys_includes, _) = build_system();
+        include_paths = sys_includes;
     }
 
     let mut build = cxx_build::bridge("src/lib.rs");

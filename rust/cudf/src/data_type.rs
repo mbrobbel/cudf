@@ -58,4 +58,18 @@ mod tests {
         assert_eq!(TypeId::FLOAT32, TypeId::FLOAT32);
         assert_ne!(TypeId::FLOAT32, TypeId::FLOAT64);
     }
+
+    #[test]
+    fn data_type_from_impl() {
+        let dt: DataType = TypeId::STRING.into();
+        assert_eq!(dt.id(), TypeId::STRING);
+        assert_eq!(dt.scale(), 0);
+    }
+
+    #[test]
+    fn data_type_clone_eq() {
+        let dt = DataType::new(TypeId::INT64, 0);
+        let dt2 = dt;
+        assert_eq!(dt, dt2);
+    }
 }

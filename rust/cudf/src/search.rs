@@ -41,4 +41,50 @@ mod tests {
             .unwrap();
         assert_eq!(result.to_vec_bool(), vec![true, true, false, false]);
     }
+
+    #[test]
+    fn lower_bound_basic() {
+        use crate::sorting::{NullOrder, Order};
+        use crate::table::TableBuilder;
+
+        // Sorted haystack: [10, 20, 30, 40, 50]
+        let hay_col = Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30, 40, 50], ds()));
+        let mut hb = TableBuilder::new();
+        hb.push_column(hay_col);
+        let haystack = hb.build().unwrap();
+
+        // Needles: [15, 30, 55]
+        let needle_col = Column(cudf_sys::ffi::make_column_from_host_i32(&[15, 30, 55], ds()));
+        let mut nb = TableBuilder::new();
+        nb.push_column(needle_col);
+        let needles = nb.build().unwrap();
+
+        let result = haystack
+            .lower_bound(&needles, &[Order::ASCENDING], &[NullOrder::BEFORE])
+            .unwrap();
+        assert_eq!(result.len(), 3);
+        assert_eq!(result.to_vec_i32(), vec![1, 2, 5]);
+    }
+
+    #[test]
+    fn upper_bound_basic() {
+        use crate::sorting::{NullOrder, Order};
+        use crate::table::TableBuilder;
+
+        let hay_col = Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30, 40, 50], ds()));
+        let mut hb = TableBuilder::new();
+        hb.push_column(hay_col);
+        let haystack = hb.build().unwrap();
+
+        let needle_col = Column(cudf_sys::ffi::make_column_from_host_i32(&[15, 30, 55], ds()));
+        let mut nb = TableBuilder::new();
+        nb.push_column(needle_col);
+        let needles = nb.build().unwrap();
+
+        let result = haystack
+            .upper_bound(&needles, &[Order::ASCENDING], &[NullOrder::BEFORE])
+            .unwrap();
+        assert_eq!(result.len(), 3);
+        assert_eq!(result.to_vec_i32(), vec![1, 3, 5]);
+    }
 }

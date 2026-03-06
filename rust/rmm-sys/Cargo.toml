@@ -15,3 +15,6 @@ cxx = { workspace = true }
 
 [build-dependencies]
 cxx-build = { workspace = true }
+
+[features]
+vendored = []

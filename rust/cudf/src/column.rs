@@ -678,4 +678,81 @@ mod tests {
         let mask = col.null_mask_to_host();
         assert_eq!(mask, vec![true, true, true]);
     }
+
+    #[test]
+    fn column_from_slice_i32() {
+        let col = Column::from_slice_i32(&[10, 20, 30]);
+        assert_eq!(col.len(), 3);
+        assert_eq!(col.type_id(), TypeId::INT32);
+        assert_eq!(col.to_vec_i32(), vec![10, 20, 30]);
+    }
+
+    #[test]
+    fn column_from_slice_i64() {
+        let col = Column::from_slice_i64(&[100, 200, 300]);
+        assert_eq!(col.len(), 3);
+        assert_eq!(col.type_id(), TypeId::INT64);
+        assert_eq!(col.to_vec_i64(), vec![100, 200, 300]);
+    }
+
+    #[test]
+    fn column_from_slice_f64() {
+        let col = Column::from_slice_f64(&[1.5, 2.5, 3.5]);
+        assert_eq!(col.len(), 3);
+        assert_eq!(col.type_id(), TypeId::FLOAT64);
+        assert_eq!(col.to_vec_f64(), vec![1.5, 2.5, 3.5]);
+    }
+
+    #[test]
+    fn column_from_slice_bool() {
+        let col = Column::from_slice_bool(&[true, false, true]);
+        assert_eq!(col.len(), 3);
+        assert_eq!(col.type_id(), TypeId::BOOL8);
+        assert_eq!(col.to_vec_bool(), vec![true, false, true]);
+    }
+
+    #[test]
+    fn column_from_strings() {
+        let col = Column::from_strings(&["hello", "world"]);
+        assert_eq!(col.len(), 2);
+        assert_eq!(col.type_id(), TypeId::STRING);
+        assert_eq!(col.to_vec_string(), vec!["hello", "world"]);
+    }
+
+    #[test]
+    fn column_from_timestamps_s() {
+        let col = Column::from_timestamps_s(&[1704067200, 1718443845]);
+        assert_eq!(col.len(), 2);
+        assert_eq!(col.type_id(), TypeId::TIMESTAMP_SECONDS);
+        assert_eq!(col.to_vec_i64(), vec![1704067200, 1718443845]);
+    }
+
+    #[test]
+    fn column_null_scalar() {
+        let s = Scalar::null_i32();
+        let col = Column::from_scalar(&s, 3);
+        assert_eq!(col.len(), 3);
+        assert!(col.has_nulls());
+        assert_eq!(col.null_count(), 3);
+    }
+
+    #[test]
+    fn column_nullable() {
+        let col = Column::from_slice_i32(&[1, 2, 3]);
+        // from_slice creates non-nullable columns
+        assert!(!col.has_nulls());
+    }
+
+    #[test]
+    fn column_view_offset() {
+        let col = Column::from_slice_i32(&[1, 2, 3]);
+        assert_eq!(col.view().offset(), 0);
+    }
+
+    #[test]
+    fn column_to_vec_f32() {
+        let s = Scalar::from_f32(1.5);
+        let col = Column::from_scalar(&s, 2);
+        assert_eq!(col.to_vec_f32(), vec![1.5, 1.5]);
+    }
 }
