@@ -6,6 +6,7 @@ use cxx::UniquePtr;
 use crate::column::{Column, ColumnView};
 use crate::error::Result;
 use crate::groupby::AggregationKind;
+use crate::scalar::Scalar;
 use crate::sorting::{NullOrder, Order};
 use crate::stream::Stream;
 
@@ -964,6 +965,46 @@ impl Table {
     /// Scatter rows from source table into this table using boolean mask.
     pub fn boolean_mask_scatter(&self, source: &Table, mask: &ColumnView<'_>) -> Result<Table> {
         let t = cudf_sys::ffi::boolean_mask_scatter_table(&source.0, &self.0, mask.0, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Scatter scalar values (one per column) to specified indices in this table.
+    pub fn scatter_scalars(
+        &self,
+        scalars: &[Scalar],
+        scatter_map: &ColumnView<'_>,
+    ) -> Result<Table> {
+        let mut list = cudf_sys::ffi::new_scalar_list();
+        for s in scalars {
+            let ffi = crate::scalar::scalar_to_ffi(s);
+            cudf_sys::ffi::scalar_list_add(list.pin_mut(), ffi);
+        }
+        let t = cudf_sys::ffi::scatter_scalars(
+            list.pin_mut(),
+            scatter_map.0,
+            &self.0,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+
+    /// Scatter scalar values (one per column) into rows where mask is true.
+    pub fn boolean_mask_scatter_scalars(
+        &self,
+        scalars: &[Scalar],
+        mask: &ColumnView<'_>,
+    ) -> Result<Table> {
+        let mut list = cudf_sys::ffi::new_scalar_list();
+        for s in scalars {
+            let ffi = crate::scalar::scalar_to_ffi(s);
+            cudf_sys::ffi::scalar_list_add(list.pin_mut(), ffi);
+        }
+        let t = cudf_sys::ffi::boolean_mask_scatter_scalars(
+            list.pin_mut(),
+            &self.0,
+            mask.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 

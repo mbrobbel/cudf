@@ -121,6 +121,29 @@ pub mod parquet {
     }
 }
 
+/// JSON read and write operations.
+pub mod json {
+    use super::*;
+
+    /// Reads a JSON file into a [`Table`].
+    ///
+    /// Set `json_lines` to `true` for JSON Lines (newline-delimited) format.
+    pub fn read<P: AsRef<Path>>(path: P, json_lines: bool) -> crate::Result<Table> {
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let tbl = cudf_sys::ffi::read_json(path_str, json_lines)?;
+        Ok(Table(tbl))
+    }
+
+    /// Writes a [`Table`] to a JSON file.
+    ///
+    /// Set `json_lines` to `true` for JSON Lines (newline-delimited) format.
+    pub fn write<P: AsRef<Path>>(table: &Table, path: P, json_lines: bool) -> crate::Result<()> {
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        cudf_sys::ffi::write_json(&table.0, path_str, json_lines)?;
+        Ok(())
+    }
+}
+
 /// ORC read and write operations.
 pub mod orc {
     use super::*;

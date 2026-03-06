@@ -1772,5 +1772,22 @@ pub mod ffi {
         /// Write a table to an ORC file.
         fn write_orc(tbl: &Table, filepath: &str) -> Result<()>;
 
+        // -- JSON I/O --
+
+        /// Read a JSON file into a table. Set json_lines=true for JSON Lines format.
+        fn read_json(filepath: &str, json_lines: bool) -> Result<UniquePtr<Table>>;
+        /// Write a table to a JSON file. Set json_lines=true for JSON Lines format.
+        fn write_json(tbl: &Table, filepath: &str, json_lines: bool) -> Result<()>;
+
+        // -- Scatter with scalars --
+
+        type ScalarList;
+        fn new_scalar_list() -> UniquePtr<ScalarList>;
+        fn scalar_list_add(list: Pin<&mut ScalarList>, s: UniquePtr<Scalar>);
+        /// Scatter scalar values to specified indices in a target table.
+        fn scatter_scalars(sources: Pin<&mut ScalarList>, indices: &column_view, target: &Table, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Scatter scalar values into target where boolean mask is true.
+        fn boolean_mask_scatter_scalars(sources: Pin<&mut ScalarList>, target: &Table, mask: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+
     }
 }

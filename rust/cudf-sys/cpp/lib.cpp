@@ -35,6 +35,7 @@
 #include <cudf/transpose.hpp>
 #include <cudf/labeling/label_bins.hpp>
 #include <cudf/io/orc.hpp>
+#include <cudf/io/json.hpp>
 
 #include <cudf/strings/attributes.hpp>
 #include <cudf/strings/case.hpp>
@@ -3731,6 +3732,63 @@ void write_orc(Table const& tbl, rust::Str filepath) {
   auto opts = cudf::io::orc_writer_options::builder(
       cudf::io::sink_info{path}, tbl.cached_view()).build();
   cudf::io::write_orc(opts);
+}
+
+// -- JSON I/O --
+
+std::unique_ptr<Table> read_json(rust::Str filepath, bool json_lines) {
+  std::string path(filepath.data(), filepath.size());
+  auto builder = cudf::io::json_reader_options::builder(cudf::io::source_info{path});
+  builder.lines(json_lines);
+  auto opts = builder.build();
+  auto result = cudf::io::read_json(opts);
+  return std::make_unique<Table>(std::move(result.tbl));
+}
+
+void write_json(Table const& tbl, rust::Str filepath, bool json_lines) {
+  std::string path(filepath.data(), filepath.size());
+  auto builder = cudf::io::json_writer_options::builder(
+      cudf::io::sink_info{path}, tbl.cached_view());
+  builder.lines(json_lines);
+  auto opts = builder.build();
+  cudf::io::write_json(opts);
+}
+
+// -- Scatter with scalars --
+
+void ScalarList::add(std::unique_ptr<Scalar> s) {
+  owned_.push_back(std::move(s));
+}
+
+std::vector<std::reference_wrapper<cudf::scalar const>> ScalarList::refs() const {
+  std::vector<std::reference_wrapper<cudf::scalar const>> result;
+  result.reserve(owned_.size());
+  for (auto const& s : owned_) {
+    result.push_back(std::cref(s->inner()));
+  }
+  return result;
+}
+
+std::unique_ptr<ScalarList> new_scalar_list() {
+  return std::make_unique<ScalarList>();
+}
+
+void scalar_list_add(ScalarList& list, std::unique_ptr<Scalar> s) {
+  list.add(std::move(s));
+}
+
+std::unique_ptr<Table> scatter_scalars(ScalarList& sources, cudf::column_view const& indices, Table const& target, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto refs = sources.refs();
+  auto result = cudf::scatter(refs, indices, target.cached_view(), s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Table> boolean_mask_scatter_scalars(ScalarList& sources, Table const& target, cudf::column_view const& mask, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto refs = sources.refs();
+  auto result = cudf::boolean_mask_scatter(refs, target.cached_view(), mask, s);
+  return std::make_unique<Table>(std::move(result));
 }
 
 }  // namespace cudf_sys

@@ -1071,4 +1071,25 @@ std::unique_ptr<Column> struct_column_builder_build(StructColumnBuilder& builder
 std::unique_ptr<Table> read_orc(rust::Str filepath);
 void write_orc(Table const& tbl, rust::Str filepath);
 
+// -- JSON I/O --
+
+std::unique_ptr<Table> read_json(rust::Str filepath, bool json_lines);
+void write_json(Table const& tbl, rust::Str filepath, bool json_lines);
+
+// -- Scatter with scalars --
+
+class ScalarList {
+ public:
+  void add(std::unique_ptr<Scalar> s);
+  std::vector<std::reference_wrapper<cudf::scalar const>> refs() const;
+
+ private:
+  std::vector<std::unique_ptr<Scalar>> owned_;
+};
+
+std::unique_ptr<ScalarList> new_scalar_list();
+void scalar_list_add(ScalarList& list, std::unique_ptr<Scalar> s);
+std::unique_ptr<Table> scatter_scalars(ScalarList& sources, cudf::column_view const& indices, Table const& target, std::size_t stream);
+std::unique_ptr<Table> boolean_mask_scatter_scalars(ScalarList& sources, Table const& target, cudf::column_view const& mask, std::size_t stream);
+
 }  // namespace cudf_sys
