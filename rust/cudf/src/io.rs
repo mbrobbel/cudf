@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use crate::Table;
+use crate::table::Table;
 
 /// CSV read and write operations.
 pub mod csv {
@@ -178,7 +178,9 @@ pub mod orc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Column, Scalar, TableBuilder};
+    use crate::column::Column;
+    use crate::scalar::Scalar;
+    use crate::table::TableBuilder;
 
     fn make_test_table() -> Table {
         let c1 = Column::from_scalar(&Scalar::from_i32(42), 3);

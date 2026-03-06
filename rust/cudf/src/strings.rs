@@ -784,7 +784,8 @@ pub mod char_types {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Column, Scalar};
+    use crate::column::Column;
+    use crate::scalar::Scalar;
 
     fn make_string_col(values: &[&str]) -> Column {
         Column::from_strings(values)
