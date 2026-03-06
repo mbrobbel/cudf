@@ -1779,6 +1779,18 @@ pub mod ffi {
         /// Write a table to a JSON file. Set json_lines=true for JSON Lines format.
         fn write_json(tbl: &Table, filepath: &str, json_lines: bool) -> Result<()>;
 
+        // -- Distinct count --
+
+        /// Count distinct values in a column.
+        fn distinct_count_column(col: &column_view, null_policy: i32, nan_is_null: bool, stream: usize) -> i32;
+        /// Count distinct rows in a table.
+        fn distinct_count_table(tbl: &Table, null_equality: i32, stream: usize) -> i32;
+
+        // -- Avro I/O --
+
+        /// Read an Avro file into a table.
+        fn read_avro(filepath: &str) -> Result<UniquePtr<Table>>;
+
         // -- Scatter with scalars --
 
         type ScalarList;

@@ -144,6 +144,18 @@ pub mod json {
     }
 }
 
+/// Avro read operations.
+pub mod avro {
+    use super::*;
+
+    /// Reads an Avro file into a [`Table`].
+    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let tbl = cudf_sys::ffi::read_avro(path_str)?;
+        Ok(Table(tbl))
+    }
+}
+
 /// ORC read and write operations.
 pub mod orc {
     use super::*;

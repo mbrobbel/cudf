@@ -1076,6 +1076,15 @@ void write_orc(Table const& tbl, rust::Str filepath);
 std::unique_ptr<Table> read_json(rust::Str filepath, bool json_lines);
 void write_json(Table const& tbl, rust::Str filepath, bool json_lines);
 
+// -- Distinct count --
+
+int32_t distinct_count_column(cudf::column_view const& col, int32_t null_policy, bool nan_is_null, std::size_t stream);
+int32_t distinct_count_table(Table const& tbl, int32_t null_equality, std::size_t stream);
+
+// -- Avro I/O --
+
+std::unique_ptr<Table> read_avro(rust::Str filepath);
+
 // -- Scatter with scalars --
 
 class ScalarList {

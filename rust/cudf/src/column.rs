@@ -503,6 +503,20 @@ impl ColumnView<'_> {
         Ok(Column(result))
     }
 
+    /// Counts the number of distinct values in this column.
+    ///
+    /// - `include_nulls`: whether null values count as a distinct value.
+    /// - `nan_is_null`: whether NaN values are treated as null.
+    pub fn distinct_count(&self, include_nulls: bool, nan_is_null: bool) -> usize {
+        let null_policy = if include_nulls { 1 } else { 0 }; // INCLUDE=1, EXCLUDE=0
+        cudf_sys::ffi::distinct_count_column(
+            self.0,
+            null_policy,
+            nan_is_null,
+            ds(),
+        ) as usize
+    }
+
     // -- Binary ops (convenience) --
 
     /// Element-wise addition with another column.

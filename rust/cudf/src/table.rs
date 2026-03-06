@@ -1118,6 +1118,18 @@ impl Table {
         self.partition_by_map_offsets_on(partition_map, num_partitions, Stream::default_stream())
     }
 
+    /// Counts the number of distinct rows in this table.
+    ///
+    /// `nulls_equal`: if true, all nulls are considered equal (count as one distinct value).
+    pub fn distinct_count(&self, nulls_equal: bool) -> usize {
+        let ne = if nulls_equal { 0 } else { 1 }; // EQUAL=0, UNEQUAL=1
+        cudf_sys::ffi::distinct_count_table(
+            &self.0,
+            ne,
+            Stream::default_stream().as_raw(),
+        ) as usize
+    }
+
     // -- Bitmask combining --
 
     /// Bitwise AND of all column null masks. Returns a BOOL8 column where

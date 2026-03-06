@@ -36,6 +36,8 @@
 #include <cudf/labeling/label_bins.hpp>
 #include <cudf/io/orc.hpp>
 #include <cudf/io/json.hpp>
+#include <cudf/io/avro.hpp>
+#include <cudf/stream_compaction.hpp>
 
 #include <cudf/strings/attributes.hpp>
 #include <cudf/strings/case.hpp>
@@ -3752,6 +3754,30 @@ void write_json(Table const& tbl, rust::Str filepath, bool json_lines) {
   builder.lines(json_lines);
   auto opts = builder.build();
   cudf::io::write_json(opts);
+}
+
+// -- Distinct count --
+
+int32_t distinct_count_column(cudf::column_view const& col, int32_t null_policy, bool nan_is_null, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto np = static_cast<cudf::null_policy>(null_policy);
+  auto nan_p = nan_is_null ? cudf::nan_policy::NAN_IS_NULL : cudf::nan_policy::NAN_IS_VALID;
+  return cudf::distinct_count(col, np, nan_p, s);
+}
+
+int32_t distinct_count_table(Table const& tbl, int32_t null_equality, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto ne = static_cast<cudf::null_equality>(null_equality);
+  return cudf::distinct_count(tbl.cached_view(), ne, s);
+}
+
+// -- Avro I/O --
+
+std::unique_ptr<Table> read_avro(rust::Str filepath) {
+  std::string path(filepath.data(), filepath.size());
+  auto opts = cudf::io::avro_reader_options::builder(cudf::io::source_info{path}).build();
+  auto result = cudf::io::read_avro(opts);
+  return std::make_unique<Table>(std::move(result.tbl));
 }
 
 // -- Scatter with scalars --
