@@ -17,12 +17,11 @@ impl Stream {
         Self(cudf_sys::ffi::get_default_stream())
     }
 
-    /// Creates a `Stream` from a raw `cudaStream_t` pointer.
+    /// Creates a `Stream` from a raw `cudaStream_t` handle.
     ///
-    /// # Safety
-    /// The caller must ensure the stream handle is valid for the
+    /// The caller must ensure the stream handle remains valid for the
     /// duration of any operation using this `Stream`.
-    pub unsafe fn from_raw(raw: usize) -> Self {
+    pub fn from_raw(raw: usize) -> Self {
         Self(raw)
     }
 

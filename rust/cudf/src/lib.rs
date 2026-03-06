@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Safe Rust bindings for [libcudf](https://github.com/rapidsai/cudf),
 //! the RAPIDS GPU DataFrame library.
 //!
@@ -51,15 +53,6 @@ use data_type::DataType;
 use error::Result;
 use scalar::Scalar;
 use stream::Stream;
-
-/// Zero-cost reinterpretation of a `#[repr(i32)]` enum slice as `&[i32]`.
-///
-/// # Safety
-/// `T` must be a `#[repr(i32)]` type with the same size and alignment as `i32`.
-pub(crate) unsafe fn enum_slice_as_i32<T>(slice: &[T]) -> &[i32] {
-    debug_assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
-    unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const i32, slice.len()) }
-}
 
 // -- Null mask utilities --
 

@@ -2016,3 +2016,48 @@ pub mod ffi {
 
     }
 }
+
+// SAFETY: cudf::column wraps GPU memory which is globally accessible from any
+// CPU thread. The CXX UniquePtr ensures exclusive ownership.
+unsafe impl Send for ffi::Column {}
+// SAFETY: &Column only allows immutable access through the FFI.
+unsafe impl Sync for ffi::Column {}
+
+// SAFETY: cudf::table wraps GPU memory which is globally accessible from any
+// CPU thread. The CXX UniquePtr ensures exclusive ownership.
+unsafe impl Send for ffi::Table {}
+// SAFETY: &Table only allows immutable access through the FFI.
+unsafe impl Sync for ffi::Table {}
+
+/// Converts a `TypeId` raw i32 value from C++ into the corresponding enum variant.
+///
+/// Returns `None` if the value is out of range.
+pub fn type_id_from_i32(value: i32) -> Option<ffi::TypeId> {
+    if value >= 0 && value < ffi::TypeId::NUM_TYPE_IDS.repr {
+        // SAFETY: TypeId is #[repr(i32)] and we verified the value is in range.
+        Some(unsafe { std::mem::transmute::<i32, ffi::TypeId>(value) })
+    } else {
+        None
+    }
+}
+
+/// Zero-cost reinterpretation of a `#[repr(i32)]` enum slice as `&[i32]`.
+///
+/// This is safe because `Order`, `NullOrder`, and `AggregationKind` are all
+/// `#[repr(i32)]` CXX shared enums with the same size and alignment as `i32`.
+pub fn orders_as_i32(slice: &[ffi::Order]) -> &[i32] {
+    // SAFETY: Order is #[repr(i32)] with identical size and alignment.
+    unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<i32>(), slice.len()) }
+}
+
+/// Zero-cost reinterpretation of a `NullOrder` slice as `&[i32]`.
+pub fn null_orders_as_i32(slice: &[ffi::NullOrder]) -> &[i32] {
+    // SAFETY: NullOrder is #[repr(i32)] with identical size and alignment.
+    unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<i32>(), slice.len()) }
+}
+
+/// Zero-cost reinterpretation of an `AggregationKind` slice as `&[i32]`.
+pub fn agg_kinds_as_i32(slice: &[ffi::AggregationKind]) -> &[i32] {
+    // SAFETY: AggregationKind is #[repr(i32)] with identical size and alignment.
+    unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<i32>(), slice.len()) }
+}

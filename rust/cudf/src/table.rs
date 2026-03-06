@@ -16,10 +16,6 @@ use crate::stream::Stream;
 /// frees the underlying GPU memory for all columns.
 pub struct Table(pub(crate) UniquePtr<cudf_sys::ffi::Table>);
 
-// GPU memory is globally accessible from any CPU thread.
-unsafe impl Send for Table {}
-unsafe impl Sync for Table {}
-
 impl Default for Table {
     /// Creates an empty table with zero columns and zero rows.
     fn default() -> Self {
@@ -75,8 +71,8 @@ impl Table {
 
     /// Sorts the table on a custom CUDA stream.
     pub fn sort_on(&self, orders: &[Order], nulls: &[NullOrder], stream: Stream) -> Result<Table> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let t = cudf_sys::ffi::sort_table(&self.0, orders_i32, nulls_i32, stream.as_raw())?;
         Ok(Table(t))
     }
@@ -103,8 +99,8 @@ impl Table {
         nulls: &[NullOrder],
         stream: Stream,
     ) -> Result<Column> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let col = cudf_sys::ffi::sorted_order(&self.0, orders_i32, nulls_i32, stream.as_raw())?;
         Ok(Column(col))
     }
@@ -121,8 +117,8 @@ impl Table {
         nulls: &[NullOrder],
         stream: Stream,
     ) -> Result<bool> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         cudf_sys::ffi::is_sorted_table(&self.0, orders_i32, nulls_i32, stream.as_raw())
             .map_err(Into::into)
     }
@@ -308,7 +304,7 @@ impl Table {
                 len: value_columns.len(),
             });
         }
-        let agg_kinds = unsafe { crate::enum_slice_as_i32(aggs) };
+        let agg_kinds = cudf_sys::agg_kinds_as_i32(aggs);
         let result = cudf_sys::ffi::groupby_multi(
             &self.0,
             key_columns,
@@ -479,8 +475,8 @@ impl Table {
         null_orders: &[NullOrder],
         stream: Stream,
     ) -> Result<Table> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(null_orders) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(null_orders);
         let tbl = cudf_sys::ffi::merge_tables(
             &self.0,
             &right.0,
@@ -815,8 +811,8 @@ impl Table {
         nulls: &[NullOrder],
         stream: Stream,
     ) -> Result<Column> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let c = cudf_sys::ffi::lower_bound(
             &self.0,
             &needles.0,
@@ -845,8 +841,8 @@ impl Table {
         nulls: &[NullOrder],
         stream: Stream,
     ) -> Result<Column> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let c = cudf_sys::ffi::upper_bound(
             &self.0,
             &needles.0,
@@ -861,32 +857,32 @@ impl Table {
 
     /// Stable sorted order (preserves order of equal elements).
     pub fn stable_sorted_order(&self, orders: &[Order], nulls: &[NullOrder]) -> Result<Column> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let c = cudf_sys::ffi::stable_sorted_order(&self.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 
     /// Stable sort (preserves order of equal elements).
     pub fn stable_sort(&self, orders: &[Order], nulls: &[NullOrder]) -> Result<Table> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let t = cudf_sys::ffi::stable_sort_table(&self.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
         Ok(Table(t))
     }
 
     /// Sort this (values) table by a separate keys table.
     pub fn sort_by_key(&self, keys: &Table, orders: &[Order], nulls: &[NullOrder]) -> Result<Table> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let t = cudf_sys::ffi::sort_by_key(&self.0, &keys.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
         Ok(Table(t))
     }
 
     /// Stable sort this (values) table by a separate keys table.
     pub fn stable_sort_by_key(&self, keys: &Table, orders: &[Order], nulls: &[NullOrder]) -> Result<Table> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let t = cudf_sys::ffi::stable_sort_by_key(&self.0, &keys.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
         Ok(Table(t))
     }
@@ -898,8 +894,8 @@ impl Table {
         orders: &[Order],
         nulls: &[NullOrder],
     ) -> Result<Column> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let c = cudf_sys::ffi::segmented_sorted_order(&self.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
@@ -911,8 +907,8 @@ impl Table {
         orders: &[Order],
         nulls: &[NullOrder],
     ) -> Result<Column> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let c = cudf_sys::ffi::stable_segmented_sorted_order(&self.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
@@ -925,8 +921,8 @@ impl Table {
         orders: &[Order],
         nulls: &[NullOrder],
     ) -> Result<Table> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let t = cudf_sys::ffi::segmented_sort_by_key(&self.0, &keys.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
         Ok(Table(t))
     }
@@ -939,8 +935,8 @@ impl Table {
         orders: &[Order],
         nulls: &[NullOrder],
     ) -> Result<Table> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let t = cudf_sys::ffi::stable_segmented_sort_by_key(&self.0, &keys.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
         Ok(Table(t))
     }
@@ -954,8 +950,8 @@ impl Table {
         orders: &[Order],
         nulls: &[NullOrder],
     ) -> Result<Table> {
-        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
-        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let orders_i32 = cudf_sys::orders_as_i32(orders);
+        let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
         let t = cudf_sys::ffi::quantiles_table(&self.0, q, interp.repr, is_sorted, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
         Ok(Table(t))
     }
@@ -1194,7 +1190,7 @@ impl Table {
                 len: value_columns.len(),
             });
         }
-        let agg_kinds = unsafe { crate::enum_slice_as_i32(aggs) };
+        let agg_kinds = cudf_sys::agg_kinds_as_i32(aggs);
         let result = cudf_sys::ffi::groupby_scan(
             &self.0,
             key_columns,
@@ -1326,11 +1322,10 @@ impl Table {
         cudf_sys::ffi::table_has_nested_nullable_columns(&self.0)
     }
 
-    /// Creates a table from a DLPack DLManagedTensor pointer.
+    /// Creates a table from a DLPack `DLManagedTensor` pointer.
     ///
-    /// # Safety
     /// The `managed_tensor_ptr` must point to a valid `DLManagedTensor`.
-    pub unsafe fn from_dlpack(managed_tensor_ptr: usize) -> Result<Table> {
+    pub fn from_dlpack(managed_tensor_ptr: usize) -> Result<Table> {
         let t = cudf_sys::ffi::from_dlpack(
             managed_tensor_ptr,
             Stream::default_stream().as_raw(),

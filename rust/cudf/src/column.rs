@@ -33,10 +33,6 @@ pub enum MaskState {
 /// frees the underlying GPU memory.
 pub struct Column(pub(crate) UniquePtr<cudf_sys::ffi::Column>);
 
-// GPU memory is globally accessible from any CPU thread.
-unsafe impl Send for Column {}
-unsafe impl Sync for Column {}
-
 impl Column {
     /// Creates a column by repeating a scalar value `count` times.
     pub fn from_scalar(scalar: &Scalar, count: usize) -> Self {
@@ -139,8 +135,7 @@ impl Column {
     /// Returns the type identifier of the column.
     pub fn type_id(&self) -> TypeId {
         let id = cudf_sys::ffi::column_type_id(&self.0);
-        // Safety: type_id values from C++ are valid TypeId discriminants
-        unsafe { std::mem::transmute::<i32, TypeId>(id) }
+        cudf_sys::type_id_from_i32(id).expect("C++ returned invalid type_id")
     }
 
     /// Returns an immutable view of the column.
@@ -405,8 +400,7 @@ impl ColumnView<'_> {
     /// Returns the type identifier of the column.
     pub fn type_id(&self) -> TypeId {
         let id = cudf_sys::ffi::column_view_type_id(self.0);
-        // Safety: type_id values from C++ are valid TypeId discriminants
-        unsafe { std::mem::transmute::<i32, TypeId>(id) }
+        cudf_sys::type_id_from_i32(id).expect("C++ returned invalid type_id")
     }
 
     // -- Child column access --

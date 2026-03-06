@@ -276,8 +276,8 @@ pub(crate) fn scalar_to_ffi(s: &Scalar) -> UniquePtr<cudf_sys::ffi::Scalar> {
 /// Converts an FFI scalar back into a Rust `Scalar` enum.
 pub(crate) fn scalar_from_ffi(ffi: &UniquePtr<cudf_sys::ffi::Scalar>) -> Scalar {
     let type_id_raw = cudf_sys::ffi::scalar_type_id(ffi);
-    // Safety: type_id values from C++ are valid TypeId discriminants
-    let tid: TypeId = unsafe { std::mem::transmute::<i32, TypeId>(type_id_raw) };
+    let tid: TypeId = cudf_sys::type_id_from_i32(type_id_raw)
+        .expect("C++ returned invalid type_id");
     let valid = cudf_sys::ffi::scalar_is_valid(ffi);
 
     if !valid {
