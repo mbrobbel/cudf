@@ -665,6 +665,10 @@ std::unique_ptr<Table> strings_extract(cudf::column_view const& col, rust::Str p
 std::unique_ptr<Column> strings_extract_all_record(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
 std::unique_ptr<Column> strings_findall(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
 std::unique_ptr<Column> strings_find_re(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
+std::unique_ptr<Column> strings_capitalize(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_title(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_is_title(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_wrap(cudf::column_view const& col, int32_t width, std::size_t stream);
 
 // -- Lists operations --
 
@@ -673,6 +677,9 @@ std::unique_ptr<Column> lists_extract_element(cudf::column_view const& col, int3
 std::unique_ptr<Column> lists_sort(cudf::column_view const& col, bool ascending, bool nulls_last, std::size_t stream);
 std::unique_ptr<Column> lists_reverse(cudf::column_view const& col, std::size_t stream);
 std::unique_ptr<Column> lists_contains_nulls(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> lists_distinct(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> lists_concatenate_elements(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> lists_sequences(cudf::column_view const& starts, cudf::column_view const& sizes, std::size_t stream);
 
 // -- Explode --
 

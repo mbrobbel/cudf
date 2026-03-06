@@ -19,6 +19,16 @@ pub trait ListExt {
     fn list_reverse(&self) -> Result<Column>;
     /// Returns a BOOL8 column indicating whether each list contains nulls.
     fn list_contains_nulls(&self) -> Result<Column>;
+    /// Remove duplicate elements from each list.
+    fn list_distinct(&self) -> Result<Column>;
+    /// Concatenate nested list elements within each row (flatten one level).
+    fn list_concatenate_elements(&self) -> Result<Column>;
+}
+
+/// Generate sequences as list column from starts and sizes columns.
+pub fn list_sequences(starts: &ColumnView<'_>, sizes: &ColumnView<'_>) -> Result<Column> {
+    let c = cudf_sys::ffi::lists_sequences(starts.0, sizes.0, Stream::default_stream().as_raw())?;
+    Ok(Column(c))
 }
 
 impl ListExt for ColumnView<'_> {
@@ -40,6 +50,14 @@ impl ListExt for ColumnView<'_> {
     }
     fn list_contains_nulls(&self) -> Result<Column> {
         let c = cudf_sys::ffi::lists_contains_nulls(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_distinct(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::lists_distinct(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_concatenate_elements(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::lists_concatenate_elements(self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

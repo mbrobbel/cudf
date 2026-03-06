@@ -133,6 +133,14 @@ pub trait StringExt {
     fn str_findall(&self, pattern: &str) -> Result<Column>;
     /// Find first regex match position.
     fn str_find_re(&self, pattern: &str) -> Result<Column>;
+    /// Capitalizes the first character of each string.
+    fn capitalize(&self) -> Result<Column>;
+    /// Title-cases each string.
+    fn title(&self) -> Result<Column>;
+    /// Returns BOOL8 column indicating whether each string is title-cased.
+    fn is_title(&self) -> Result<Column>;
+    /// Wraps strings onto multiple lines shorter than `width`.
+    fn wrap(&self, width: i32) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -372,6 +380,22 @@ impl StringExt for ColumnView<'_> {
     }
     fn str_find_re(&self, pattern: &str) -> Result<Column> {
         let c = cudf_sys::ffi::strings_find_re(self.0, pattern, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn capitalize(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_capitalize(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn title(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_title(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn is_title(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_is_title(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn wrap(&self, width: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_wrap(self.0, width, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

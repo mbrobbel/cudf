@@ -52,6 +52,8 @@
 #include <cudf/strings/reverse.hpp>
 #include <cudf/strings/extract.hpp>
 #include <cudf/strings/findall.hpp>
+#include <cudf/strings/capitalize.hpp>
+#include <cudf/strings/wrap.hpp>
 #include <cudf/strings/strings_column_view.hpp>
 
 #include <cudf/lists/count_elements.hpp>
@@ -59,6 +61,9 @@
 #include <cudf/lists/sorting.hpp>
 #include <cudf/lists/reverse.hpp>
 #include <cudf/lists/contains.hpp>
+#include <cudf/lists/combine.hpp>
+#include <cudf/lists/filling.hpp>
+#include <cudf/lists/stream_compaction.hpp>
 #include <cudf/lists/explode.hpp>
 
 #include <cudf/rolling.hpp>
@@ -2131,6 +2136,34 @@ std::unique_ptr<Column> strings_find_re(cudf::column_view const& col, rust::Str 
   return std::make_unique<Column>(std::move(result));
 }
 
+std::unique_ptr<Column> strings_capitalize(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::capitalize(scv, cudf::string_scalar("", true, s), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_title(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::title(scv, cudf::strings::string_character_types::ALPHA, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_is_title(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::is_title(scv, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_wrap(cudf::column_view const& col, int32_t width, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::wrap(scv, width, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
 // -- Lists operations --
 
 std::unique_ptr<Column> lists_count_elements(cudf::column_view const& col, std::size_t stream) {
@@ -2167,6 +2200,25 @@ std::unique_ptr<Column> lists_contains_nulls(cudf::column_view const& col, std::
   rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
   cudf::lists_column_view lcv(col);
   auto result = cudf::lists::contains_nulls(lcv, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> lists_distinct(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view lcv(col);
+  auto result = cudf::lists::distinct(lcv, cudf::null_equality::EQUAL, cudf::nan_equality::ALL_EQUAL, cudf::duplicate_keep_option::KEEP_ANY, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> lists_concatenate_elements(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::lists::concatenate_list_elements(col, cudf::lists::concatenate_null_policy::IGNORE, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> lists_sequences(cudf::column_view const& starts, cudf::column_view const& sizes, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::lists::sequences(starts, sizes, s);
   return std::make_unique<Column>(std::move(result));
 }
 

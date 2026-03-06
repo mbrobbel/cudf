@@ -1262,6 +1262,14 @@ pub mod ffi {
         fn strings_findall(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
         /// Find first regex match position.
         fn strings_find_re(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Capitalizes the first character of each string.
+        fn strings_capitalize(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Title-cases each string (first char of each word uppercase).
+        fn strings_title(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Returns BOOL8 column indicating whether each string is title-cased.
+        fn strings_is_title(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Wraps strings onto multiple lines shorter than `width`.
+        fn strings_wrap(col: &column_view, width: i32, stream: usize) -> Result<UniquePtr<Column>>;
 
         // -- Lists operations --
 
@@ -1275,6 +1283,12 @@ pub mod ffi {
         fn lists_reverse(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Check if each list contains nulls.
         fn lists_contains_nulls(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Remove duplicates from each list.
+        fn lists_distinct(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Concatenate nested list elements within each row.
+        fn lists_concatenate_elements(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Generate sequences as lists from starts and sizes columns.
+        fn lists_sequences(starts: &column_view, sizes: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
 
         // -- Explode --
 
