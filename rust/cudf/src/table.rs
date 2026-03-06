@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
+//! GPU table types: owning [`Table`] and [`TableBuilder`].
+
 use cxx::UniquePtr;
 
 use crate::column::{Column, ColumnView};
@@ -126,12 +128,7 @@ impl Table {
     // -- Joins --
 
     /// Performs an inner join with another table.
-    pub fn inner_join(
-        &self,
-        right: &Table,
-        left_on: &[i32],
-        right_on: &[i32],
-    ) -> Result<Table> {
+    pub fn inner_join(&self, right: &Table, left_on: &[i32], right_on: &[i32]) -> Result<Table> {
         self.inner_join_on(right, left_on, right_on, Stream::default_stream())
     }
 
@@ -143,18 +140,12 @@ impl Table {
         right_on: &[i32],
         stream: Stream,
     ) -> Result<Table> {
-        let t =
-            cudf_sys::ffi::inner_join(&self.0, &right.0, left_on, right_on, stream.as_raw())?;
+        let t = cudf_sys::ffi::inner_join(&self.0, &right.0, left_on, right_on, stream.as_raw())?;
         Ok(Table(t))
     }
 
     /// Performs a left join with another table.
-    pub fn left_join(
-        &self,
-        right: &Table,
-        left_on: &[i32],
-        right_on: &[i32],
-    ) -> Result<Table> {
+    pub fn left_join(&self, right: &Table, left_on: &[i32], right_on: &[i32]) -> Result<Table> {
         self.left_join_on(right, left_on, right_on, Stream::default_stream())
     }
 
@@ -166,18 +157,12 @@ impl Table {
         right_on: &[i32],
         stream: Stream,
     ) -> Result<Table> {
-        let t =
-            cudf_sys::ffi::left_join(&self.0, &right.0, left_on, right_on, stream.as_raw())?;
+        let t = cudf_sys::ffi::left_join(&self.0, &right.0, left_on, right_on, stream.as_raw())?;
         Ok(Table(t))
     }
 
     /// Performs a full outer join with another table.
-    pub fn full_join(
-        &self,
-        right: &Table,
-        left_on: &[i32],
-        right_on: &[i32],
-    ) -> Result<Table> {
+    pub fn full_join(&self, right: &Table, left_on: &[i32], right_on: &[i32]) -> Result<Table> {
         self.full_join_on(right, left_on, right_on, Stream::default_stream())
     }
 
@@ -189,8 +174,7 @@ impl Table {
         right_on: &[i32],
         stream: Stream,
     ) -> Result<Table> {
-        let t =
-            cudf_sys::ffi::full_join(&self.0, &right.0, left_on, right_on, stream.as_raw())?;
+        let t = cudf_sys::ffi::full_join(&self.0, &right.0, left_on, right_on, stream.as_raw())?;
         Ok(Table(t))
     }
 
@@ -212,13 +196,8 @@ impl Table {
         right_on: &[i32],
         stream: Stream,
     ) -> Result<Table> {
-        let t = cudf_sys::ffi::left_semi_join(
-            &self.0,
-            &right.0,
-            left_on,
-            right_on,
-            stream.as_raw(),
-        )?;
+        let t =
+            cudf_sys::ffi::left_semi_join(&self.0, &right.0, left_on, right_on, stream.as_raw())?;
         Ok(Table(t))
     }
 
@@ -240,13 +219,8 @@ impl Table {
         right_on: &[i32],
         stream: Stream,
     ) -> Result<Table> {
-        let t = cudf_sys::ffi::left_anti_join(
-            &self.0,
-            &right.0,
-            left_on,
-            right_on,
-            stream.as_raw(),
-        )?;
+        let t =
+            cudf_sys::ffi::left_anti_join(&self.0, &right.0, left_on, right_on, stream.as_raw())?;
         Ok(Table(t))
     }
 
@@ -359,22 +333,22 @@ impl Table {
 
     // -- Hashing --
 
-    /// Computes MurmurHash3 32-bit hash of each row.
+    /// Computes `MurmurHash3` 32-bit hash of each row.
     pub fn murmur3(&self, seed: u32) -> Column {
         self.murmur3_on(seed, Stream::default_stream())
     }
 
-    /// MurmurHash3 on a custom CUDA stream.
+    /// `MurmurHash3` on a custom CUDA stream.
     pub fn murmur3_on(&self, seed: u32, stream: Stream) -> Column {
         Column(cudf_sys::ffi::hash_murmur3(&self.0, seed, stream.as_raw()))
     }
 
-    /// Computes XXHash64 hash of each row.
+    /// Computes `XXHash64` hash of each row.
     pub fn xxhash64(&self, seed: u64) -> Column {
         self.xxhash64_on(seed, Stream::default_stream())
     }
 
-    /// XXHash64 on a custom CUDA stream.
+    /// `XXHash64` on a custom CUDA stream.
     pub fn xxhash64_on(&self, seed: u64, stream: Stream) -> Column {
         Column(cudf_sys::ffi::hash_xxhash64(&self.0, seed, stream.as_raw()))
     }
@@ -405,13 +379,17 @@ impl Table {
         Ok(Column(c))
     }
 
-    /// MurmurHash3 128-bit hash (returns Table of two UINT64 columns).
+    /// `MurmurHash3` 128-bit hash (returns Table of two UINT64 columns).
     pub fn murmurhash3_x64_128(&self, seed: u64) -> Result<Table> {
-        let t = cudf_sys::ffi::hash_murmurhash3_x64_128(&self.0, seed, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::hash_murmurhash3_x64_128(
+            &self.0,
+            seed,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 
-    /// XXHash 32-bit hash of each row.
+    /// `XXHash` 32-bit hash of each row.
     pub fn xxhash_32(&self, seed: u32) -> Result<Column> {
         let c = cudf_sys::ffi::hash_xxhash_32(&self.0, seed, Stream::default_stream().as_raw())?;
         Ok(Column(c))
@@ -443,13 +421,18 @@ impl Table {
 
     /// Per-segment cumulative row bit count.
     pub fn segmented_row_bit_count(&self, segment_length: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::segmented_row_bit_count(&self.0, segment_length, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::segmented_row_bit_count(
+            &self.0,
+            segment_length,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
 
     /// Convert column elements to lists of bytes.
     pub fn byte_cast(col: &ColumnView<'_>, flip_endian: bool) -> Result<Column> {
-        let c = cudf_sys::ffi::byte_cast_column(col.0, flip_endian, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::byte_cast_column(col.0, flip_endian, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 
@@ -463,7 +446,13 @@ impl Table {
         orders: &[Order],
         null_orders: &[NullOrder],
     ) -> Result<Table> {
-        self.merge_on(right, key_columns, orders, null_orders, Stream::default_stream())
+        self.merge_on(
+            right,
+            key_columns,
+            orders,
+            null_orders,
+            Stream::default_stream(),
+        )
     }
 
     /// Merge on a custom CUDA stream.
@@ -558,11 +547,7 @@ impl Table {
     }
 
     /// Returns partition offsets for round-robin partitioning.
-    pub fn round_robin_offsets(
-        &self,
-        num_partitions: usize,
-        start: usize,
-    ) -> Result<Vec<usize>> {
+    pub fn round_robin_offsets(&self, num_partitions: usize, start: usize) -> Result<Vec<usize>> {
         self.round_robin_offsets_on(num_partitions, start, Stream::default_stream())
     }
 
@@ -650,7 +635,7 @@ impl Table {
         self.drop_nans_on(keys, Stream::default_stream())
     }
 
-    /// drop_nans on a custom CUDA stream.
+    /// `drop_nans` on a custom CUDA stream.
     pub fn drop_nans_on(&self, keys: &[i32], stream: Stream) -> Result<Table> {
         let t = cudf_sys::ffi::drop_nans(&self.0, keys, stream.as_raw())?;
         Ok(Table(t))
@@ -661,7 +646,7 @@ impl Table {
         self.drop_nulls_with_threshold_on(keys, threshold, Stream::default_stream())
     }
 
-    /// drop_nulls_with_threshold on a custom CUDA stream.
+    /// `drop_nulls_with_threshold` on a custom CUDA stream.
     pub fn drop_nulls_with_threshold_on(
         &self,
         keys: &[i32],
@@ -704,7 +689,7 @@ impl Table {
         self.stable_distinct_on(keys, Stream::default_stream())
     }
 
-    /// stable_distinct on a custom CUDA stream.
+    /// `stable_distinct` on a custom CUDA stream.
     pub fn stable_distinct_on(&self, keys: &[i32], stream: Stream) -> Result<Table> {
         let t = cudf_sys::ffi::stable_distinct_table(&self.0, keys, 0, 0, 0, stream.as_raw())?;
         Ok(Table(t))
@@ -724,12 +709,7 @@ impl Table {
         scatter_map: &ColumnView<'_>,
         stream: Stream,
     ) -> Result<Table> {
-        let t = cudf_sys::ffi::scatter_table(
-            &source.0,
-            scatter_map.0,
-            &self.0,
-            stream.as_raw(),
-        )?;
+        let t = cudf_sys::ffi::scatter_table(&source.0, scatter_map.0, &self.0, stream.as_raw())?;
         Ok(Table(t))
     }
 
@@ -859,7 +839,12 @@ impl Table {
     pub fn stable_sorted_order(&self, orders: &[Order], nulls: &[NullOrder]) -> Result<Column> {
         let orders_i32 = cudf_sys::orders_as_i32(orders);
         let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
-        let c = cudf_sys::ffi::stable_sorted_order(&self.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::stable_sorted_order(
+            &self.0,
+            orders_i32,
+            nulls_i32,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
 
@@ -867,23 +852,50 @@ impl Table {
     pub fn stable_sort(&self, orders: &[Order], nulls: &[NullOrder]) -> Result<Table> {
         let orders_i32 = cudf_sys::orders_as_i32(orders);
         let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
-        let t = cudf_sys::ffi::stable_sort_table(&self.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::stable_sort_table(
+            &self.0,
+            orders_i32,
+            nulls_i32,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 
     /// Sort this (values) table by a separate keys table.
-    pub fn sort_by_key(&self, keys: &Table, orders: &[Order], nulls: &[NullOrder]) -> Result<Table> {
+    pub fn sort_by_key(
+        &self,
+        keys: &Table,
+        orders: &[Order],
+        nulls: &[NullOrder],
+    ) -> Result<Table> {
         let orders_i32 = cudf_sys::orders_as_i32(orders);
         let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
-        let t = cudf_sys::ffi::sort_by_key(&self.0, &keys.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::sort_by_key(
+            &self.0,
+            &keys.0,
+            orders_i32,
+            nulls_i32,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 
     /// Stable sort this (values) table by a separate keys table.
-    pub fn stable_sort_by_key(&self, keys: &Table, orders: &[Order], nulls: &[NullOrder]) -> Result<Table> {
+    pub fn stable_sort_by_key(
+        &self,
+        keys: &Table,
+        orders: &[Order],
+        nulls: &[NullOrder],
+    ) -> Result<Table> {
         let orders_i32 = cudf_sys::orders_as_i32(orders);
         let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
-        let t = cudf_sys::ffi::stable_sort_by_key(&self.0, &keys.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::stable_sort_by_key(
+            &self.0,
+            &keys.0,
+            orders_i32,
+            nulls_i32,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 
@@ -896,7 +908,13 @@ impl Table {
     ) -> Result<Column> {
         let orders_i32 = cudf_sys::orders_as_i32(orders);
         let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
-        let c = cudf_sys::ffi::segmented_sorted_order(&self.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::segmented_sorted_order(
+            &self.0,
+            segment_offsets.0,
+            orders_i32,
+            nulls_i32,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
 
@@ -909,7 +927,13 @@ impl Table {
     ) -> Result<Column> {
         let orders_i32 = cudf_sys::orders_as_i32(orders);
         let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
-        let c = cudf_sys::ffi::stable_segmented_sorted_order(&self.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::stable_segmented_sorted_order(
+            &self.0,
+            segment_offsets.0,
+            orders_i32,
+            nulls_i32,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
 
@@ -923,7 +947,14 @@ impl Table {
     ) -> Result<Table> {
         let orders_i32 = cudf_sys::orders_as_i32(orders);
         let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
-        let t = cudf_sys::ffi::segmented_sort_by_key(&self.0, &keys.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::segmented_sort_by_key(
+            &self.0,
+            &keys.0,
+            segment_offsets.0,
+            orders_i32,
+            nulls_i32,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 
@@ -937,7 +968,14 @@ impl Table {
     ) -> Result<Table> {
         let orders_i32 = cudf_sys::orders_as_i32(orders);
         let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
-        let t = cudf_sys::ffi::stable_segmented_sort_by_key(&self.0, &keys.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::stable_segmented_sort_by_key(
+            &self.0,
+            &keys.0,
+            segment_offsets.0,
+            orders_i32,
+            nulls_i32,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 
@@ -952,7 +990,15 @@ impl Table {
     ) -> Result<Table> {
         let orders_i32 = cudf_sys::orders_as_i32(orders);
         let nulls_i32 = cudf_sys::null_orders_as_i32(nulls);
-        let t = cudf_sys::ffi::quantiles_table(&self.0, q, interp.repr, is_sorted, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::quantiles_table(
+            &self.0,
+            q,
+            interp.repr,
+            is_sorted,
+            orders_i32,
+            nulls_i32,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 
@@ -960,7 +1006,12 @@ impl Table {
 
     /// Scatter rows from source table into this table using boolean mask.
     pub fn boolean_mask_scatter(&self, source: &Table, mask: &ColumnView<'_>) -> Result<Table> {
-        let t = cudf_sys::ffi::boolean_mask_scatter_table(&source.0, &self.0, mask.0, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::boolean_mask_scatter_table(
+            &source.0,
+            &self.0,
+            mask.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 
@@ -1006,7 +1057,11 @@ impl Table {
 
     /// Repeat table rows using per-row counts from a column.
     pub fn repeat_by_column(&self, counts: &ColumnView<'_>) -> Result<Table> {
-        let t = cudf_sys::ffi::repeat_table_column(&self.0, counts.0, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::repeat_table_column(
+            &self.0,
+            counts.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
 
@@ -1028,7 +1083,7 @@ impl Table {
         self.explode_position_on(column_idx, Stream::default_stream())
     }
 
-    /// explode_position on a custom CUDA stream.
+    /// `explode_position` on a custom CUDA stream.
     pub fn explode_position_on(&self, column_idx: usize, stream: Stream) -> Result<Table> {
         let t = cudf_sys::ffi::explode_position_table(&self.0, column_idx as i32, stream.as_raw())?;
         Ok(Table(t))
@@ -1039,7 +1094,7 @@ impl Table {
         self.explode_outer_on(column_idx, Stream::default_stream())
     }
 
-    /// explode_outer on a custom CUDA stream.
+    /// `explode_outer` on a custom CUDA stream.
     pub fn explode_outer_on(&self, column_idx: usize, stream: Stream) -> Result<Table> {
         let t = cudf_sys::ffi::explode_outer_table(&self.0, column_idx as i32, stream.as_raw())?;
         Ok(Table(t))
@@ -1050,9 +1105,13 @@ impl Table {
         self.explode_outer_position_on(column_idx, Stream::default_stream())
     }
 
-    /// explode_outer_position on a custom CUDA stream.
+    /// `explode_outer_position` on a custom CUDA stream.
     pub fn explode_outer_position_on(&self, column_idx: usize, stream: Stream) -> Result<Table> {
-        let t = cudf_sys::ffi::explode_outer_position_table(&self.0, column_idx as i32, stream.as_raw())?;
+        let t = cudf_sys::ffi::explode_outer_position_table(
+            &self.0,
+            column_idx as i32,
+            stream.as_raw(),
+        )?;
         Ok(Table(t))
     }
 
@@ -1063,9 +1122,15 @@ impl Table {
         self.gather_checked_on(indices, nullify_oob, Stream::default_stream())
     }
 
-    /// gather_checked on a custom CUDA stream.
-    pub fn gather_checked_on(&self, indices: &ColumnView<'_>, nullify_oob: bool, stream: Stream) -> Result<Table> {
-        let t = cudf_sys::ffi::gather_table_checked(&self.0, indices.0, nullify_oob, stream.as_raw())?;
+    /// `gather_checked` on a custom CUDA stream.
+    pub fn gather_checked_on(
+        &self,
+        indices: &ColumnView<'_>,
+        nullify_oob: bool,
+        stream: Stream,
+    ) -> Result<Table> {
+        let t =
+            cudf_sys::ffi::gather_table_checked(&self.0, indices.0, nullify_oob, stream.as_raw())?;
         Ok(Table(t))
     }
 
@@ -1089,7 +1154,7 @@ impl Table {
         self.partition_by_map_on(partition_map, num_partitions, Stream::default_stream())
     }
 
-    /// partition_by_map on a custom CUDA stream.
+    /// `partition_by_map` on a custom CUDA stream.
     pub fn partition_by_map_on(
         &self,
         partition_map: &ColumnView<'_>,
@@ -1118,12 +1183,8 @@ impl Table {
     ///
     /// `nulls_equal`: if true, all nulls are considered equal (count as one distinct value).
     pub fn distinct_count(&self, nulls_equal: bool) -> usize {
-        let ne = if nulls_equal { 0 } else { 1 }; // EQUAL=0, UNEQUAL=1
-        cudf_sys::ffi::distinct_count_table(
-            &self.0,
-            ne,
-            Stream::default_stream().as_raw(),
-        ) as usize
+        let ne = i32::from(!nulls_equal); // EQUAL=0, UNEQUAL=1
+        cudf_sys::ffi::distinct_count_table(&self.0, ne, Stream::default_stream().as_raw()) as usize
     }
 
     // -- Bitmask combining --
@@ -1131,24 +1192,18 @@ impl Table {
     /// Bitwise AND of all column null masks. Returns a BOOL8 column where
     /// `true` means the row is valid in ALL columns.
     pub fn bitmask_and_to_bools(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::bitmask_and_to_bools(
-            &self.0,
-            Stream::default_stream().as_raw(),
-        )?;
+        let c = cudf_sys::ffi::bitmask_and_to_bools(&self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 
     /// Bitwise OR of all column null masks. Returns a BOOL8 column where
     /// `true` means the row is valid in ANY column.
     pub fn bitmask_or_to_bools(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::bitmask_or_to_bools(
-            &self.0,
-            Stream::default_stream().as_raw(),
-        )?;
+        let c = cudf_sys::ffi::bitmask_or_to_bools(&self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 
-    /// partition_by_map_offsets on a custom CUDA stream.
+    /// `partition_by_map_offsets` on a custom CUDA stream.
     pub fn partition_by_map_offsets_on(
         &self,
         partition_map: &ColumnView<'_>,
@@ -1209,7 +1264,13 @@ impl Table {
         offsets: &[i32],
         fill_values: &[Scalar],
     ) -> Result<Table> {
-        self.groupby_shift_on(key_columns, value_columns, offsets, fill_values, Stream::default_stream())
+        self.groupby_shift_on(
+            key_columns,
+            value_columns,
+            offsets,
+            fill_values,
+            Stream::default_stream(),
+        )
     }
 
     /// Grouped shift on a custom CUDA stream.
@@ -1247,10 +1308,15 @@ impl Table {
         value_columns: &[i32],
         policies: &[i32],
     ) -> Result<Table> {
-        self.groupby_replace_nulls_on(key_columns, value_columns, policies, Stream::default_stream())
+        self.groupby_replace_nulls_on(
+            key_columns,
+            value_columns,
+            policies,
+            Stream::default_stream(),
+        )
     }
 
-    /// Grouped replace_nulls on a custom CUDA stream.
+    /// Grouped `replace_nulls` on a custom CUDA stream.
     pub fn groupby_replace_nulls_on(
         &self,
         key_columns: &[i32],
@@ -1272,12 +1338,8 @@ impl Table {
 
     /// Counts consecutive unique rows in the table.
     pub fn unique_count(&self, nulls_equal: bool) -> usize {
-        let ne = if nulls_equal { 0 } else { 1 };
-        cudf_sys::ffi::unique_count_table(
-            &self.0,
-            ne,
-            Stream::default_stream().as_raw(),
-        ) as usize
+        let ne = i32::from(!nulls_equal);
+        cudf_sys::ffi::unique_count_table(&self.0, ne, Stream::default_stream().as_raw()) as usize
     }
 
     // -- Drop NaNs with threshold --
@@ -1295,16 +1357,12 @@ impl Table {
 
     // -- Approximate distinct count --
 
-    /// Estimates the approximate number of distinct rows using HyperLogLog.
+    /// Estimates the approximate number of distinct rows using `HyperLogLog`.
     ///
     /// `precision` controls accuracy vs memory (4-18, default 12).
     /// Standard error ≈ 1.04 / sqrt(2^precision).
     pub fn approx_distinct_count(&self, precision: i32) -> usize {
-        cudf_sys::ffi::approx_distinct_count(
-            &self.0,
-            precision,
-            Stream::default_stream().as_raw(),
-        )
+        cudf_sys::ffi::approx_distinct_count(&self.0, precision, Stream::default_stream().as_raw())
     }
 
     /// Returns true if this table contains any nested columns (LIST, STRUCT).
@@ -1322,37 +1380,28 @@ impl Table {
         cudf_sys::ffi::table_has_nested_nullable_columns(&self.0)
     }
 
-    /// Creates a table from a DLPack `DLManagedTensor` pointer.
+    /// Creates a table from a `DLPack` `DLManagedTensor` pointer.
     ///
     /// The `managed_tensor_ptr` must point to a valid `DLManagedTensor`.
     pub fn from_dlpack(managed_tensor_ptr: usize) -> Result<Table> {
-        let t = cudf_sys::ffi::from_dlpack(
-            managed_tensor_ptr,
-            Stream::default_stream().as_raw(),
-        )?;
+        let t = cudf_sys::ffi::from_dlpack(managed_tensor_ptr, Stream::default_stream().as_raw())?;
         Ok(Table(t))
     }
 
-    /// Converts this table into a DLPack DLManagedTensor pointer.
+    /// Converts this table into a `DLPack` `DLManagedTensor` pointer.
     ///
     /// All columns must have the same numeric type and zero null count.
     /// Returns the pointer as `usize`; the caller is responsible for calling
-    /// the DLManagedTensor's `deleter` to free it.
+    /// the `DLManagedTensor`'s `deleter` to free it.
     pub fn to_dlpack(&self) -> usize {
-        cudf_sys::ffi::to_dlpack(
-            &self.0,
-            Stream::default_stream().as_raw(),
-        )
+        cudf_sys::ffi::to_dlpack(&self.0, Stream::default_stream().as_raw())
     }
 
     /// Concatenates all columns in this table into a single column.
     ///
     /// All columns must have the same data type.
     pub fn concatenate_columns(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::concatenate_columns(
-            &self.0,
-            Stream::default_stream().as_raw(),
-        )?;
+        let c = cudf_sys::ffi::concatenate_columns(&self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 

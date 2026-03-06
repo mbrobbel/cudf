@@ -9,11 +9,14 @@ use crate::table::Table;
 
 /// CSV read and write operations.
 pub mod csv {
-    use super::*;
+    use super::{Path, Table};
 
     /// Reads a CSV file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         let tbl = cudf_sys::ffi::read_csv(path_str)?;
         Ok(Table(tbl))
     }
@@ -42,11 +45,11 @@ pub mod csv {
     }
 
     /// Reads a CSV file into a [`Table`] with the given options.
-    pub fn read_with_options<P: AsRef<Path>>(
-        path: P,
-        opts: &ReadOptions,
-    ) -> crate::Result<Table> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+    pub fn read_with_options<P: AsRef<Path>>(path: P, opts: &ReadOptions) -> crate::Result<Table> {
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         let tbl = cudf_sys::ffi::read_csv_with_options(
             path_str,
             opts.delimiter,
@@ -59,7 +62,10 @@ pub mod csv {
 
     /// Writes a [`Table`] to a CSV file.
     pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         cudf_sys::ffi::write_csv(&table.0, path_str)?;
         Ok(())
     }
@@ -90,7 +96,10 @@ pub mod csv {
         path: P,
         opts: &WriteOptions<'_>,
     ) -> crate::Result<()> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         cudf_sys::ffi::write_csv_with_options(
             &table.0,
             path_str,
@@ -104,18 +113,24 @@ pub mod csv {
 
 /// Parquet read and write operations.
 pub mod parquet {
-    use super::*;
+    use super::{Path, Table};
 
     /// Reads a Parquet file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         let tbl = cudf_sys::ffi::read_parquet(path_str)?;
         Ok(Table(tbl))
     }
 
     /// Writes a [`Table`] to a Parquet file.
     pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         cudf_sys::ffi::write_parquet(&table.0, path_str)?;
         Ok(())
     }
@@ -123,13 +138,16 @@ pub mod parquet {
 
 /// JSON read and write operations.
 pub mod json {
-    use super::*;
+    use super::{Path, Table};
 
     /// Reads a JSON file into a [`Table`].
     ///
     /// Set `json_lines` to `true` for JSON Lines (newline-delimited) format.
     pub fn read<P: AsRef<Path>>(path: P, json_lines: bool) -> crate::Result<Table> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         let tbl = cudf_sys::ffi::read_json(path_str, json_lines)?;
         Ok(Table(tbl))
     }
@@ -138,7 +156,10 @@ pub mod json {
     ///
     /// Set `json_lines` to `true` for JSON Lines (newline-delimited) format.
     pub fn write<P: AsRef<Path>>(table: &Table, path: P, json_lines: bool) -> crate::Result<()> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         cudf_sys::ffi::write_json(&table.0, path_str, json_lines)?;
         Ok(())
     }
@@ -146,11 +167,14 @@ pub mod json {
 
 /// Avro read operations.
 pub mod avro {
-    use super::*;
+    use super::{Path, Table};
 
     /// Reads an Avro file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         let tbl = cudf_sys::ffi::read_avro(path_str)?;
         Ok(Table(tbl))
     }
@@ -158,18 +182,24 @@ pub mod avro {
 
 /// ORC read and write operations.
 pub mod orc {
-    use super::*;
+    use super::{Path, Table};
 
     /// Reads an ORC file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         let tbl = cudf_sys::ffi::read_orc(path_str)?;
         Ok(Table(tbl))
     }
 
     /// Writes a [`Table`] to an ORC file.
     pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
-        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let path_str = path
+            .as_ref()
+            .to_str()
+            .ok_or(crate::error::Error::InvalidPath)?;
         cudf_sys::ffi::write_orc(&table.0, path_str)?;
         Ok(())
     }

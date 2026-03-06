@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
-//! Stream compaction operations: unique, distinct, drop_nans, drop_nulls.
+//! Stream compaction operations: unique, distinct, `drop_nans`, `drop_nulls`.
 
 pub use cudf_sys::ffi::DuplicateKeepOption;
 pub use cudf_sys::ffi::NanEquality;

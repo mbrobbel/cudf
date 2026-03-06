@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
-//! GroupBy aggregation operations.
+//! `GroupBy` aggregation operations.
 //!
-//! GroupBy is available as methods on [`Table`](crate::Table):
+//! `GroupBy` is available as methods on [`Table`](crate::Table):
 //! `table.groupby(...)`, `table.groupby_multi(...)`.
 
 /// Aggregation operation kind for groupby.

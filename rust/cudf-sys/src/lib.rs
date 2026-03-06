@@ -1,6 +1,16 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
+//! Low-level CXX FFI bindings for libcudf.
+//!
+//! This crate provides raw FFI wrappers; prefer the safe `cudf` crate.
+
+#![deny(clippy::undocumented_unsafe_blocks)]
+// CXX-generated shared enum variants and repr fields cannot carry doc comments.
+#![allow(missing_docs)]
+// CXX bridge functions may need many parameters to match C++ signatures.
+#![allow(clippy::too_many_arguments)]
+
 #[cxx::bridge(namespace = "cudf_sys")]
 pub mod ffi {
     /// Identifies a column's logical element type.
@@ -521,7 +531,11 @@ pub mod ffi {
         // -- Unary operations --
 
         /// Casts a column to a different type.
-        fn unary_cast(col: &column_view, target_type_id: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn unary_cast(
+            col: &column_view,
+            target_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Returns a BOOL8 column where true indicates a null value.
         fn unary_is_null(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
@@ -541,16 +555,32 @@ pub mod ffi {
         // -- Reduction --
 
         /// Computes the sum of all elements.
-        fn reduce_sum(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_sum(
+            col: &column_view,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Computes the minimum value.
-        fn reduce_min(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_min(
+            col: &column_view,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Computes the maximum value.
-        fn reduce_max(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_max(
+            col: &column_view,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Computes the product of all elements.
-        fn reduce_product(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_product(
+            col: &column_view,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Returns true if any element is non-zero.
         fn reduce_any(col: &column_view, stream: usize) -> Result<UniquePtr<Scalar>>;
@@ -587,7 +617,11 @@ pub mod ffi {
         // -- Filtering --
 
         /// Filters a table by a boolean mask column.
-        fn apply_boolean_mask(tbl: &Table, mask: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        fn apply_boolean_mask(
+            tbl: &Table,
+            mask: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         /// Drops rows where all columns are null.
         fn drop_nulls_all(tbl: &Table, stream: usize) -> Result<UniquePtr<Table>>;
@@ -627,7 +661,11 @@ pub mod ffi {
         // -- Copying --
 
         /// Gathers rows from a table using index column.
-        fn gather_table(tbl: &Table, indices: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        fn gather_table(
+            tbl: &Table,
+            indices: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         /// Creates an empty column with the same type as input.
         fn empty_like_column(col: &column_view) -> UniquePtr<Column>;
@@ -860,16 +898,32 @@ pub mod ffi {
         fn strings_to_upper(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Returns BOOL8 column indicating whether each string contains the target.
-        fn strings_contains(col: &column_view, target: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_contains(
+            col: &column_view,
+            target: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Returns BOOL8 column indicating whether each string starts with the target.
-        fn strings_starts_with(col: &column_view, target: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_starts_with(
+            col: &column_view,
+            target: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Returns BOOL8 column indicating whether each string ends with the target.
-        fn strings_ends_with(col: &column_view, target: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_ends_with(
+            col: &column_view,
+            target: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Returns INT32 column with position of first occurrence of target in each string.
-        fn strings_find(col: &column_view, target: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_find(
+            col: &column_view,
+            target: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Replaces occurrences of target with replacement in each string.
         fn strings_replace(
@@ -898,15 +952,21 @@ pub mod ffi {
         fn strings_from_integers(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Converts a string column to an integer column.
-        fn strings_to_integers(col: &column_view, output_type_id: i32, stream: usize)
-            -> Result<UniquePtr<Column>>;
+        fn strings_to_integers(
+            col: &column_view,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Converts a float column to a string column.
         fn strings_from_floats(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Converts a string column to a float column.
-        fn strings_to_floats(col: &column_view, output_type_id: i32, stream: usize)
-            -> Result<UniquePtr<Column>>;
+        fn strings_to_floats(
+            col: &column_view,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- String column construction --
 
@@ -1035,7 +1095,10 @@ pub mod ffi {
         fn datetime_days_in_month(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Returns the last day of the month for each timestamp (returns TIMESTAMP_DAYS).
-        fn datetime_last_day_of_month(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn datetime_last_day_of_month(
+            col: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Returns the quarter (1-4) for each timestamp (returns INT16).
         fn datetime_extract_quarter(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
@@ -1240,10 +1303,20 @@ pub mod ffi {
         ) -> Result<UniquePtr<Column>>;
 
         /// Extracts a slice [begin, end) of a column as a new owned column.
-        fn slice_column(col: &column_view, begin: i32, end: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn slice_column(
+            col: &column_view,
+            begin: i32,
+            end: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Extracts a slice [begin, end) of a table as a new owned table.
-        fn slice_table(tbl: &Table, begin: i32, end: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn slice_table(
+            tbl: &Table,
+            begin: i32,
+            end: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         /// Randomly samples rows from a table.
         fn sample_table(
@@ -1257,19 +1330,41 @@ pub mod ffi {
         // -- Additional reductions --
 
         /// Computes the mean of all elements.
-        fn reduce_mean(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_mean(
+            col: &column_view,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Computes the standard deviation.
-        fn reduce_std(col: &column_view, output_type_id: i32, ddof: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_std(
+            col: &column_view,
+            output_type_id: i32,
+            ddof: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Computes the variance.
-        fn reduce_var(col: &column_view, output_type_id: i32, ddof: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_var(
+            col: &column_view,
+            output_type_id: i32,
+            ddof: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Computes the median.
-        fn reduce_median(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_median(
+            col: &column_view,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Counts the number of unique elements.
-        fn reduce_nunique(col: &column_view, null_policy: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_nunique(
+            col: &column_view,
+            null_policy: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Prefix scan (cumulative operation).
         fn scan_column(
@@ -1306,43 +1401,102 @@ pub mod ffi {
         // -- String extras --
 
         /// Pads strings to a minimum width.
-        fn strings_pad(col: &column_view, width: i32, side: i32, fill_char: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_pad(
+            col: &column_view,
+            width: i32,
+            side: i32,
+            fill_char: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Zero-fills strings to a minimum width.
-        fn strings_zfill(col: &column_view, width: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_zfill(col: &column_view, width: i32, stream: usize)
+        -> Result<UniquePtr<Column>>;
 
         /// Extracts a substring [start, stop) with optional step.
-        fn strings_slice(col: &column_view, start: i32, stop: i32, step: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_slice(
+            col: &column_view,
+            start: i32,
+            stop: i32,
+            step: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Repeats each string N times.
-        fn strings_repeat(col: &column_view, repeat_times: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_repeat(
+            col: &column_view,
+            repeat_times: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Splits strings by a delimiter into a table of columns.
-        fn strings_split_to_table(col: &column_view, delimiter: &Scalar, maxsplit: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn strings_split_to_table(
+            col: &column_view,
+            delimiter: &Scalar,
+            maxsplit: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         /// Right-splits strings by a delimiter into a table of columns.
-        fn strings_rsplit_to_table(col: &column_view, delimiter: &Scalar, maxsplit: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn strings_rsplit_to_table(
+            col: &column_view,
+            delimiter: &Scalar,
+            maxsplit: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         /// Returns the Nth part after splitting by delimiter.
-        fn strings_split_part(col: &column_view, delimiter: &Scalar, index: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_split_part(
+            col: &column_view,
+            delimiter: &Scalar,
+            index: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Joins all strings in a column into a single string column of size 1.
-        fn strings_join(col: &column_view, separator: &Scalar, narep: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_join(
+            col: &column_view,
+            separator: &Scalar,
+            narep: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Concatenates string columns element-wise with a separator.
-        fn strings_concatenate_columns(tbl: &Table, separator: &Scalar, narep: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_concatenate_columns(
+            tbl: &Table,
+            separator: &Scalar,
+            narep: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// SQL LIKE pattern matching.
-        fn strings_like(col: &column_view, pattern: &str, escape_char: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_like(
+            col: &column_view,
+            pattern: &str,
+            escape_char: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Regex contains check.
-        fn strings_contains_re(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_contains_re(
+            col: &column_view,
+            pattern: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Regex match from start of string.
-        fn strings_matches_re(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_matches_re(
+            col: &column_view,
+            pattern: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Counts regex matches per string.
-        fn strings_count_re(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_count_re(
+            col: &column_view,
+            pattern: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Replaces regex matches with a replacement string.
         fn strings_replace_re(
@@ -1357,29 +1511,80 @@ pub mod ffi {
         /// Swap case (upper→lower, lower→upper).
         fn strings_swapcase(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Strip specified characters from sides of strings.
-        fn strings_strip_chars(col: &column_view, side: i32, to_strip: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_strip_chars(
+            col: &column_view,
+            side: i32,
+            to_strip: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Literal string replace with maxrepl.
-        fn strings_replace_literal(col: &column_view, target: &str, repl: &str, maxrepl: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_replace_literal(
+            col: &column_view,
+            target: &str,
+            repl: &str,
+            maxrepl: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Find first position of target in range [start, stop).
-        fn strings_find_str(col: &column_view, target: &str, start: i32, stop: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_find_str(
+            col: &column_view,
+            target: &str,
+            start: i32,
+            stop: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Find last position of target (reverse find).
-        fn strings_rfind(col: &column_view, target: &str, start: i32, stop: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_rfind(
+            col: &column_view,
+            target: &str,
+            start: i32,
+            stop: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Check if string contains literal target.
-        fn strings_contains_str(col: &column_view, target: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_contains_str(
+            col: &column_view,
+            target: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Check if string starts with literal target.
-        fn strings_starts_with_str(col: &column_view, target: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_starts_with_str(
+            col: &column_view,
+            target: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Check if string ends with literal target.
-        fn strings_ends_with_str(col: &column_view, target: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_ends_with_str(
+            col: &column_view,
+            target: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Reverse characters within each string.
         fn strings_reverse(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Regex extract groups into a Table (one column per group).
-        fn strings_extract(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Table>>;
+        fn strings_extract(
+            col: &column_view,
+            pattern: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Regex extract all matches into a lists column.
-        fn strings_extract_all_record(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_extract_all_record(
+            col: &column_view,
+            pattern: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Find all regex matches as a lists column.
-        fn strings_findall(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_findall(
+            col: &column_view,
+            pattern: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Find first regex match position.
-        fn strings_find_re(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_find_re(
+            col: &column_view,
+            pattern: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Capitalizes the first character of each string.
         fn strings_capitalize(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Title-cases each string (first char of each word uppercase).
@@ -1392,53 +1597,144 @@ pub mod ffi {
         // -- String character types --
 
         /// Check if all characters in each string match the given type bitmask.
-        fn strings_all_characters_of_type(col: &column_view, types: u32, verify_types: u32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_all_characters_of_type(
+            col: &column_view,
+            types: u32,
+            verify_types: u32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- String operations (new batch) --
 
         /// Regex split to table of columns.
-        fn strings_split_re(col: &column_view, pattern: &str, maxsplit: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn strings_split_re(
+            col: &column_view,
+            pattern: &str,
+            maxsplit: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Regex reverse split to table of columns.
-        fn strings_rsplit_re(col: &column_view, pattern: &str, maxsplit: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn strings_rsplit_re(
+            col: &column_view,
+            pattern: &str,
+            maxsplit: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Regex split to lists column.
-        fn strings_split_record_re(col: &column_view, pattern: &str, maxsplit: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_split_record_re(
+            col: &column_view,
+            pattern: &str,
+            maxsplit: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Regex reverse split to lists column.
-        fn strings_rsplit_record_re(col: &column_view, pattern: &str, maxsplit: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_rsplit_record_re(
+            col: &column_view,
+            pattern: &str,
+            maxsplit: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Partition around first delimiter into 3 columns.
-        fn strings_partition(col: &column_view, delimiter: &str, stream: usize) -> Result<UniquePtr<Table>>;
+        fn strings_partition(
+            col: &column_view,
+            delimiter: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Partition around last delimiter into 3 columns.
-        fn strings_rpartition(col: &column_view, delimiter: &str, stream: usize) -> Result<UniquePtr<Table>>;
+        fn strings_rpartition(
+            col: &column_view,
+            delimiter: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Regex replace with back-reference template.
-        fn strings_replace_with_backrefs(col: &column_view, pattern: &str, replacement: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_replace_with_backrefs(
+            col: &column_view,
+            pattern: &str,
+            replacement: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Repeat each string by count in another column.
-        fn strings_repeat_column(col: &column_view, repeat_times: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_repeat_column(
+            col: &column_view,
+            repeat_times: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Check if strings contain multiple targets (returns Table of BOOL8 columns).
-        fn strings_contains_multiple(col: &column_view, targets: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        fn strings_contains_multiple(
+            col: &column_view,
+            targets: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Find positions of multiple targets in each string (returns lists column).
-        fn strings_find_multiple(col: &column_view, targets: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_find_multiple(
+            col: &column_view,
+            targets: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- String conversions --
 
         /// Converts strings to timestamps using format pattern.
-        fn strings_to_timestamps(col: &column_view, timestamp_type_id: i32, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_to_timestamps(
+            col: &column_view,
+            timestamp_type_id: i32,
+            format: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Converts timestamp column to strings using format pattern.
-        fn strings_from_timestamps(col: &column_view, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_from_timestamps(
+            col: &column_view,
+            format: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Verifies strings can be parsed as timestamps with given format.
-        fn strings_is_timestamp(col: &column_view, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_is_timestamp(
+            col: &column_view,
+            format: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Converts strings to booleans using true_string match.
-        fn strings_to_booleans(col: &column_view, true_string: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_to_booleans(
+            col: &column_view,
+            true_string: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Converts boolean column to strings.
-        fn strings_from_booleans(col: &column_view, true_string: &str, false_string: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_from_booleans(
+            col: &column_view,
+            true_string: &str,
+            false_string: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Converts strings to durations using format pattern.
-        fn strings_to_durations(col: &column_view, duration_type_id: i32, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_to_durations(
+            col: &column_view,
+            duration_type_id: i32,
+            format: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Converts duration column to strings using format pattern.
-        fn strings_from_durations(col: &column_view, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_from_durations(
+            col: &column_view,
+            format: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Converts strings to fixed-point decimal.
-        fn strings_to_fixed_point(col: &column_view, type_id: i32, scale: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_to_fixed_point(
+            col: &column_view,
+            type_id: i32,
+            scale: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Converts fixed-point column to strings.
         fn strings_from_fixed_point(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Verifies strings can be parsed as fixed-point.
-        fn strings_is_fixed_point(col: &column_view, type_id: i32, scale: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_is_fixed_point(
+            col: &column_view,
+            type_id: i32,
+            scale: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// URL-encodes each string.
         fn strings_url_encode(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// URL-decodes each string.
@@ -1455,16 +1751,26 @@ pub mod ffi {
         /// Ceil datetimes to frequency (DAY=0, HOUR=1, MINUTE=2, SECOND=3, MS=4, US=5, NS=6).
         fn datetime_ceil(col: &column_view, freq: i32, stream: usize) -> Result<UniquePtr<Column>>;
         /// Floor datetimes to frequency.
-        fn datetime_floor(col: &column_view, freq: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn datetime_floor(col: &column_view, freq: i32, stream: usize)
+        -> Result<UniquePtr<Column>>;
         /// Round datetimes to frequency.
-        fn datetime_round(col: &column_view, freq: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn datetime_round(col: &column_view, freq: i32, stream: usize)
+        -> Result<UniquePtr<Column>>;
         /// Add months column to timestamp column.
-        fn datetime_add_months(timestamps: &column_view, months: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn datetime_add_months(
+            timestamps: &column_view,
+            months: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Hashing (new) --
 
         /// MurmurHash3 128-bit hash (returns table of two UINT64 columns).
-        fn hash_murmurhash3_x64_128(tbl: &Table, seed: u64, stream: usize) -> Result<UniquePtr<Table>>;
+        fn hash_murmurhash3_x64_128(
+            tbl: &Table,
+            seed: u64,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// SHA-1 hash.
         fn hash_sha1(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
         /// XXHash 32-bit.
@@ -1478,27 +1784,56 @@ pub mod ffi {
         // -- Reshape (new) --
 
         /// Convert column elements to lists of bytes.
-        fn byte_cast_column(col: &column_view, flip_endian: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn byte_cast_column(
+            col: &column_view,
+            flip_endian: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- List set operations --
 
         /// Check if two list columns have overlapping elements per row.
-        fn lists_have_overlap(lhs: &column_view, rhs: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_have_overlap(
+            lhs: &column_view,
+            rhs: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Intersect distinct elements of two list columns per row.
-        fn lists_intersect_distinct(lhs: &column_view, rhs: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_intersect_distinct(
+            lhs: &column_view,
+            rhs: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Union distinct elements of two list columns per row.
-        fn lists_union_distinct(lhs: &column_view, rhs: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_union_distinct(
+            lhs: &column_view,
+            rhs: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Difference distinct elements of two list columns per row.
-        fn lists_difference_distinct(lhs: &column_view, rhs: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_difference_distinct(
+            lhs: &column_view,
+            rhs: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Lists operations --
 
         /// Count elements in each list row.
         fn lists_count_elements(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Extract element at given index from each list row.
-        fn lists_extract_element(col: &column_view, index: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_extract_element(
+            col: &column_view,
+            index: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Sort elements within each list row.
-        fn lists_sort(col: &column_view, ascending: bool, nulls_last: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_sort(
+            col: &column_view,
+            ascending: bool,
+            nulls_last: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Reverse elements within each list row.
         fn lists_reverse(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Check if each list contains nulls.
@@ -1506,18 +1841,33 @@ pub mod ffi {
         /// Remove duplicates from each list.
         fn lists_distinct(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Concatenate nested list elements within each row.
-        fn lists_concatenate_elements(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_concatenate_elements(
+            col: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Generate sequences as lists from starts and sizes columns.
-        fn lists_sequences(starts: &column_view, sizes: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_sequences(
+            starts: &column_view,
+            sizes: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Explode --
 
         /// Explode a list column in a table.
         fn explode_table(tbl: &Table, column_idx: i32, stream: usize) -> Result<UniquePtr<Table>>;
         /// Explode a list column with position column.
-        fn explode_position_table(tbl: &Table, column_idx: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn explode_position_table(
+            tbl: &Table,
+            column_idx: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Explode a list column, keeping null/empty list rows.
-        fn explode_outer_table(tbl: &Table, column_idx: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn explode_outer_table(
+            tbl: &Table,
+            column_idx: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         // -- Rolling window --
 
@@ -1545,61 +1895,160 @@ pub mod ffi {
         // -- Sorting (new) --
 
         /// Stable sorted order (preserves order of equal elements).
-        fn stable_sorted_order(tbl: &Table, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Column>>;
+        fn stable_sorted_order(
+            tbl: &Table,
+            column_orders: &[i32],
+            null_orders: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Stable sort table.
-        fn stable_sort_table(tbl: &Table, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+        fn stable_sort_table(
+            tbl: &Table,
+            column_orders: &[i32],
+            null_orders: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Sort values table by a separate keys table.
-        fn sort_by_key(values: &Table, keys: &Table, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+        fn sort_by_key(
+            values: &Table,
+            keys: &Table,
+            column_orders: &[i32],
+            null_orders: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Stable sort values table by a separate keys table.
-        fn stable_sort_by_key(values: &Table, keys: &Table, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+        fn stable_sort_by_key(
+            values: &Table,
+            keys: &Table,
+            column_orders: &[i32],
+            null_orders: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Compute ranks of elements in a column. method: 0=FIRST,1=AVERAGE,2=MIN,3=MAX,4=DENSE.
-        fn rank_column(col: &column_view, method: i32, column_order: i32, null_handling: i32, null_precedence: i32, percentage: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn rank_column(
+            col: &column_view,
+            method: i32,
+            column_order: i32,
+            null_handling: i32,
+            null_precedence: i32,
+            percentage: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Top k values of a column.
-        fn top_k(col: &column_view, k: i32, order: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn top_k(col: &column_view, k: i32, order: i32, stream: usize)
+        -> Result<UniquePtr<Column>>;
         /// Top k indices of a column.
-        fn top_k_order(col: &column_view, k: i32, order: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn top_k_order(
+            col: &column_view,
+            k: i32,
+            order: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Segmented sorted order.
-        fn segmented_sorted_order(tbl: &Table, segment_offsets: &column_view, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Column>>;
+        fn segmented_sorted_order(
+            tbl: &Table,
+            segment_offsets: &column_view,
+            column_orders: &[i32],
+            null_orders: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Segmented top k values.
-        fn segmented_top_k(col: &column_view, segment_offsets: &column_view, k: i32, order: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn segmented_top_k(
+            col: &column_view,
+            segment_offsets: &column_view,
+            k: i32,
+            order: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Segmented top k indices.
-        fn segmented_top_k_order(col: &column_view, segment_offsets: &column_view, k: i32, order: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn segmented_top_k_order(
+            col: &column_view,
+            segment_offsets: &column_view,
+            k: i32,
+            order: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Copying (new) --
 
         /// Copy range of elements from source into target (out-of-place).
-        fn copy_range(source: &column_view, target: &column_view, source_begin: i32, source_end: i32, target_begin: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn copy_range(
+            source: &column_view,
+            target: &column_view,
+            source_begin: i32,
+            source_end: i32,
+            target_begin: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Create uninitialized column of same type and size.
         fn allocate_like_column(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Scatter rows from source table into target using boolean mask.
-        fn boolean_mask_scatter_table(source: &Table, target: &Table, mask: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        fn boolean_mask_scatter_table(
+            source: &Table,
+            target: &Table,
+            mask: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Check if column has non-empty null rows (LIST/STRING).
         fn has_nonempty_nulls(col: &column_view, stream: usize) -> Result<bool>;
         /// Purge non-empty null row contents.
         fn purge_nonempty_nulls(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Copy-if-else with two scalars and a boolean mask.
-        fn copy_if_else_scalars(lhs: &Scalar, rhs: &Scalar, mask: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn copy_if_else_scalars(
+            lhs: &Scalar,
+            rhs: &Scalar,
+            mask: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Replace (new) --
 
         /// Replace nulls using preceding/following policy. policy: 0=PRECEDING, 1=FOLLOWING.
-        fn replace_nulls_policy(col: &column_view, policy: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn replace_nulls_policy(
+            col: &column_view,
+            policy: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Clamp with separate replacement values for lo and hi.
-        fn clamp_column_with_replace(col: &column_view, lo: &Scalar, lo_replace: &Scalar, hi: &Scalar, hi_replace: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        fn clamp_column_with_replace(
+            col: &column_view,
+            lo: &Scalar,
+            lo_replace: &Scalar,
+            hi: &Scalar,
+            hi_replace: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Normalize NaNs and zeros (convert -NaN to NaN, -0.0 to 0.0).
         fn normalize_nans_and_zeros(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
 
         // -- Fill (new) --
 
         /// Repeat table rows by per-row counts in a column.
-        fn repeat_table_column(tbl: &Table, counts: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        fn repeat_table_column(
+            tbl: &Table,
+            counts: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Generate calendrical month sequence.
-        fn calendrical_month_sequence(count: i32, init: &Scalar, months: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn calendrical_month_sequence(
+            count: i32,
+            init: &Scalar,
+            months: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Quantiles (new) --
 
         /// Table-level quantile rows.
-        fn quantiles_table(tbl: &Table, quantiles: &[f64], interp: i32, is_input_sorted: bool, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+        fn quantiles_table(
+            tbl: &Table,
+            quantiles: &[f64],
+            interp: i32,
+            is_input_sorted: bool,
+            column_orders: &[i32],
+            null_orders: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         // -- Null mask utilities --
 
@@ -1611,80 +2060,178 @@ pub mod ffi {
         // -- Dictionary operations --
 
         /// Dictionary-encode a column (returns DICTIONARY32 column).
-        fn dictionary_encode(col: &column_view, indices_type_id: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn dictionary_encode(
+            col: &column_view,
+            indices_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Decode a dictionary column back to its value type.
         fn dictionary_decode(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Add new keys to a dictionary column.
-        fn dictionary_add_keys(col: &column_view, new_keys: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn dictionary_add_keys(
+            col: &column_view,
+            new_keys: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Remove keys from a dictionary column.
-        fn dictionary_remove_keys(col: &column_view, keys_to_remove: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn dictionary_remove_keys(
+            col: &column_view,
+            keys_to_remove: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Replace the keyset of a dictionary column.
-        fn dictionary_set_keys(col: &column_view, keys: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn dictionary_set_keys(
+            col: &column_view,
+            keys: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Remove keys not referenced by any indices.
-        fn dictionary_remove_unused_keys(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn dictionary_remove_unused_keys(
+            col: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Look up a scalar key in a dictionary, returning its index.
-        fn dictionary_get_index(col: &column_view, key: &Scalar, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn dictionary_get_index(
+            col: &column_view,
+            key: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         // -- Lists contains / index_of / segmented_gather --
 
         /// Check if each list row contains a scalar value (returns BOOL8).
-        fn lists_contains_scalar(col: &column_view, search_key: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_contains_scalar(
+            col: &column_view,
+            search_key: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Check if each list row contains the corresponding search_keys value.
-        fn lists_contains_column(col: &column_view, search_keys: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_contains_column(
+            col: &column_view,
+            search_keys: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Find position of scalar in each list row. find_first=true for FIND_FIRST.
-        fn lists_index_of_scalar(col: &column_view, search_key: &Scalar, find_first: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_index_of_scalar(
+            col: &column_view,
+            search_key: &Scalar,
+            find_first: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Find position of each search_keys value in corresponding list row.
-        fn lists_index_of_column(col: &column_view, search_keys: &column_view, find_first: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_index_of_column(
+            col: &column_view,
+            search_keys: &column_view,
+            find_first: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Gather elements from each list row using a gather map list column.
-        fn lists_segmented_gather(col: &column_view, gather_map: &column_view, nullify_oob: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_segmented_gather(
+            col: &column_view,
+            gather_map: &column_view,
+            nullify_oob: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- String validation / conversion extras --
 
         /// Filter characters by type, replacing removed chars with replacement string.
-        fn strings_filter_characters_of_type(col: &column_view, types_to_remove: u32, replacement: &str, types_to_keep: u32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_filter_characters_of_type(
+            col: &column_view,
+            types_to_remove: u32,
+            replacement: &str,
+            types_to_keep: u32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Check if all chars in each string are valid integers.
         fn strings_is_integer(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Check if all chars are valid integers within given int type range.
-        fn strings_is_integer_with_type(col: &column_view, int_type_id: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_is_integer_with_type(
+            col: &column_view,
+            int_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Check if all chars in each string are valid floats.
         fn strings_is_float(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Convert hex strings to integers.
-        fn strings_hex_to_integers(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_hex_to_integers(
+            col: &column_view,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Check if strings are valid hex format.
         fn strings_is_hex(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Convert integers to hex strings.
         fn strings_integers_to_hex(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Format a list-of-strings column into a single formatted strings column.
-        fn strings_format_list_column(col: &column_view, na_rep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_format_list_column(
+            col: &column_view,
+            na_rep: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Strings: replace_slice / replace_multiple --
 
         /// Replace substring positions [start, stop) with replacement string.
-        fn strings_replace_slice(col: &column_view, repl: &str, start: i32, stop: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_replace_slice(
+            col: &column_view,
+            repl: &str,
+            start: i32,
+            stop: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Replace multiple target strings with corresponding replacements.
-        fn strings_replace_multiple(col: &column_view, targets: &column_view, repls: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_replace_multiple(
+            col: &column_view,
+            targets: &column_view,
+            repls: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Strings: split_record / rsplit_record --
 
         /// Split strings by delimiter into lists column (left-to-right).
-        fn strings_split_record(col: &column_view, delimiter: &Scalar, maxsplit: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_split_record(
+            col: &column_view,
+            delimiter: &Scalar,
+            maxsplit: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Split strings by delimiter into lists column (right-to-left).
-        fn strings_rsplit_record(col: &column_view, delimiter: &Scalar, maxsplit: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_rsplit_record(
+            col: &column_view,
+            delimiter: &Scalar,
+            maxsplit: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Lists: apply_boolean_mask --
 
         /// Filter elements within each list row using a boolean mask list column.
-        fn lists_apply_boolean_mask(col: &column_view, boolean_mask: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_apply_boolean_mask(
+            col: &column_view,
+            boolean_mask: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Strings: join_list_elements --
 
         /// Join lists of strings into a single string per row with separator.
-        fn strings_join_list_elements(col: &column_view, separator: &str, narep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_join_list_elements(
+            col: &column_view,
+            separator: &str,
+            narep: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Transform: segmented_row_bit_count --
 
         /// Per-segment cumulative row bit count.
-        fn segmented_row_bit_count(tbl: &Table, segment_length: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn segmented_row_bit_count(
+            tbl: &Table,
+            segment_length: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Strings: code_points --
 
@@ -1694,23 +2241,53 @@ pub mod ffi {
         // -- Strings: translate / filter_characters --
 
         /// Translate individual characters using from→to mapping (flat arrays of char_utf8 as u32).
-        fn strings_translate(col: &column_view, from_chars: &[u32], to_chars: &[u32], stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_translate(
+            col: &column_view,
+            from_chars: &[u32],
+            to_chars: &[u32],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Filter character ranges. keep=true keeps ranges, false removes them.
-        fn strings_filter_characters(col: &column_view, from_chars: &[u32], to_chars: &[u32], keep: bool, replacement: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_filter_characters(
+            col: &column_view,
+            from_chars: &[u32],
+            to_chars: &[u32],
+            keep: bool,
+            replacement: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Strings: cast_to_integer / cast_from_integer --
 
         /// Encode strings as integers (binary byte representation). big_endian controls byte order.
-        fn strings_cast_to_integer(col: &column_view, output_type_id: i32, big_endian: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_cast_to_integer(
+            col: &column_view,
+            output_type_id: i32,
+            big_endian: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Decode integer-encoded bytes back to strings.
-        fn strings_cast_from_integer(col: &column_view, big_endian: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_cast_from_integer(
+            col: &column_view,
+            big_endian: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Lists: extract (column), stable sort, concatenate_rows --
 
         /// Extract element from each list using per-row column indices.
-        fn lists_extract_element_column(col: &column_view, indices: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_extract_element_column(
+            col: &column_view,
+            indices: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Stable sort elements within each list row.
-        fn lists_stable_sort(col: &column_view, ascending: bool, nulls_last: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_stable_sort(
+            col: &column_view,
+            ascending: bool,
+            nulls_last: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Row-wise concatenation of list columns from a table into a single list column.
         fn lists_concatenate_rows(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
 
@@ -1719,54 +2296,117 @@ pub mod ffi {
         /// Compute the output scale for a fixed-point binary operation.
         fn binary_operation_fixed_point_scale(op: i32, left_scale: i32, right_scale: i32) -> i32;
         /// Check if a binary operation is supported for the given types.
-        fn is_supported_binaryop(out_type_id: i32, lhs_type_id: i32, rhs_type_id: i32, op: i32) -> bool;
+        fn is_supported_binaryop(
+            out_type_id: i32,
+            lhs_type_id: i32,
+            rhs_type_id: i32,
+            op: i32,
+        ) -> bool;
 
         // -- Sorting: stable segmented --
 
         /// Stable segmented sorted order (returns index column).
-        fn stable_segmented_sorted_order(tbl: &Table, segment_offsets: &column_view, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Column>>;
+        fn stable_segmented_sorted_order(
+            tbl: &Table,
+            segment_offsets: &column_view,
+            column_orders: &[i32],
+            null_orders: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Stable segmented sort by key (returns reordered values table).
-        fn stable_segmented_sort_by_key(values: &Table, keys: &Table, segment_offsets: &column_view, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+        fn stable_segmented_sort_by_key(
+            values: &Table,
+            keys: &Table,
+            segment_offsets: &column_view,
+            column_orders: &[i32],
+            null_orders: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         // -- Explode: outer_position --
 
         /// Explode outer with position column.
-        fn explode_outer_position_table(tbl: &Table, column_idx: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn explode_outer_position_table(
+            tbl: &Table,
+            column_idx: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         // -- Strings: slice by column, extract_single --
 
         /// Slice strings using per-row start/stop columns.
-        fn strings_slice_column(col: &column_view, starts: &column_view, stops: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_slice_column(
+            col: &column_view,
+            starts: &column_view,
+            stops: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Extract a single regex group from each string.
-        fn strings_extract_single(col: &column_view, pattern: &str, group_index: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_extract_single(
+            col: &column_view,
+            pattern: &str,
+            group_index: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Copying: gather_checked, may_have_nonempty_nulls --
 
         /// Gather rows with out-of-bounds policy (nullify_oob=true → NULLIFY).
-        fn gather_table_checked(tbl: &Table, gather_map: &column_view, nullify_oob: bool, stream: usize) -> Result<UniquePtr<Table>>;
+        fn gather_table_checked(
+            tbl: &Table,
+            gather_map: &column_view,
+            nullify_oob: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Check if a column may have non-empty data in null rows (no stream needed).
         fn may_have_nonempty_nulls(col: &column_view) -> bool;
 
         // -- Sorting: segmented_sort_by_key (non-stable) --
 
         /// Segmented sort by key (returns reordered values table).
-        fn segmented_sort_by_key(values: &Table, keys: &Table, segment_offsets: &column_view, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+        fn segmented_sort_by_key(
+            values: &Table,
+            keys: &Table,
+            segment_offsets: &column_view,
+            column_orders: &[i32],
+            null_orders: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         // -- Partitioning: partition by map column --
 
         /// Partition table rows by a map column.
-        fn partition_by_map(tbl: &Table, partition_map: &column_view, num_partitions: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn partition_by_map(
+            tbl: &Table,
+            partition_map: &column_view,
+            num_partitions: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Get partition offsets for partition by map.
-        fn partition_by_map_offsets(tbl: &Table, partition_map: &column_view, num_partitions: i32, stream: usize) -> Result<Vec<i32>>;
+        fn partition_by_map_offsets(
+            tbl: &Table,
+            partition_map: &column_view,
+            num_partitions: i32,
+            stream: usize,
+        ) -> Result<Vec<i32>>;
 
         // -- Datetime: fractional seconds --
 
         /// Extract millisecond fraction from timestamp.
-        fn datetime_extract_millisecond(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn datetime_extract_millisecond(
+            col: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Extract microsecond fraction from timestamp.
-        fn datetime_extract_microsecond(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn datetime_extract_microsecond(
+            col: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Extract nanosecond fraction from timestamp.
-        fn datetime_extract_nanosecond(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn datetime_extract_nanosecond(
+            col: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Join: cross_join --
 
@@ -1776,19 +2416,40 @@ pub mod ffi {
         // -- Lists: sequences with step --
 
         /// Generate sequences with custom step from starts, steps, and sizes columns.
-        fn lists_sequences_with_step(starts: &column_view, steps: &column_view, sizes: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn lists_sequences_with_step(
+            starts: &column_view,
+            steps: &column_view,
+            sizes: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Strings: per-row separator variants --
 
         /// Row-wise concatenation of string columns with per-row separator column.
-        fn strings_concatenate_columns_sep_col(tbl: &Table, separators: &column_view, separator_narep: &str, col_narep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_concatenate_columns_sep_col(
+            tbl: &Table,
+            separators: &column_view,
+            separator_narep: &str,
+            col_narep: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Join lists of strings with per-row separator column.
-        fn strings_join_list_elements_column(col: &column_view, separators: &column_view, separator_narep: &str, string_narep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_join_list_elements_column(
+            col: &column_view,
+            separators: &column_view,
+            separator_narep: &str,
+            string_narep: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Strings: zfill_by_widths --
 
         /// Zero-fill strings using per-row widths column.
-        fn strings_zfill_by_widths(col: &column_view, widths: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_zfill_by_widths(
+            col: &column_view,
+            widths: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Hashing: sha224 / sha384 / sha512 --
 
@@ -1802,16 +2463,33 @@ pub mod ffi {
         // -- Column factories --
 
         /// Create an uninitialized fixed-width column. mask_state: 0=UNALLOCATED, 1=UNINITIALIZED, 2=ALL_VALID, 3=ALL_NULL.
-        fn make_fixed_width_column(type_id: i32, scale: i32, num_rows: i32, mask_state: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn make_fixed_width_column(
+            type_id: i32,
+            scale: i32,
+            num_rows: i32,
+            mask_state: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Create an empty lists column with the given child element type.
         fn make_empty_lists_column(child_type_id: i32, stream: usize) -> Result<UniquePtr<Column>>;
         /// Create a dictionary column filled with a single scalar value.
-        fn make_dictionary_from_scalar(scalar: &Scalar, num_rows: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn make_dictionary_from_scalar(
+            scalar: &Scalar,
+            num_rows: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- JSON path extraction --
 
         /// Extract values from JSON strings using a JSONPath expression.
-        fn get_json_object(col: &column_view, json_path: &str, allow_single_quotes: bool, strip_quotes: bool, missing_fields_as_nulls: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        fn get_json_object(
+            col: &column_view,
+            json_path: &str,
+            allow_single_quotes: bool,
+            strip_quotes: bool,
+            missing_fields_as_nulls: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Null mask utility --
 
@@ -1827,26 +2505,52 @@ pub mod ffi {
         /// Check if two tables have columns of the same types.
         fn tables_have_same_types(lhs: &Table, rhs: &Table) -> bool;
         /// Check if a cast from one data type to another is supported.
-        fn is_supported_cast(from_type_id: i32, from_scale: i32, to_type_id: i32, to_scale: i32) -> bool;
+        fn is_supported_cast(
+            from_type_id: i32,
+            from_scale: i32,
+            to_type_id: i32,
+            to_scale: i32,
+        ) -> bool;
 
         // -- In-place operations --
 
         /// Fill a range [begin, end) of a column with a scalar value in-place.
-        fn fill_in_place(col: Pin<&mut Column>, begin: i32, end: i32, value: &Scalar, stream: usize) -> Result<()>;
+        fn fill_in_place(
+            col: Pin<&mut Column>,
+            begin: i32,
+            end: i32,
+            value: &Scalar,
+            stream: usize,
+        ) -> Result<()>;
         /// Copy a range from source into dest in-place.
-        fn copy_range_in_place(dest: Pin<&mut Column>, source: &column_view, source_begin: i32, source_end: i32, dest_begin: i32, stream: usize) -> Result<()>;
+        fn copy_range_in_place(
+            dest: Pin<&mut Column>,
+            source: &column_view,
+            source_begin: i32,
+            source_end: i32,
+            dest_begin: i32,
+            stream: usize,
+        ) -> Result<()>;
 
         // -- One-hot encoding --
 
         /// One-hot encode input against categories, returning a table of BOOL8 columns.
-        fn one_hot_encode(input: &column_view, categories: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        fn one_hot_encode(
+            input: &column_view,
+            categories: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         // -- Null mask conversions --
 
         /// Convert a column's null mask to a BOOL8 column (true = valid, false = null).
         fn null_mask_to_bools(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
         /// Set a column's null mask from a BOOL8 column (true = valid, false = null).
-        fn set_null_mask_from_bools(col: Pin<&mut Column>, bools: &column_view, stream: usize) -> Result<()>;
+        fn set_null_mask_from_bools(
+            col: Pin<&mut Column>,
+            bools: &column_view,
+            stream: usize,
+        ) -> Result<()>;
 
         // -- Bitmask combining --
 
@@ -1858,12 +2562,24 @@ pub mod ffi {
         // -- Column factories: lists and structs --
 
         /// Create a LIST column from offsets and child (no null mask).
-        fn make_lists_column(num_rows: i32, offsets: UniquePtr<Column>, child: UniquePtr<Column>, stream: usize) -> Result<UniquePtr<Column>>;
+        fn make_lists_column(
+            num_rows: i32,
+            offsets: UniquePtr<Column>,
+            child: UniquePtr<Column>,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         type StructColumnBuilder;
         fn new_struct_column_builder() -> UniquePtr<StructColumnBuilder>;
-        fn struct_column_builder_add(builder: Pin<&mut StructColumnBuilder>, col: UniquePtr<Column>);
-        fn struct_column_builder_build(builder: Pin<&mut StructColumnBuilder>, num_rows: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn struct_column_builder_add(
+            builder: Pin<&mut StructColumnBuilder>,
+            col: UniquePtr<Column>,
+        );
+        fn struct_column_builder_build(
+            builder: Pin<&mut StructColumnBuilder>,
+            num_rows: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- ORC I/O --
 
@@ -1882,7 +2598,12 @@ pub mod ffi {
         // -- Distinct count --
 
         /// Count distinct values in a column.
-        fn distinct_count_column(col: &column_view, null_policy: i32, nan_is_null: bool, stream: usize) -> i32;
+        fn distinct_count_column(
+            col: &column_view,
+            null_policy: i32,
+            nan_is_null: bool,
+            stream: usize,
+        ) -> i32;
         /// Count distinct rows in a table.
         fn distinct_count_table(tbl: &Table, null_equality: i32, stream: usize) -> i32;
 
@@ -1897,42 +2618,95 @@ pub mod ffi {
         fn new_scalar_list() -> UniquePtr<ScalarList>;
         fn scalar_list_add(list: Pin<&mut ScalarList>, s: UniquePtr<Scalar>);
         /// Scatter scalar values to specified indices in a target table.
-        fn scatter_scalars(sources: Pin<&mut ScalarList>, indices: &column_view, target: &Table, stream: usize) -> Result<UniquePtr<Table>>;
+        fn scatter_scalars(
+            sources: Pin<&mut ScalarList>,
+            indices: &column_view,
+            target: &Table,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
         /// Scatter scalar values into target where boolean mask is true.
-        fn boolean_mask_scatter_scalars(sources: Pin<&mut ScalarList>, target: &Table, mask: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        fn boolean_mask_scatter_scalars(
+            sources: Pin<&mut ScalarList>,
+            target: &Table,
+            mask: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         // -- Unique count (consecutive) --
 
         /// Count consecutive unique values in a column.
-        fn unique_count_column(col: &column_view, null_policy: i32, nan_is_null: bool, stream: usize) -> i32;
+        fn unique_count_column(
+            col: &column_view,
+            null_policy: i32,
+            nan_is_null: bool,
+            stream: usize,
+        ) -> i32;
         /// Count consecutive unique rows in a table.
         fn unique_count_table(tbl: &Table, null_equality: i32, stream: usize) -> i32;
 
         // -- Additional hashing --
 
         /// Compute MurmurHash3 x86 32-bit hash of each row (returns UINT32 column).
-        fn hash_murmurhash3_x86_32(tbl: &Table, seed: u32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn hash_murmurhash3_x86_32(
+            tbl: &Table,
+            seed: u32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Drop NaNs with threshold --
 
         /// Drop rows with NaN values, keeping rows with at least threshold non-NaN values.
-        fn drop_nans_with_threshold(tbl: &Table, keys: &[i32], threshold: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        fn drop_nans_with_threshold(
+            tbl: &Table,
+            keys: &[i32],
+            threshold: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         // -- Generic reduce --
 
         /// Reduce a column with any aggregation kind (ddof used for STD/VAR).
-        fn reduce_generic(col: &column_view, agg_kind: i32, ddof: i32, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_generic(
+            col: &column_view,
+            agg_kind: i32,
+            ddof: i32,
+            output_type_id: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Reduces a column with an initial value (supports SUM, PRODUCT, MIN, MAX, ANY, ALL).
-        fn reduce_with_init(col: &column_view, agg_kind: i32, ddof: i32, output_type_id: i32, init: &Scalar, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn reduce_with_init(
+            col: &column_view,
+            agg_kind: i32,
+            ddof: i32,
+            output_type_id: i32,
+            init: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         /// Segmented reduce: reduces each segment of a column defined by offsets.
-        fn segmented_reduce(col: &column_view, offsets: &column_view, agg_kind: i32, ddof: i32, output_type_id: i32, null_handling: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn segmented_reduce(
+            col: &column_view,
+            offsets: &column_view,
+            agg_kind: i32,
+            ddof: i32,
+            output_type_id: i32,
+            null_handling: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Rolling window with defaults --
 
         /// Rolling window aggregation with default output values (for LEAD/LAG).
-        fn rolling_window_with_defaults(col: &column_view, default_outputs: &column_view, preceding: i32, following: i32, min_periods: i32, agg_kind: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn rolling_window_with_defaults(
+            col: &column_view,
+            default_outputs: &column_view,
+            preceding: i32,
+            following: i32,
+            min_periods: i32,
+            agg_kind: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Approximate distinct count --
 
@@ -1942,18 +2716,37 @@ pub mod ffi {
         // -- Column child access --
 
         /// Deep-copies a child column by index (for STRUCT, LIST, DICTIONARY columns).
-        fn column_view_child_copy(col: &column_view, index: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn column_view_child_copy(
+            col: &column_view,
+            index: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Returns the number of child columns.
         fn column_view_num_children(col: &column_view) -> i32;
 
         // -- Strings: join_strings, find_instance, like_column --
 
         /// Joins all strings in a column with a separator into a single-row column.
-        fn strings_join_strings(col: &column_view, separator: &str, narep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_join_strings(
+            col: &column_view,
+            separator: &str,
+            narep: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// Finds the nth instance of target in each string, returns position (-1 if not found).
-        fn strings_find_instance(col: &column_view, target: &str, instance: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_find_instance(
+            col: &column_view,
+            target: &str,
+            instance: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
         /// SQL LIKE with per-row patterns from a strings column.
-        fn strings_like_column(col: &column_view, patterns: &column_view, escape_char: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        fn strings_like_column(
+            col: &column_view,
+            patterns: &column_view,
+            escape_char: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- DLPack interop --
 
@@ -1981,12 +2774,20 @@ pub mod ffi {
         // -- Percentile approx --
 
         /// Computes approximate percentiles from a t-digest column.
-        fn percentile_approx(tdigest_col: &column_view, percentiles: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn percentile_approx(
+            tdigest_col: &column_view,
+            percentiles: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Datetime: add months with scalar --
 
         /// Adds months (scalar) to a timestamp column.
-        fn datetime_add_months_scalar(timestamps: &column_view, months: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        fn datetime_add_months_scalar(
+            timestamps: &column_view,
+            months: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- Table nested column queries --
 
@@ -2007,12 +2808,20 @@ pub mod ffi {
         // -- Repeat string scalar --
 
         /// Repeats a string scalar N times.
-        fn repeat_string_scalar(input: &Scalar, repeat_times: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+        fn repeat_string_scalar(
+            input: &Scalar,
+            repeat_times: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Scalar>>;
 
         // -- Column with null mask from bools --
 
         /// Creates a copy of the column with a null mask derived from a boolean validity column.
-        fn column_with_null_mask_from_bools(col: &Column, validity: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        fn column_with_null_mask_from_bools(
+            col: &Column,
+            validity: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
     }
 }
@@ -2033,7 +2842,7 @@ unsafe impl Sync for ffi::Table {}
 ///
 /// Returns `None` if the value is out of range.
 pub fn type_id_from_i32(value: i32) -> Option<ffi::TypeId> {
-    if value >= 0 && value < ffi::TypeId::NUM_TYPE_IDS.repr {
+    if (0..ffi::TypeId::NUM_TYPE_IDS.repr).contains(&value) {
         // SAFETY: TypeId is #[repr(i32)] and we verified the value is in range.
         Some(unsafe { std::mem::transmute::<i32, ffi::TypeId>(value) })
     } else {

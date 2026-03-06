@@ -60,11 +60,8 @@ impl DictionaryExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn dict_set_keys(&self, keys: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::dictionary_set_keys(
-            self.0,
-            keys.0,
-            Stream::default_stream().as_raw(),
-        )?;
+        let c =
+            cudf_sys::ffi::dictionary_set_keys(self.0, keys.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn dict_remove_unused_keys(&self) -> Result<Column> {
@@ -76,11 +73,8 @@ impl DictionaryExt for ColumnView<'_> {
     }
     fn dict_get_index(&self, key: &Scalar) -> Result<Scalar> {
         let ffi = crate::scalar::scalar_to_ffi(key);
-        let s = cudf_sys::ffi::dictionary_get_index(
-            self.0,
-            &ffi,
-            Stream::default_stream().as_raw(),
-        )?;
+        let s =
+            cudf_sys::ffi::dictionary_get_index(self.0, &ffi, Stream::default_stream().as_raw())?;
         Ok(crate::scalar::scalar_from_ffi(&s))
     }
 }

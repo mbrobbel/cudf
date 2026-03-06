@@ -43,19 +43,19 @@ pub trait DatetimeExt {
     fn day_of_year_on(&self, stream: Stream) -> Result<Column>;
     /// Returns whether each year is a leap year (returns BOOL8).
     fn is_leap_year(&self) -> Result<Column>;
-    /// is_leap_year on a custom CUDA stream.
+    /// `is_leap_year` on a custom CUDA stream.
     fn is_leap_year_on(&self, stream: Stream) -> Result<Column>;
     /// Returns the number of days in the month (returns INT16).
     fn days_in_month(&self) -> Result<Column>;
-    /// days_in_month on a custom CUDA stream.
+    /// `days_in_month` on a custom CUDA stream.
     fn days_in_month_on(&self, stream: Stream) -> Result<Column>;
-    /// Returns the last day of the month (returns TIMESTAMP_DAYS).
+    /// Returns the last day of the month (returns `TIMESTAMP_DAYS`).
     fn last_day_of_month(&self) -> Result<Column>;
-    /// last_day_of_month on a custom CUDA stream.
+    /// `last_day_of_month` on a custom CUDA stream.
     fn last_day_of_month_on(&self, stream: Stream) -> Result<Column>;
     /// Returns the quarter (1-4) (returns INT16).
     fn extract_quarter(&self) -> Result<Column>;
-    /// extract_quarter on a custom CUDA stream.
+    /// `extract_quarter` on a custom CUDA stream.
     fn extract_quarter_on(&self, stream: Stream) -> Result<Column>;
     /// Ceil datetimes to given frequency.
     fn dt_ceil(&self, freq: RoundingFrequency) -> Result<Column>;
@@ -79,12 +79,19 @@ pub trait DatetimeExt {
 #[repr(i32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RoundingFrequency {
+    /// Round to day boundary.
     Day = 0,
+    /// Round to hour boundary.
     Hour = 1,
+    /// Round to minute boundary.
     Minute = 2,
+    /// Round to second boundary.
     Second = 3,
+    /// Round to millisecond boundary.
     Millisecond = 4,
+    /// Round to microsecond boundary.
     Microsecond = 5,
+    /// Round to nanosecond boundary.
     Nanosecond = 6,
 }
 
@@ -174,36 +181,50 @@ impl DatetimeExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn dt_ceil(&self, freq: RoundingFrequency) -> Result<Column> {
-        let c = cudf_sys::ffi::datetime_ceil(self.0, freq as i32, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::datetime_ceil(self.0, freq as i32, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn dt_floor(&self, freq: RoundingFrequency) -> Result<Column> {
-        let c = cudf_sys::ffi::datetime_floor(self.0, freq as i32, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::datetime_floor(self.0, freq as i32, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn dt_round(&self, freq: RoundingFrequency) -> Result<Column> {
-        let c = cudf_sys::ffi::datetime_round(self.0, freq as i32, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::datetime_round(self.0, freq as i32, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn dt_add_months(&self, months: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::datetime_add_months(self.0, months.0, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::datetime_add_months(
+            self.0,
+            months.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn dt_add_months_scalar(&self, months: &crate::scalar::Scalar) -> Result<Column> {
         let ffi_scalar = crate::scalar::scalar_to_ffi(months);
-        let c = cudf_sys::ffi::datetime_add_months_scalar(self.0, &ffi_scalar, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::datetime_add_months_scalar(
+            self.0,
+            &ffi_scalar,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn extract_millisecond(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::datetime_extract_millisecond(self.0, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::datetime_extract_millisecond(self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn extract_microsecond(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::datetime_extract_microsecond(self.0, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::datetime_extract_microsecond(self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn extract_nanosecond(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::datetime_extract_nanosecond(self.0, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::datetime_extract_nanosecond(self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }
@@ -259,10 +280,7 @@ mod tests {
 
     #[test]
     fn extract_hour_basic() {
-        let ts = make_timestamp_seconds(&[
-            EPOCH_2024_06_15_10_30_45,
-            EPOCH_2024_01_01_00_00_00,
-        ]);
+        let ts = make_timestamp_seconds(&[EPOCH_2024_06_15_10_30_45, EPOCH_2024_01_01_00_00_00]);
         let result = ts.view().extract_hour().unwrap();
         assert_eq!(result.to_vec_i16(), vec![9, 0]);
     }
@@ -278,10 +296,7 @@ mod tests {
 
     #[test]
     fn day_of_year_basic() {
-        let ts = make_timestamp_seconds(&[
-            EPOCH_2024_01_01_00_00_00,
-            EPOCH_2024_06_15_10_30_45,
-        ]);
+        let ts = make_timestamp_seconds(&[EPOCH_2024_01_01_00_00_00, EPOCH_2024_06_15_10_30_45]);
         let result = ts.view().day_of_year().unwrap();
         let vals = result.to_vec_i16();
         assert_eq!(vals[0], 1);
@@ -290,10 +305,7 @@ mod tests {
 
     #[test]
     fn is_leap_year_basic() {
-        let ts = make_timestamp_seconds(&[
-            EPOCH_2024_01_01_00_00_00,
-            EPOCH_2021_01_01_00_00_00,
-        ]);
+        let ts = make_timestamp_seconds(&[EPOCH_2024_01_01_00_00_00, EPOCH_2021_01_01_00_00_00]);
         let result = ts.view().is_leap_year().unwrap();
         assert_eq!(result.type_id(), TypeId::BOOL8);
         assert_eq!(result.to_vec_bool(), vec![true, false]);
@@ -301,20 +313,14 @@ mod tests {
 
     #[test]
     fn days_in_month_basic() {
-        let ts = make_timestamp_seconds(&[
-            EPOCH_2024_01_01_00_00_00,
-            EPOCH_2024_06_15_10_30_45,
-        ]);
+        let ts = make_timestamp_seconds(&[EPOCH_2024_01_01_00_00_00, EPOCH_2024_06_15_10_30_45]);
         let result = ts.view().days_in_month().unwrap();
         assert_eq!(result.to_vec_i16(), vec![31, 30]);
     }
 
     #[test]
     fn extract_quarter_basic() {
-        let ts = make_timestamp_seconds(&[
-            EPOCH_2024_01_01_00_00_00,
-            EPOCH_2024_06_15_10_30_45,
-        ]);
+        let ts = make_timestamp_seconds(&[EPOCH_2024_01_01_00_00_00, EPOCH_2024_06_15_10_30_45]);
         let result = ts.view().extract_quarter().unwrap();
         assert_eq!(result.to_vec_i16(), vec![1, 2]);
     }

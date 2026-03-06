@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
+//! Scalar values for GPU operations.
+
 use cxx::UniquePtr;
 
 use crate::data_type::TypeId;
@@ -11,26 +13,47 @@ use crate::data_type::TypeId;
 /// [`scalar_to_ffi`] when calling into libcudf.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Scalar {
+    /// Signed 8-bit integer.
     Int8(i8),
+    /// Signed 16-bit integer.
     Int16(i16),
+    /// Signed 32-bit integer.
     Int32(i32),
+    /// Signed 64-bit integer.
     Int64(i64),
+    /// Unsigned 8-bit integer.
     UInt8(u8),
+    /// Unsigned 16-bit integer.
     UInt16(u16),
+    /// Unsigned 32-bit integer.
     UInt32(u32),
+    /// Unsigned 64-bit integer.
     UInt64(u64),
+    /// 32-bit floating point.
     Float32(f32),
+    /// 64-bit floating point.
     Float64(f64),
+    /// Boolean.
     Bool(bool),
+    /// UTF-8 string.
     String(String),
+    /// Timestamp in seconds since epoch.
     TimestampSeconds(i64),
+    /// Timestamp in milliseconds since epoch.
     TimestampMilliseconds(i64),
+    /// Timestamp in microseconds since epoch.
     TimestampMicroseconds(i64),
+    /// Timestamp in nanoseconds since epoch.
     TimestampNanoseconds(i64),
+    /// Duration in seconds.
     DurationSeconds(i64),
+    /// Duration in milliseconds.
     DurationMilliseconds(i64),
+    /// Duration in microseconds.
     DurationMicroseconds(i64),
+    /// Duration in nanoseconds.
     DurationNanoseconds(i64),
+    /// Null value of the given type.
     Null(TypeId),
 }
 
@@ -120,42 +143,42 @@ impl Scalar {
         Scalar::String(value.to_owned())
     }
 
-    /// Creates a valid TIMESTAMP_SECONDS scalar from epoch seconds.
+    /// Creates a valid `TIMESTAMP_SECONDS` scalar from epoch seconds.
     pub fn from_timestamp_s(value: i64) -> Self {
         Scalar::TimestampSeconds(value)
     }
 
-    /// Creates a valid TIMESTAMP_MILLISECONDS scalar.
+    /// Creates a valid `TIMESTAMP_MILLISECONDS` scalar.
     pub fn from_timestamp_ms(value: i64) -> Self {
         Scalar::TimestampMilliseconds(value)
     }
 
-    /// Creates a valid TIMESTAMP_MICROSECONDS scalar.
+    /// Creates a valid `TIMESTAMP_MICROSECONDS` scalar.
     pub fn from_timestamp_us(value: i64) -> Self {
         Scalar::TimestampMicroseconds(value)
     }
 
-    /// Creates a valid TIMESTAMP_NANOSECONDS scalar.
+    /// Creates a valid `TIMESTAMP_NANOSECONDS` scalar.
     pub fn from_timestamp_ns(value: i64) -> Self {
         Scalar::TimestampNanoseconds(value)
     }
 
-    /// Creates a valid DURATION_SECONDS scalar.
+    /// Creates a valid `DURATION_SECONDS` scalar.
     pub fn from_duration_s(value: i64) -> Self {
         Scalar::DurationSeconds(value)
     }
 
-    /// Creates a valid DURATION_MILLISECONDS scalar.
+    /// Creates a valid `DURATION_MILLISECONDS` scalar.
     pub fn from_duration_ms(value: i64) -> Self {
         Scalar::DurationMilliseconds(value)
     }
 
-    /// Creates a valid DURATION_MICROSECONDS scalar.
+    /// Creates a valid `DURATION_MICROSECONDS` scalar.
     pub fn from_duration_us(value: i64) -> Self {
         Scalar::DurationMicroseconds(value)
     }
 
-    /// Creates a valid DURATION_NANOSECONDS scalar.
+    /// Creates a valid `DURATION_NANOSECONDS` scalar.
     pub fn from_duration_ns(value: i64) -> Self {
         Scalar::DurationNanoseconds(value)
     }
@@ -267,17 +290,15 @@ pub(crate) fn scalar_to_ffi(s: &Scalar) -> UniquePtr<cudf_sys::ffi::Scalar> {
         Scalar::DurationMilliseconds(v) => cudf_sys::ffi::make_duration_ms_scalar(*v, true),
         Scalar::DurationMicroseconds(v) => cudf_sys::ffi::make_duration_us_scalar(*v, true),
         Scalar::DurationNanoseconds(v) => cudf_sys::ffi::make_duration_ns_scalar(*v, true),
-        Scalar::Null(tid) => {
-            cudf_sys::ffi::make_default_constructed_scalar(tid.repr, 0)
-        }
+        Scalar::Null(tid) => cudf_sys::ffi::make_default_constructed_scalar(tid.repr, 0),
     }
 }
 
 /// Converts an FFI scalar back into a Rust `Scalar` enum.
 pub(crate) fn scalar_from_ffi(ffi: &UniquePtr<cudf_sys::ffi::Scalar>) -> Scalar {
     let type_id_raw = cudf_sys::ffi::scalar_type_id(ffi);
-    let tid: TypeId = cudf_sys::type_id_from_i32(type_id_raw)
-        .expect("C++ returned invalid type_id");
+    let tid: TypeId =
+        cudf_sys::type_id_from_i32(type_id_raw).expect("C++ returned invalid type_id");
     let valid = cudf_sys::ffi::scalar_is_valid(ffi);
 
     if !valid {
@@ -421,18 +442,42 @@ mod tests {
 
     #[test]
     fn scalar_timestamp_type_ids() {
-        assert_eq!(Scalar::TimestampSeconds(0).type_id(), TypeId::TIMESTAMP_SECONDS);
-        assert_eq!(Scalar::TimestampMilliseconds(0).type_id(), TypeId::TIMESTAMP_MILLISECONDS);
-        assert_eq!(Scalar::TimestampMicroseconds(0).type_id(), TypeId::TIMESTAMP_MICROSECONDS);
-        assert_eq!(Scalar::TimestampNanoseconds(0).type_id(), TypeId::TIMESTAMP_NANOSECONDS);
+        assert_eq!(
+            Scalar::TimestampSeconds(0).type_id(),
+            TypeId::TIMESTAMP_SECONDS
+        );
+        assert_eq!(
+            Scalar::TimestampMilliseconds(0).type_id(),
+            TypeId::TIMESTAMP_MILLISECONDS
+        );
+        assert_eq!(
+            Scalar::TimestampMicroseconds(0).type_id(),
+            TypeId::TIMESTAMP_MICROSECONDS
+        );
+        assert_eq!(
+            Scalar::TimestampNanoseconds(0).type_id(),
+            TypeId::TIMESTAMP_NANOSECONDS
+        );
     }
 
     #[test]
     fn scalar_duration_type_ids() {
-        assert_eq!(Scalar::DurationSeconds(0).type_id(), TypeId::DURATION_SECONDS);
-        assert_eq!(Scalar::DurationMilliseconds(0).type_id(), TypeId::DURATION_MILLISECONDS);
-        assert_eq!(Scalar::DurationMicroseconds(0).type_id(), TypeId::DURATION_MICROSECONDS);
-        assert_eq!(Scalar::DurationNanoseconds(0).type_id(), TypeId::DURATION_NANOSECONDS);
+        assert_eq!(
+            Scalar::DurationSeconds(0).type_id(),
+            TypeId::DURATION_SECONDS
+        );
+        assert_eq!(
+            Scalar::DurationMilliseconds(0).type_id(),
+            TypeId::DURATION_MILLISECONDS
+        );
+        assert_eq!(
+            Scalar::DurationMicroseconds(0).type_id(),
+            TypeId::DURATION_MICROSECONDS
+        );
+        assert_eq!(
+            Scalar::DurationNanoseconds(0).type_id(),
+            TypeId::DURATION_NANOSECONDS
+        );
     }
 
     #[test]

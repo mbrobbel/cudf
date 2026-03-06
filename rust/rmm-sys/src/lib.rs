@@ -1,6 +1,14 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
+//! Low-level CXX FFI bindings for RMM (RAPIDS Memory Manager).
+//!
+//! This crate provides device queries (memory, device count).
+
+#![deny(clippy::undocumented_unsafe_blocks)]
+// CXX-generated shared enum variants and repr fields cannot carry doc comments.
+#![allow(missing_docs)]
+
 #[cxx::bridge(namespace = "rmm_sys")]
 pub mod ffi {
     /// A CUDA device identifier.

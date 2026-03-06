@@ -18,27 +18,35 @@ mod tests {
 
     #[test]
     fn contains_found() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30, 40, 50], ds()));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[10, 20, 30, 40, 50],
+            ds(),
+        ));
         let needle = Scalar::from_i32(20);
         assert!(col.view().contains_scalar(&needle).unwrap());
     }
 
     #[test]
     fn contains_not_found() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30, 40, 50], ds()));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[10, 20, 30, 40, 50],
+            ds(),
+        ));
         let needle = Scalar::from_i32(25);
         assert!(!col.view().contains_scalar(&needle).unwrap());
     }
 
     #[test]
     fn contains_column_test() {
-        let haystack =
-            Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30, 40, 50], ds()));
-        let needles = Column(cudf_sys::ffi::make_column_from_host_i32(&[20, 40, 60, 80], ds()));
-        let result = haystack
-            .view()
-            .contains_column(&needles.view())
-            .unwrap();
+        let haystack = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[10, 20, 30, 40, 50],
+            ds(),
+        ));
+        let needles = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[20, 40, 60, 80],
+            ds(),
+        ));
+        let result = haystack.view().contains_column(&needles.view()).unwrap();
         assert_eq!(result.to_vec_bool(), vec![true, true, false, false]);
     }
 
@@ -48,13 +56,19 @@ mod tests {
         use crate::table::TableBuilder;
 
         // Sorted haystack: [10, 20, 30, 40, 50]
-        let hay_col = Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30, 40, 50], ds()));
+        let hay_col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[10, 20, 30, 40, 50],
+            ds(),
+        ));
         let mut hb = TableBuilder::new();
         hb.push_column(hay_col);
         let haystack = hb.build().unwrap();
 
         // Needles: [15, 30, 55]
-        let needle_col = Column(cudf_sys::ffi::make_column_from_host_i32(&[15, 30, 55], ds()));
+        let needle_col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[15, 30, 55],
+            ds(),
+        ));
         let mut nb = TableBuilder::new();
         nb.push_column(needle_col);
         let needles = nb.build().unwrap();
@@ -71,12 +85,18 @@ mod tests {
         use crate::sorting::{NullOrder, Order};
         use crate::table::TableBuilder;
 
-        let hay_col = Column(cudf_sys::ffi::make_column_from_host_i32(&[10, 20, 30, 40, 50], ds()));
+        let hay_col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[10, 20, 30, 40, 50],
+            ds(),
+        ));
         let mut hb = TableBuilder::new();
         hb.push_column(hay_col);
         let haystack = hb.build().unwrap();
 
-        let needle_col = Column(cudf_sys::ffi::make_column_from_host_i32(&[15, 30, 55], ds()));
+        let needle_col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[15, 30, 55],
+            ds(),
+        ));
         let mut nb = TableBuilder::new();
         nb.push_column(needle_col);
         let needles = nb.build().unwrap();

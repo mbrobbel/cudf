@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
+//! Logical element type descriptors ([`DataType`] and [`TypeId`]).
+
 pub use cudf_sys::ffi::TypeId;
 
 /// A logical data type descriptor.

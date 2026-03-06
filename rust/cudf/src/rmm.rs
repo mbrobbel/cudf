@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
+//! GPU memory management via RMM (device queries).
+
 pub use rmm_sys::ffi::DeviceId;
 
 /// Returns the number of CUDA devices available.

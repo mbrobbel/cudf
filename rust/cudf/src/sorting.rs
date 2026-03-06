@@ -51,7 +51,9 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let sorted = table.sort(&[Order::DESCENDING], &[NullOrder::AFTER]).unwrap();
+        let sorted = table
+            .sort(&[Order::DESCENDING], &[NullOrder::AFTER])
+            .unwrap();
         assert_eq!(sorted.len(), 3);
     }
 

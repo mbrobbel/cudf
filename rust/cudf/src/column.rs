@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
+//! GPU column types: owning [`Column`] and borrowed [`ColumnView`].
+
 use cxx::UniquePtr;
 
 use crate::data_type::TypeId;
 use crate::error::Result;
-use crate::scalar::{scalar_from_ffi, Scalar};
+use crate::scalar::{Scalar, scalar_from_ffi};
 use crate::stream::Stream;
 
 /// Default stream shorthand for internal use.
@@ -89,12 +91,7 @@ impl Column {
     /// `offsets` must be an INT32 column of length `num_rows + 1`.
     /// `child` contains the flattened list elements.
     pub fn from_lists(num_rows: usize, offsets: Column, child: Column) -> Result<Self> {
-        let c = cudf_sys::ffi::make_lists_column(
-            num_rows as i32,
-            offsets.0,
-            child.0,
-            ds(),
-        )?;
+        let c = cudf_sys::ffi::make_lists_column(num_rows as i32, offsets.0, child.0, ds())?;
         Ok(Self(c))
     }
 
@@ -104,11 +101,8 @@ impl Column {
         for child in children {
             cudf_sys::ffi::struct_column_builder_add(builder.pin_mut(), child.0);
         }
-        let c = cudf_sys::ffi::struct_column_builder_build(
-            builder.pin_mut(),
-            num_rows as i32,
-            ds(),
-        )?;
+        let c =
+            cudf_sys::ffi::struct_column_builder_build(builder.pin_mut(), num_rows as i32, ds())?;
         Ok(Self(c))
     }
 
@@ -263,49 +257,61 @@ impl Column {
         Self(cudf_sys::ffi::make_column_from_host_bool(data, ds()))
     }
 
-    /// Creates a TIMESTAMP_SECONDS column from epoch-second values.
+    /// Creates a `TIMESTAMP_SECONDS` column from epoch-second values.
     pub fn from_timestamps_s(data: &[i64]) -> Self {
         Self(cudf_sys::ffi::make_column_from_host_timestamp_s(data, ds()))
     }
 
-    /// Creates a TIMESTAMP_MILLISECONDS column from epoch-millisecond values.
+    /// Creates a `TIMESTAMP_MILLISECONDS` column from epoch-millisecond values.
     pub fn from_timestamps_ms(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_timestamp_ms(data, ds()))
+        Self(cudf_sys::ffi::make_column_from_host_timestamp_ms(
+            data,
+            ds(),
+        ))
     }
 
-    /// Creates a TIMESTAMP_MICROSECONDS column from epoch-microsecond values.
+    /// Creates a `TIMESTAMP_MICROSECONDS` column from epoch-microsecond values.
     pub fn from_timestamps_us(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_timestamp_us(data, ds()))
+        Self(cudf_sys::ffi::make_column_from_host_timestamp_us(
+            data,
+            ds(),
+        ))
     }
 
-    /// Creates a TIMESTAMP_NANOSECONDS column from epoch-nanosecond values.
+    /// Creates a `TIMESTAMP_NANOSECONDS` column from epoch-nanosecond values.
     pub fn from_timestamps_ns(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_timestamp_ns(data, ds()))
+        Self(cudf_sys::ffi::make_column_from_host_timestamp_ns(
+            data,
+            ds(),
+        ))
     }
 
-    /// Creates a DURATION_SECONDS column from host data.
+    /// Creates a `DURATION_SECONDS` column from host data.
     pub fn from_durations_s(data: &[i64]) -> Self {
         Self(cudf_sys::ffi::make_column_from_host_duration_s(data, ds()))
     }
 
-    /// Creates a DURATION_MILLISECONDS column from host data.
+    /// Creates a `DURATION_MILLISECONDS` column from host data.
     pub fn from_durations_ms(data: &[i64]) -> Self {
         Self(cudf_sys::ffi::make_column_from_host_duration_ms(data, ds()))
     }
 
-    /// Creates a DURATION_MICROSECONDS column from host data.
+    /// Creates a `DURATION_MICROSECONDS` column from host data.
     pub fn from_durations_us(data: &[i64]) -> Self {
         Self(cudf_sys::ffi::make_column_from_host_duration_us(data, ds()))
     }
 
-    /// Creates a DURATION_NANOSECONDS column from host data.
+    /// Creates a `DURATION_NANOSECONDS` column from host data.
     pub fn from_durations_ns(data: &[i64]) -> Self {
         Self(cudf_sys::ffi::make_column_from_host_duration_ns(data, ds()))
     }
 
     /// Creates a string column from a slice of strings.
     pub fn from_strings(values: &[&str]) -> Self {
-        let strings: Vec<String> = values.iter().map(|s| s.to_string()).collect();
+        let strings: Vec<String> = values
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
         Self(cudf_sys::ffi::make_string_column(strings, ds()))
     }
 
@@ -314,13 +320,7 @@ impl Column {
     /// Fills the range `[begin, end)` with a scalar value in-place.
     pub fn fill_in_place(&mut self, begin: usize, end: usize, value: &Scalar) -> Result<()> {
         let ffi = crate::scalar::scalar_to_ffi(value);
-        cudf_sys::ffi::fill_in_place(
-            self.0.pin_mut(),
-            begin as i32,
-            end as i32,
-            &ffi,
-            ds(),
-        )?;
+        cudf_sys::ffi::fill_in_place(self.0.pin_mut(), begin as i32, end as i32, &ffi, ds())?;
         Ok(())
     }
 
@@ -438,7 +438,7 @@ impl ColumnView<'_> {
         self.is_null_on(Stream::default_stream())
     }
 
-    /// is_null on a custom CUDA stream.
+    /// `is_null` on a custom CUDA stream.
     pub fn is_null_on(&self, stream: Stream) -> Result<Column> {
         let c = cudf_sys::ffi::unary_is_null(self.0, stream.as_raw())?;
         Ok(Column(c))
@@ -449,7 +449,7 @@ impl ColumnView<'_> {
         self.is_valid_on(Stream::default_stream())
     }
 
-    /// is_valid on a custom CUDA stream.
+    /// `is_valid` on a custom CUDA stream.
     pub fn is_valid_on(&self, stream: Stream) -> Result<Column> {
         let c = cudf_sys::ffi::unary_is_valid(self.0, stream.as_raw())?;
         Ok(Column(c))
@@ -460,7 +460,7 @@ impl ColumnView<'_> {
         self.is_nan_on(Stream::default_stream())
     }
 
-    /// is_nan on a custom CUDA stream.
+    /// `is_nan` on a custom CUDA stream.
     pub fn is_nan_on(&self, stream: Stream) -> Result<Column> {
         let c = cudf_sys::ffi::unary_is_nan(self.0, stream.as_raw())?;
         Ok(Column(c))
@@ -590,8 +590,7 @@ impl ColumnView<'_> {
         interp: crate::quantile::Interpolation,
         stream: Stream,
     ) -> Result<Column> {
-        let c =
-            cudf_sys::ffi::quantile_column(self.0, quantiles, interp.repr, stream.as_raw())?;
+        let c = cudf_sys::ffi::quantile_column(self.0, quantiles, interp.repr, stream.as_raw())?;
         Ok(Column(c))
     }
 
@@ -609,7 +608,7 @@ impl ColumnView<'_> {
         self.nans_to_nulls_on(Stream::default_stream())
     }
 
-    /// nans_to_nulls on a custom CUDA stream.
+    /// `nans_to_nulls` on a custom CUDA stream.
     pub fn nans_to_nulls_on(&self, stream: Stream) -> Result<Column> {
         let result = cudf_sys::ffi::nans_to_nulls(self.0, stream.as_raw())?;
         Ok(Column(result))
@@ -620,24 +619,14 @@ impl ColumnView<'_> {
     /// - `include_nulls`: whether null values count as a distinct value.
     /// - `nan_is_null`: whether NaN values are treated as null.
     pub fn distinct_count(&self, include_nulls: bool, nan_is_null: bool) -> usize {
-        let null_policy = if include_nulls { 1 } else { 0 }; // INCLUDE=1, EXCLUDE=0
-        cudf_sys::ffi::distinct_count_column(
-            self.0,
-            null_policy,
-            nan_is_null,
-            ds(),
-        ) as usize
+        let null_policy = i32::from(include_nulls); // INCLUDE=1, EXCLUDE=0
+        cudf_sys::ffi::distinct_count_column(self.0, null_policy, nan_is_null, ds()) as usize
     }
 
     /// Counts consecutive unique values in the column.
     pub fn unique_count(&self, include_nulls: bool, nan_is_null: bool) -> usize {
-        let null_policy = if include_nulls { 1 } else { 0 };
-        cudf_sys::ffi::unique_count_column(
-            self.0,
-            null_policy,
-            nan_is_null,
-            ds(),
-        ) as usize
+        let null_policy = i32::from(include_nulls);
+        cudf_sys::ffi::unique_count_column(self.0, null_policy, nan_is_null, ds()) as usize
     }
 
     /// Computes approximate percentiles from a t-digest column.
@@ -845,7 +834,7 @@ impl ColumnView<'_> {
         self.unary_op_on(op, Stream::default_stream())
     }
 
-    /// unary_op on a custom CUDA stream.
+    /// `unary_op` on a custom CUDA stream.
     pub fn unary_op_on(&self, op: crate::ops::UnaryOperator, stream: Stream) -> Result<Column> {
         let c = cudf_sys::ffi::unary_operation(self.0, op.repr, stream.as_raw())?;
         Ok(Column(c))
@@ -856,7 +845,7 @@ impl ColumnView<'_> {
         self.is_not_nan_on(Stream::default_stream())
     }
 
-    /// is_not_nan on a custom CUDA stream.
+    /// `is_not_nan` on a custom CUDA stream.
     pub fn is_not_nan_on(&self, stream: Stream) -> Result<Column> {
         let c = cudf_sys::ffi::unary_is_not_nan(self.0, stream.as_raw())?;
         Ok(Column(c))
@@ -865,47 +854,89 @@ impl ColumnView<'_> {
     // -- Math convenience methods --
 
     /// Computes the sine of each element.
-    pub fn sin(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::SIN) }
+    pub fn sin(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::SIN)
+    }
     /// Computes the cosine of each element.
-    pub fn cos(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::COS) }
+    pub fn cos(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::COS)
+    }
     /// Computes the tangent of each element.
-    pub fn tan(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::TAN) }
+    pub fn tan(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::TAN)
+    }
     /// Computes the arcsine of each element.
-    pub fn arcsin(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCSIN) }
+    pub fn arcsin(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::ARCSIN)
+    }
     /// Computes the arccosine of each element.
-    pub fn arccos(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCCOS) }
+    pub fn arccos(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::ARCCOS)
+    }
     /// Computes the arctangent of each element.
-    pub fn arctan(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCTAN) }
+    pub fn arctan(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::ARCTAN)
+    }
     /// Computes the hyperbolic sine of each element.
-    pub fn sinh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::SINH) }
+    pub fn sinh(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::SINH)
+    }
     /// Computes the hyperbolic cosine of each element.
-    pub fn cosh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::COSH) }
+    pub fn cosh(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::COSH)
+    }
     /// Computes the hyperbolic tangent of each element.
-    pub fn tanh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::TANH) }
+    pub fn tanh(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::TANH)
+    }
     /// Computes the inverse hyperbolic sine of each element.
-    pub fn arcsinh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCSINH) }
+    pub fn arcsinh(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::ARCSINH)
+    }
     /// Computes the inverse hyperbolic cosine of each element.
-    pub fn arccosh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCCOSH) }
+    pub fn arccosh(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::ARCCOSH)
+    }
     /// Computes the inverse hyperbolic tangent of each element.
-    pub fn arctanh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCTANH) }
+    pub fn arctanh(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::ARCTANH)
+    }
     /// Computes e^x for each element.
-    pub fn exp(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::EXP) }
+    pub fn exp(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::EXP)
+    }
     /// Computes the natural log of each element.
-    pub fn log(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::LOG) }
+    pub fn log(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::LOG)
+    }
     /// Computes the square root of each element.
-    pub fn sqrt(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::SQRT) }
+    pub fn sqrt(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::SQRT)
+    }
     /// Computes the cube root of each element.
-    pub fn cbrt(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::CBRT) }
+    pub fn cbrt(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::CBRT)
+    }
     /// Computes the ceiling of each element.
-    pub fn ceil(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::CEIL) }
+    pub fn ceil(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::CEIL)
+    }
     /// Computes the floor of each element.
-    pub fn floor(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::FLOOR) }
+    pub fn floor(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::FLOOR)
+    }
     /// Rounds each element to the nearest integer (round half to even).
-    pub fn rint(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::RINT) }
+    pub fn rint(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::RINT)
+    }
     /// Bitwise inversion of each element.
-    pub fn bit_invert(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::BIT_INVERT) }
+    pub fn bit_invert(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::BIT_INVERT)
+    }
     /// Logical NOT of each element.
-    pub fn logical_not(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::NOT) }
+    pub fn logical_not(&self) -> Result<Column> {
+        self.unary_op(crate::ops::UnaryOperator::NOT)
+    }
 
     // -- Round --
 
@@ -953,7 +984,7 @@ impl ColumnView<'_> {
         self.std_dev_on(output_type, ddof, Stream::default_stream())
     }
 
-    /// std_dev on a custom CUDA stream.
+    /// `std_dev` on a custom CUDA stream.
     pub fn std_dev_on(&self, output_type: TypeId, ddof: i32, stream: Stream) -> Result<Scalar> {
         let s = cudf_sys::ffi::reduce_std(self.0, output_type.repr, ddof, stream.as_raw())?;
         Ok(scalar_from_ffi(&s))
@@ -1076,7 +1107,14 @@ impl ColumnView<'_> {
         ddof: i32,
         exclude_nulls: bool,
     ) -> Result<Column> {
-        self.segmented_reduce_on(offsets, agg, output_type, ddof, exclude_nulls, Stream::default_stream())
+        self.segmented_reduce_on(
+            offsets,
+            agg,
+            output_type,
+            ddof,
+            exclude_nulls,
+            Stream::default_stream(),
+        )
     }
 
     /// Segmented reduce on a custom CUDA stream.
@@ -1089,7 +1127,7 @@ impl ColumnView<'_> {
         exclude_nulls: bool,
         stream: Stream,
     ) -> Result<Column> {
-        let null_handling = if exclude_nulls { 0 } else { 1 };
+        let null_handling = i32::from(!exclude_nulls);
         let c = cudf_sys::ffi::segmented_reduce(
             self.0,
             offsets.0,
@@ -1105,7 +1143,11 @@ impl ColumnView<'_> {
     // -- Scan --
 
     /// Computes a prefix scan (cumulative operation).
-    pub fn scan(&self, agg_kind: crate::groupby::AggregationKind, inclusive: bool) -> Result<Column> {
+    pub fn scan(
+        &self,
+        agg_kind: crate::groupby::AggregationKind,
+        inclusive: bool,
+    ) -> Result<Column> {
         self.scan_on(agg_kind, inclusive, Stream::default_stream())
     }
 
@@ -1116,7 +1158,7 @@ impl ColumnView<'_> {
         inclusive: bool,
         stream: Stream,
     ) -> Result<Column> {
-        let scan_type = if inclusive { 0 } else { 1 };
+        let scan_type = i32::from(!inclusive);
         let c = cudf_sys::ffi::scan_column(
             self.0,
             agg_kind.repr,
@@ -1143,7 +1185,8 @@ impl ColumnView<'_> {
 
     /// Returns a single element as a scalar.
     pub fn get_element(&self, index: usize) -> Result<Scalar> {
-        let s = cudf_sys::ffi::get_element(self.0, index as i32, Stream::default_stream().as_raw())?;
+        let s =
+            cudf_sys::ffi::get_element(self.0, index as i32, Stream::default_stream().as_raw())?;
         Ok(scalar_from_ffi(&s))
     }
 
@@ -1208,7 +1251,7 @@ impl ColumnView<'_> {
         self.contains_scalar_on(needle, Stream::default_stream())
     }
 
-    /// contains_scalar on a custom CUDA stream.
+    /// `contains_scalar` on a custom CUDA stream.
     pub fn contains_scalar_on(&self, needle: &Scalar, stream: Stream) -> Result<bool> {
         let ffi = crate::scalar::scalar_to_ffi(needle);
         cudf_sys::ffi::contains_scalar(self.0, &ffi, stream.as_raw()).map_err(Into::into)
@@ -1219,12 +1262,8 @@ impl ColumnView<'_> {
         self.contains_column_on(needles, Stream::default_stream())
     }
 
-    /// contains_column on a custom CUDA stream.
-    pub fn contains_column_on(
-        &self,
-        needles: &ColumnView<'_>,
-        stream: Stream,
-    ) -> Result<Column> {
+    /// `contains_column` on a custom CUDA stream.
+    pub fn contains_column_on(&self, needles: &ColumnView<'_>, stream: Stream) -> Result<Column> {
         let c = cudf_sys::ffi::contains_column(self.0, needles.0, stream.as_raw())?;
         Ok(Column(c))
     }
@@ -1254,25 +1293,57 @@ impl ColumnView<'_> {
 
     /// Top k values of the column.
     pub fn top_k(&self, k: usize, order: crate::sorting::Order) -> Result<Column> {
-        let c = cudf_sys::ffi::top_k(self.0, k as i32, order.repr, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::top_k(
+            self.0,
+            k as i32,
+            order.repr,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
 
     /// Top k indices of the column.
     pub fn top_k_order(&self, k: usize, order: crate::sorting::Order) -> Result<Column> {
-        let c = cudf_sys::ffi::top_k_order(self.0, k as i32, order.repr, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::top_k_order(
+            self.0,
+            k as i32,
+            order.repr,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
 
     /// Segmented top k values.
-    pub fn segmented_top_k(&self, segment_offsets: &ColumnView<'_>, k: usize, order: crate::sorting::Order) -> Result<Column> {
-        let c = cudf_sys::ffi::segmented_top_k(self.0, segment_offsets.0, k as i32, order.repr, Stream::default_stream().as_raw())?;
+    pub fn segmented_top_k(
+        &self,
+        segment_offsets: &ColumnView<'_>,
+        k: usize,
+        order: crate::sorting::Order,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::segmented_top_k(
+            self.0,
+            segment_offsets.0,
+            k as i32,
+            order.repr,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
 
     /// Segmented top k indices.
-    pub fn segmented_top_k_order(&self, segment_offsets: &ColumnView<'_>, k: usize, order: crate::sorting::Order) -> Result<Column> {
-        let c = cudf_sys::ffi::segmented_top_k_order(self.0, segment_offsets.0, k as i32, order.repr, Stream::default_stream().as_raw())?;
+    pub fn segmented_top_k_order(
+        &self,
+        segment_offsets: &ColumnView<'_>,
+        k: usize,
+        order: crate::sorting::Order,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::segmented_top_k_order(
+            self.0,
+            segment_offsets.0,
+            k as i32,
+            order.repr,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
 
@@ -1305,7 +1376,8 @@ impl ColumnView<'_> {
 
     /// Check if this column has non-empty null rows (LIST/STRING).
     pub fn has_nonempty_nulls(&self) -> Result<bool> {
-        cudf_sys::ffi::has_nonempty_nulls(self.0, Stream::default_stream().as_raw()).map_err(Into::into)
+        cudf_sys::ffi::has_nonempty_nulls(self.0, Stream::default_stream().as_raw())
+            .map_err(Into::into)
     }
 
     /// Check if this column *may* have non-empty data in null rows.
@@ -1324,8 +1396,9 @@ impl ColumnView<'_> {
 
     /// Replace nulls using preceding/following policy.
     pub fn replace_nulls_policy(&self, preceding: bool) -> Result<Column> {
-        let policy = if preceding { 0 } else { 1 };
-        let c = cudf_sys::ffi::replace_nulls_policy(self.0, policy, Stream::default_stream().as_raw())?;
+        let policy = i32::from(!preceding);
+        let c =
+            cudf_sys::ffi::replace_nulls_policy(self.0, policy, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 
@@ -1342,7 +1415,11 @@ impl ColumnView<'_> {
         let hi_ffi = crate::scalar::scalar_to_ffi(hi);
         let hi_r_ffi = crate::scalar::scalar_to_ffi(hi_replace);
         let c = cudf_sys::ffi::clamp_column_with_replace(
-            self.0, &lo_ffi, &lo_r_ffi, &hi_ffi, &hi_r_ffi,
+            self.0,
+            &lo_ffi,
+            &lo_r_ffi,
+            &hi_ffi,
+            &hi_r_ffi,
             Stream::default_stream().as_raw(),
         )?;
         Ok(Column(c))
@@ -1370,16 +1447,10 @@ impl ColumnView<'_> {
         stream: Stream,
     ) -> Result<Column> {
         let ffi = crate::scalar::scalar_to_ffi(value);
-        let c = cudf_sys::ffi::fill_column(
-            self.0,
-            begin as i32,
-            end as i32,
-            &ffi,
-            stream.as_raw(),
-        )?;
+        let c =
+            cudf_sys::ffi::fill_column(self.0, begin as i32, end as i32, &ffi, stream.as_raw())?;
         Ok(Column(c))
     }
-
 }
 
 #[cfg(test)]

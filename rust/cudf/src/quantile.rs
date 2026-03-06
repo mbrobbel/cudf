@@ -19,7 +19,10 @@ mod tests {
 
     #[test]
     fn median_of_column() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4, 5], ds()));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[1, 2, 3, 4, 5],
+            ds(),
+        ));
         let result = col.view().quantile(&[0.5]).unwrap();
         assert_eq!(result.len(), 1);
         let data = result.to_vec_f64();
@@ -28,7 +31,10 @@ mod tests {
 
     #[test]
     fn quartiles() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4, 5], ds()));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[1, 2, 3, 4, 5],
+            ds(),
+        ));
         let result = col.view().quantile(&[0.25, 0.5, 0.75]).unwrap();
         assert_eq!(result.len(), 3);
         let data = result.to_vec_f64();
@@ -40,7 +46,10 @@ mod tests {
     #[test]
     fn quantile_with_interp_lower() {
         use crate::quantile::Interpolation;
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4], ds()));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[1, 2, 3, 4],
+            ds(),
+        ));
         let result = col
             .view()
             .quantile_with_interp(&[0.5], Interpolation::LOWER)
@@ -52,7 +61,10 @@ mod tests {
     #[test]
     fn quantile_with_interp_higher() {
         use crate::quantile::Interpolation;
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 2, 3, 4], ds()));
+        let col = Column(cudf_sys::ffi::make_column_from_host_i32(
+            &[1, 2, 3, 4],
+            ds(),
+        ));
         let result = col
             .view()
             .quantile_with_interp(&[0.5], Interpolation::HIGHER)

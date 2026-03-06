@@ -5,9 +5,9 @@
 
 use crate::column::{Column, ColumnView};
 use crate::error::Result;
-use cudf_sys::ffi::AggregationKind;
 use crate::stream::Stream;
 use crate::table::Table;
+use cudf_sys::ffi::AggregationKind;
 
 impl ColumnView<'_> {
     /// Applies a fixed-size rolling window aggregation.
@@ -22,10 +22,16 @@ impl ColumnView<'_> {
         min_periods: i32,
         agg_kind: AggregationKind,
     ) -> Result<Column> {
-        self.rolling_window_on(preceding, following, min_periods, agg_kind, Stream::default_stream())
+        self.rolling_window_on(
+            preceding,
+            following,
+            min_periods,
+            agg_kind,
+            Stream::default_stream(),
+        )
     }
 
-    /// rolling_window on a custom CUDA stream.
+    /// `rolling_window` on a custom CUDA stream.
     pub fn rolling_window_on(
         &self,
         preceding: i32,
@@ -58,11 +64,16 @@ impl ColumnView<'_> {
         agg_kind: AggregationKind,
     ) -> Result<Column> {
         self.grouped_rolling_window_on(
-            group_keys, preceding, following, min_periods, agg_kind, Stream::default_stream(),
+            group_keys,
+            preceding,
+            following,
+            min_periods,
+            agg_kind,
+            Stream::default_stream(),
         )
     }
 
-    /// grouped_rolling_window on a custom CUDA stream.
+    /// `grouped_rolling_window` on a custom CUDA stream.
     pub fn grouped_rolling_window_on(
         &self,
         group_keys: &Table,
@@ -97,11 +108,16 @@ impl ColumnView<'_> {
         agg_kind: AggregationKind,
     ) -> Result<Column> {
         self.rolling_window_with_defaults_on(
-            default_outputs, preceding, following, min_periods, agg_kind, Stream::default_stream(),
+            default_outputs,
+            preceding,
+            following,
+            min_periods,
+            agg_kind,
+            Stream::default_stream(),
         )
     }
 
-    /// rolling_window_with_defaults on a custom CUDA stream.
+    /// `rolling_window_with_defaults` on a custom CUDA stream.
     pub fn rolling_window_with_defaults_on(
         &self,
         default_outputs: &ColumnView<'_>,

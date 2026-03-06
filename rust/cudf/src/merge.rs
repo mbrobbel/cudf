@@ -24,12 +24,7 @@ mod tests {
         let right = b2.build().unwrap();
 
         let result = left
-            .merge(
-                &right,
-                &[0i32],
-                &[Order::ASCENDING],
-                &[NullOrder::BEFORE],
-            )
+            .merge(&right, &[0i32], &[Order::ASCENDING], &[NullOrder::BEFORE])
             .unwrap();
         assert_eq!(result.len(), 6);
         assert_eq!(result.columns_len(), 1);

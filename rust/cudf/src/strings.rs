@@ -16,67 +16,72 @@ pub use cudf_sys::ffi::SideType;
 pub trait StringExt {
     /// Converts each string to lower case.
     fn to_lower(&self) -> Result<Column>;
-    /// to_lower on a custom CUDA stream.
+    /// `to_lower` on a custom CUDA stream.
     fn to_lower_on(&self, stream: Stream) -> Result<Column>;
     /// Converts each string to upper case.
     fn to_upper(&self) -> Result<Column>;
-    /// to_upper on a custom CUDA stream.
+    /// `to_upper` on a custom CUDA stream.
     fn to_upper_on(&self, stream: Stream) -> Result<Column>;
     /// Returns a BOOL8 column indicating whether each string contains the target.
     fn str_contains(&self, target: &Scalar) -> Result<Column>;
-    /// str_contains on a custom CUDA stream.
+    /// `str_contains` on a custom CUDA stream.
     fn str_contains_on(&self, target: &Scalar, stream: Stream) -> Result<Column>;
     /// Returns a BOOL8 column indicating whether each string starts with the target.
     fn str_starts_with(&self, target: &Scalar) -> Result<Column>;
-    /// str_starts_with on a custom CUDA stream.
+    /// `str_starts_with` on a custom CUDA stream.
     fn str_starts_with_on(&self, target: &Scalar, stream: Stream) -> Result<Column>;
     /// Returns a BOOL8 column indicating whether each string ends with the target.
     fn str_ends_with(&self, target: &Scalar) -> Result<Column>;
-    /// str_ends_with on a custom CUDA stream.
+    /// `str_ends_with` on a custom CUDA stream.
     fn str_ends_with_on(&self, target: &Scalar, stream: Stream) -> Result<Column>;
     /// Returns an INT32 column with the position of the first occurrence of the target.
     fn str_find(&self, target: &Scalar) -> Result<Column>;
-    /// str_find on a custom CUDA stream.
+    /// `str_find` on a custom CUDA stream.
     fn str_find_on(&self, target: &Scalar, stream: Stream) -> Result<Column>;
     /// Replaces all occurrences of `target` with `replacement`.
     fn str_replace(&self, target: &Scalar, replacement: &Scalar) -> Result<Column>;
-    /// str_replace on a custom CUDA stream.
-    fn str_replace_on(&self, target: &Scalar, replacement: &Scalar, stream: Stream) -> Result<Column>;
+    /// `str_replace` on a custom CUDA stream.
+    fn str_replace_on(
+        &self,
+        target: &Scalar,
+        replacement: &Scalar,
+        stream: Stream,
+    ) -> Result<Column>;
     /// Strips whitespace from both sides.
     fn str_strip(&self) -> Result<Column>;
-    /// str_strip on a custom CUDA stream.
+    /// `str_strip` on a custom CUDA stream.
     fn str_strip_on(&self, stream: Stream) -> Result<Column>;
     /// Strips whitespace from the left side.
     fn str_lstrip(&self) -> Result<Column>;
-    /// str_lstrip on a custom CUDA stream.
+    /// `str_lstrip` on a custom CUDA stream.
     fn str_lstrip_on(&self, stream: Stream) -> Result<Column>;
     /// Strips whitespace from the right side.
     fn str_rstrip(&self) -> Result<Column>;
-    /// str_rstrip on a custom CUDA stream.
+    /// `str_rstrip` on a custom CUDA stream.
     fn str_rstrip_on(&self, stream: Stream) -> Result<Column>;
     /// Returns an INT32 column with the character count.
     fn count_characters(&self) -> Result<Column>;
-    /// count_characters on a custom CUDA stream.
+    /// `count_characters` on a custom CUDA stream.
     fn count_characters_on(&self, stream: Stream) -> Result<Column>;
     /// Returns an INT32 column with the byte count.
     fn count_bytes(&self) -> Result<Column>;
-    /// count_bytes on a custom CUDA stream.
+    /// `count_bytes` on a custom CUDA stream.
     fn count_bytes_on(&self, stream: Stream) -> Result<Column>;
     /// Converts an integer column to a string column.
     fn str_from_integers(&self) -> Result<Column>;
-    /// str_from_integers on a custom CUDA stream.
+    /// `str_from_integers` on a custom CUDA stream.
     fn str_from_integers_on(&self, stream: Stream) -> Result<Column>;
     /// Converts a string column to an integer column.
     fn str_to_integers(&self, output_type: TypeId) -> Result<Column>;
-    /// str_to_integers on a custom CUDA stream.
+    /// `str_to_integers` on a custom CUDA stream.
     fn str_to_integers_on(&self, output_type: TypeId, stream: Stream) -> Result<Column>;
     /// Converts a float column to a string column.
     fn str_from_floats(&self) -> Result<Column>;
-    /// str_from_floats on a custom CUDA stream.
+    /// `str_from_floats` on a custom CUDA stream.
     fn str_from_floats_on(&self, stream: Stream) -> Result<Column>;
     /// Converts a string column to a float column.
     fn str_to_floats(&self, output_type: TypeId) -> Result<Column>;
-    /// str_to_floats on a custom CUDA stream.
+    /// `str_to_floats` on a custom CUDA stream.
     fn str_to_floats_on(&self, output_type: TypeId, stream: Stream) -> Result<Column>;
 
     // -- New string operations --
@@ -202,10 +207,15 @@ pub trait StringExt {
     /// Check if all characters match the given type bitmask.
     ///
     /// Types are bitmasks: DECIMAL=1, NUMERIC=2, DIGIT=4, ALPHA=8, SPACE=16, UPPER=32, LOWER=64.
-    /// `verify_types` restricts which types are checked (default ALL_TYPES=127).
+    /// `verify_types` restricts which types are checked (default `ALL_TYPES=127`).
     fn all_characters_of_type(&self, types: u32, verify_types: u32) -> Result<Column>;
     /// Filter characters by type, replacing removed chars with replacement string.
-    fn filter_characters_of_type(&self, types_to_remove: u32, replacement: &str, types_to_keep: u32) -> Result<Column>;
+    fn filter_characters_of_type(
+        &self,
+        types_to_remove: u32,
+        replacement: &str,
+        types_to_keep: u32,
+    ) -> Result<Column>;
     /// Check if all chars in each string are valid integers.
     fn str_is_integer(&self) -> Result<Column>;
     /// Check if all chars are valid integers within the given type range.
@@ -224,7 +234,11 @@ pub trait StringExt {
     /// Replace substring at positions [start, stop) with replacement string.
     fn str_replace_slice(&self, repl: &str, start: i32, stop: i32) -> Result<Column>;
     /// Replace multiple targets with corresponding replacement strings.
-    fn str_replace_multiple(&self, targets: &ColumnView<'_>, repls: &ColumnView<'_>) -> Result<Column>;
+    fn str_replace_multiple(
+        &self,
+        targets: &ColumnView<'_>,
+        repls: &ColumnView<'_>,
+    ) -> Result<Column>;
 
     // -- Split to lists column (non-regex) --
 
@@ -241,11 +255,17 @@ pub trait StringExt {
     // -- Translate / filter characters --
 
     /// Translate individual characters using from→to mapping.
-    /// `from_chars[i]` is replaced by `to_chars[i]`. Use 0 in to_chars to remove a character.
+    /// `from_chars[i]` is replaced by `to_chars[i]`. Use 0 in `to_chars` to remove a character.
     fn str_translate(&self, from_chars: &[u32], to_chars: &[u32]) -> Result<Column>;
     /// Filter character ranges. `keep=true` keeps only characters in ranges, `false` removes them.
     /// Each range is `[from_chars[i], to_chars[i]]`.
-    fn str_filter_characters(&self, from_chars: &[u32], to_chars: &[u32], keep: bool, replacement: &str) -> Result<Column>;
+    fn str_filter_characters(
+        &self,
+        from_chars: &[u32],
+        to_chars: &[u32],
+        keep: bool,
+        replacement: &str,
+    ) -> Result<Column>;
 
     // -- Code points --
 
@@ -266,7 +286,12 @@ pub trait StringExt {
     /// Extract a single regex capture group from each string.
     fn str_extract_single(&self, pattern: &str, group_index: i32) -> Result<Column>;
     /// Join lists of strings with per-row separator column.
-    fn str_join_list_elements_column(&self, separators: &ColumnView<'_>, separator_narep: &str, string_narep: &str) -> Result<Column>;
+    fn str_join_list_elements_column(
+        &self,
+        separators: &ColumnView<'_>,
+        separator_narep: &str,
+        string_narep: &str,
+    ) -> Result<Column>;
     /// Join all strings in a column into a single-row column using a string separator.
     fn str_join_strings(&self, separator: &str, narep: &str) -> Result<Column>;
     /// Find the Nth occurrence of a target substring, returning INT32 positions.
@@ -333,12 +358,8 @@ impl StringExt for ColumnView<'_> {
     ) -> Result<Column> {
         let target_ffi = crate::scalar::scalar_to_ffi(target);
         let replacement_ffi = crate::scalar::scalar_to_ffi(replacement);
-        let c = cudf_sys::ffi::strings_replace(
-            self.0,
-            &target_ffi,
-            &replacement_ffi,
-            stream.as_raw(),
-        )?;
+        let c =
+            cudf_sys::ffi::strings_replace(self.0, &target_ffi, &replacement_ffi, stream.as_raw())?;
         Ok(Column(c))
     }
     fn str_strip(&self) -> Result<Column> {
@@ -406,64 +427,115 @@ impl StringExt for ColumnView<'_> {
     }
 
     fn str_pad(&self, width: usize, side: SideType, fill_char: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_pad(self.0, width as i32, side.repr, fill_char, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_pad(
+            self.0,
+            width as i32,
+            side.repr,
+            fill_char,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_zfill(&self, width: usize) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_zfill(self.0, width as i32, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::strings_zfill(self.0, width as i32, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn str_zfill_by_widths(&self, widths: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_zfill_by_widths(self.0, widths.0, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_zfill_by_widths(
+            self.0,
+            widths.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_slice(&self, start: i32, stop: i32, step: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_slice(self.0, start, stop, step, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_slice(
+            self.0,
+            start,
+            stop,
+            step,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_repeat(&self, times: usize) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_repeat(self.0, times as i32, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::strings_repeat(self.0, times as i32, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn str_split(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Table> {
         let ffi = crate::scalar::scalar_to_ffi(delimiter);
-        let t = cudf_sys::ffi::strings_split_to_table(self.0, &ffi, maxsplit, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::strings_split_to_table(
+            self.0,
+            &ffi,
+            maxsplit,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
     fn str_rsplit(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Table> {
         let ffi = crate::scalar::scalar_to_ffi(delimiter);
-        let t = cudf_sys::ffi::strings_rsplit_to_table(self.0, &ffi, maxsplit, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::strings_rsplit_to_table(
+            self.0,
+            &ffi,
+            maxsplit,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
     fn str_split_part(&self, delimiter: &Scalar, index: i32) -> Result<Column> {
         let ffi = crate::scalar::scalar_to_ffi(delimiter);
-        let c = cudf_sys::ffi::strings_split_part(self.0, &ffi, index, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_split_part(
+            self.0,
+            &ffi,
+            index,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_join(&self, separator: &Scalar, narep: &Scalar) -> Result<Column> {
         let sep_ffi = crate::scalar::scalar_to_ffi(separator);
         let na_ffi = crate::scalar::scalar_to_ffi(narep);
-        let c = cudf_sys::ffi::strings_join(self.0, &sep_ffi, &na_ffi, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_join(
+            self.0,
+            &sep_ffi,
+            &na_ffi,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_like(&self, pattern: &str, escape_char: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_like(self.0, pattern, escape_char, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_like(
+            self.0,
+            pattern,
+            escape_char,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_contains_re(&self, pattern: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_contains_re(self.0, pattern, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::strings_contains_re(self.0, pattern, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn str_matches_re(&self, pattern: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_matches_re(self.0, pattern, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::strings_matches_re(self.0, pattern, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn str_count_re(&self, pattern: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_count_re(self.0, pattern, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::strings_count_re(self.0, pattern, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn str_replace_re(&self, pattern: &str, replacement: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_replace_re(self.0, pattern, replacement, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_replace_re(
+            self.0,
+            pattern,
+            replacement,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn swapcase(&self) -> Result<Column> {
@@ -471,31 +543,63 @@ impl StringExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn str_strip_chars(&self, side: SideType, to_strip: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_strip_chars(self.0, side.repr, to_strip, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_strip_chars(
+            self.0,
+            side.repr,
+            to_strip,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_replace_literal(&self, target: &str, repl: &str, maxrepl: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_replace_literal(self.0, target, repl, maxrepl, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_replace_literal(
+            self.0,
+            target,
+            repl,
+            maxrepl,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_find_str(&self, target: &str, start: i32, stop: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_find_str(self.0, target, start, stop, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_find_str(
+            self.0,
+            target,
+            start,
+            stop,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_rfind(&self, target: &str, start: i32, stop: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_rfind(self.0, target, start, stop, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_rfind(
+            self.0,
+            target,
+            start,
+            stop,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_contains_literal(&self, target: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_contains_str(self.0, target, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::strings_contains_str(self.0, target, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn str_starts_with_str(&self, target: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_starts_with_str(self.0, target, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_starts_with_str(
+            self.0,
+            target,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_ends_with_str(&self, target: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_ends_with_str(self.0, target, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_ends_with_str(
+            self.0,
+            target,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_reverse(&self) -> Result<Column> {
@@ -507,7 +611,11 @@ impl StringExt for ColumnView<'_> {
         Ok(Table(t))
     }
     fn str_extract_all(&self, pattern: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_extract_all_record(self.0, pattern, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_extract_all_record(
+            self.0,
+            pattern,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_findall(&self, pattern: &str) -> Result<Column> {
@@ -535,35 +643,68 @@ impl StringExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn str_to_timestamps(&self, timestamp_type: TypeId, format: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_to_timestamps(self.0, timestamp_type.repr, format, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_to_timestamps(
+            self.0,
+            timestamp_type.repr,
+            format,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_from_timestamps(&self, format: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_from_timestamps(self.0, format, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_from_timestamps(
+            self.0,
+            format,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_is_timestamp(&self, format: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_is_timestamp(self.0, format, Stream::default_stream().as_raw())?;
+        let c =
+            cudf_sys::ffi::strings_is_timestamp(self.0, format, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn str_to_booleans(&self, true_string: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_to_booleans(self.0, true_string, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_to_booleans(
+            self.0,
+            true_string,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_from_booleans(&self, true_string: &str, false_string: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_from_booleans(self.0, true_string, false_string, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_from_booleans(
+            self.0,
+            true_string,
+            false_string,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_to_durations(&self, duration_type: TypeId, format: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_to_durations(self.0, duration_type.repr, format, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_to_durations(
+            self.0,
+            duration_type.repr,
+            format,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_from_durations(&self, format: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_from_durations(self.0, format, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_from_durations(
+            self.0,
+            format,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_to_fixed_point(&self, type_id: TypeId, scale: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_to_fixed_point(self.0, type_id.repr, scale, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_to_fixed_point(
+            self.0,
+            type_id.repr,
+            scale,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_from_fixed_point(&self) -> Result<Column> {
@@ -571,7 +712,12 @@ impl StringExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn str_is_fixed_point(&self, type_id: TypeId, scale: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_is_fixed_point(self.0, type_id.repr, scale, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_is_fixed_point(
+            self.0,
+            type_id.repr,
+            scale,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn url_encode(&self) -> Result<Column> {
@@ -595,51 +741,109 @@ impl StringExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn str_split_re(&self, pattern: &str, maxsplit: i32) -> Result<Table> {
-        let t = cudf_sys::ffi::strings_split_re(self.0, pattern, maxsplit, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::strings_split_re(
+            self.0,
+            pattern,
+            maxsplit,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
     fn str_rsplit_re(&self, pattern: &str, maxsplit: i32) -> Result<Table> {
-        let t = cudf_sys::ffi::strings_rsplit_re(self.0, pattern, maxsplit, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::strings_rsplit_re(
+            self.0,
+            pattern,
+            maxsplit,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
     fn str_split_record_re(&self, pattern: &str, maxsplit: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_split_record_re(self.0, pattern, maxsplit, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_split_record_re(
+            self.0,
+            pattern,
+            maxsplit,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_rsplit_record_re(&self, pattern: &str, maxsplit: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_rsplit_record_re(self.0, pattern, maxsplit, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_rsplit_record_re(
+            self.0,
+            pattern,
+            maxsplit,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_partition(&self, delimiter: &str) -> Result<Table> {
-        let t = cudf_sys::ffi::strings_partition(self.0, delimiter, Stream::default_stream().as_raw())?;
+        let t =
+            cudf_sys::ffi::strings_partition(self.0, delimiter, Stream::default_stream().as_raw())?;
         Ok(Table(t))
     }
     fn str_rpartition(&self, delimiter: &str) -> Result<Table> {
-        let t = cudf_sys::ffi::strings_rpartition(self.0, delimiter, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::strings_rpartition(
+            self.0,
+            delimiter,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
     fn str_replace_with_backrefs(&self, pattern: &str, replacement: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_replace_with_backrefs(self.0, pattern, replacement, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_replace_with_backrefs(
+            self.0,
+            pattern,
+            replacement,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_repeat_column(&self, repeat_times: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_repeat_column(self.0, repeat_times.0, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_repeat_column(
+            self.0,
+            repeat_times.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_contains_multiple(&self, targets: &ColumnView<'_>) -> Result<Table> {
-        let t = cudf_sys::ffi::strings_contains_multiple(self.0, targets.0, Stream::default_stream().as_raw())?;
+        let t = cudf_sys::ffi::strings_contains_multiple(
+            self.0,
+            targets.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Table(t))
     }
     fn str_find_multiple(&self, targets: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_find_multiple(self.0, targets.0, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_find_multiple(
+            self.0,
+            targets.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn all_characters_of_type(&self, types: u32, verify_types: u32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_all_characters_of_type(self.0, types, verify_types, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_all_characters_of_type(
+            self.0,
+            types,
+            verify_types,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
-    fn filter_characters_of_type(&self, types_to_remove: u32, replacement: &str, types_to_keep: u32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_filter_characters_of_type(self.0, types_to_remove, replacement, types_to_keep, Stream::default_stream().as_raw())?;
+    fn filter_characters_of_type(
+        &self,
+        types_to_remove: u32,
+        replacement: &str,
+        types_to_keep: u32,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_filter_characters_of_type(
+            self.0,
+            types_to_remove,
+            replacement,
+            types_to_keep,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_is_integer(&self) -> Result<Column> {
@@ -647,7 +851,11 @@ impl StringExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn str_is_integer_with_type(&self, int_type: TypeId) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_is_integer_with_type(self.0, int_type.repr, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_is_integer_with_type(
+            self.0,
+            int_type.repr,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_is_float(&self) -> Result<Column> {
@@ -655,7 +863,11 @@ impl StringExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn str_hex_to_integers(&self, output_type: TypeId) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_hex_to_integers(self.0, output_type.repr, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_hex_to_integers(
+            self.0,
+            output_type.repr,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_is_hex(&self) -> Result<Column> {
@@ -667,33 +879,81 @@ impl StringExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn str_replace_slice(&self, repl: &str, start: i32, stop: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_replace_slice(self.0, repl, start, stop, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_replace_slice(
+            self.0,
+            repl,
+            start,
+            stop,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
-    fn str_replace_multiple(&self, targets: &ColumnView<'_>, repls: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_replace_multiple(self.0, targets.0, repls.0, Stream::default_stream().as_raw())?;
+    fn str_replace_multiple(
+        &self,
+        targets: &ColumnView<'_>,
+        repls: &ColumnView<'_>,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_replace_multiple(
+            self.0,
+            targets.0,
+            repls.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_split_record(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Column> {
         let ffi = crate::scalar::scalar_to_ffi(delimiter);
-        let c = cudf_sys::ffi::strings_split_record(self.0, &ffi, maxsplit, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_split_record(
+            self.0,
+            &ffi,
+            maxsplit,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_rsplit_record(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Column> {
         let ffi = crate::scalar::scalar_to_ffi(delimiter);
-        let c = cudf_sys::ffi::strings_rsplit_record(self.0, &ffi, maxsplit, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_rsplit_record(
+            self.0,
+            &ffi,
+            maxsplit,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_join_list_elements(&self, separator: &str, narep: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_join_list_elements(self.0, separator, narep, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_join_list_elements(
+            self.0,
+            separator,
+            narep,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_translate(&self, from_chars: &[u32], to_chars: &[u32]) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_translate(self.0, from_chars, to_chars, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_translate(
+            self.0,
+            from_chars,
+            to_chars,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
-    fn str_filter_characters(&self, from_chars: &[u32], to_chars: &[u32], keep: bool, replacement: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_filter_characters(self.0, from_chars, to_chars, keep, replacement, Stream::default_stream().as_raw())?;
+    fn str_filter_characters(
+        &self,
+        from_chars: &[u32],
+        to_chars: &[u32],
+        keep: bool,
+        replacement: &str,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_filter_characters(
+            self.0,
+            from_chars,
+            to_chars,
+            keep,
+            replacement,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn code_points(&self) -> Result<Column> {
@@ -701,35 +961,80 @@ impl StringExt for ColumnView<'_> {
         Ok(Column(c))
     }
     fn str_cast_to_integer(&self, output_type: TypeId, big_endian: bool) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_cast_to_integer(self.0, output_type.repr, big_endian, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_cast_to_integer(
+            self.0,
+            output_type.repr,
+            big_endian,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_cast_from_integer(&self, big_endian: bool) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_cast_from_integer(self.0, big_endian, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_cast_from_integer(
+            self.0,
+            big_endian,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_slice_column(&self, starts: &ColumnView<'_>, stops: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_slice_column(self.0, starts.0, stops.0, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_slice_column(
+            self.0,
+            starts.0,
+            stops.0,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_extract_single(&self, pattern: &str, group_index: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_extract_single(self.0, pattern, group_index, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_extract_single(
+            self.0,
+            pattern,
+            group_index,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
-    fn str_join_list_elements_column(&self, separators: &ColumnView<'_>, separator_narep: &str, string_narep: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_join_list_elements_column(self.0, separators.0, separator_narep, string_narep, Stream::default_stream().as_raw())?;
+    fn str_join_list_elements_column(
+        &self,
+        separators: &ColumnView<'_>,
+        separator_narep: &str,
+        string_narep: &str,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_join_list_elements_column(
+            self.0,
+            separators.0,
+            separator_narep,
+            string_narep,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_join_strings(&self, separator: &str, narep: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_join_strings(self.0, separator, narep, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_join_strings(
+            self.0,
+            separator,
+            narep,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_find_instance(&self, target: &str, instance: i32) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_find_instance(self.0, target, instance, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_find_instance(
+            self.0,
+            target,
+            instance,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
     fn str_like_column(&self, patterns: &ColumnView<'_>, escape_char: &str) -> Result<Column> {
-        let c = cudf_sys::ffi::strings_like_column(self.0, patterns.0, escape_char, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::ffi::strings_like_column(
+            self.0,
+            patterns.0,
+            escape_char,
+            Stream::default_stream().as_raw(),
+        )?;
         Ok(Column(c))
     }
 }
@@ -741,13 +1046,19 @@ pub fn concatenate_strings_with_separator(
     separator_narep: &str,
     col_narep: &str,
 ) -> Result<Column> {
-    let c = cudf_sys::ffi::strings_concatenate_columns_sep_col(&tbl.0, separators.0, separator_narep, col_narep, Stream::default_stream().as_raw())?;
+    let c = cudf_sys::ffi::strings_concatenate_columns_sep_col(
+        &tbl.0,
+        separators.0,
+        separator_narep,
+        col_narep,
+        Stream::default_stream().as_raw(),
+    )?;
     Ok(Column(c))
 }
 
-/// Extract values from JSON strings using a JSONPath expression.
+/// Extract values from JSON strings using a `JSONPath` expression.
 ///
-/// Each row in the input column must be a valid JSON string. The JSONPath
+/// Each row in the input column must be a valid JSON string. The `JSONPath`
 /// expression is applied to every row, returning the matched values as strings.
 pub fn get_json_object(
     col: &ColumnView<'_>,
@@ -769,15 +1080,25 @@ pub fn get_json_object(
 
 /// String character type bitmask constants.
 pub mod char_types {
+    /// Decimal characters (e.g. `0`–`9` in various scripts).
     pub const DECIMAL: u32 = 1;
+    /// Numeric characters (includes fractions, subscripts, etc.).
     pub const NUMERIC: u32 = 2;
+    /// Digit characters (ASCII `0`–`9`).
     pub const DIGIT: u32 = 4;
+    /// Alphabetic characters.
     pub const ALPHA: u32 = 8;
+    /// Whitespace characters.
     pub const SPACE: u32 = 16;
+    /// Uppercase characters.
     pub const UPPER: u32 = 32;
+    /// Lowercase characters.
     pub const LOWER: u32 = 64;
+    /// Alphanumeric: `DECIMAL | NUMERIC | DIGIT | ALPHA`.
     pub const ALPHANUM: u32 = DECIMAL | NUMERIC | DIGIT | ALPHA;
+    /// Case types: `UPPER | LOWER`.
     pub const CASE_TYPES: u32 = UPPER | LOWER;
+    /// All character types combined.
     pub const ALL_TYPES: u32 = ALPHANUM | CASE_TYPES | SPACE;
 }
 

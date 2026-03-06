@@ -10,14 +10,14 @@ use crate::scalar::Scalar;
 use crate::stream::Stream;
 
 pub use cudf_sys::ffi::BinaryOperator;
-pub use cudf_sys::ffi::UnaryOperator;
 pub use cudf_sys::ffi::RoundingMethod;
+pub use cudf_sys::ffi::UnaryOperator;
 
 /// Extension trait for generic binary operations.
 pub trait BinaryOp<Rhs> {
     /// Applies a binary operation.
     fn binary_op(&self, rhs: &Rhs, op: BinaryOperator, output_type: TypeId) -> Result<Column>;
-    /// binary_op on a custom CUDA stream.
+    /// `binary_op` on a custom CUDA stream.
     fn binary_op_on(
         &self,
         rhs: &Rhs,
@@ -55,12 +55,7 @@ impl BinaryOp<ColumnView<'_>> for ColumnView<'_> {
 }
 
 impl BinaryOp<Scalar> for ColumnView<'_> {
-    fn binary_op(
-        &self,
-        rhs: &Scalar,
-        op: BinaryOperator,
-        output_type: TypeId,
-    ) -> Result<Column> {
+    fn binary_op(&self, rhs: &Scalar, op: BinaryOperator, output_type: TypeId) -> Result<Column> {
         self.binary_op_on(rhs, op, output_type, Stream::default_stream())
     }
     fn binary_op_on(
@@ -111,7 +106,11 @@ impl BinaryOp<ColumnView<'_>> for Scalar {
 }
 
 /// Compute the output scale for a fixed-point binary operation.
-pub fn binary_operation_fixed_point_scale(op: BinaryOperator, left_scale: i32, right_scale: i32) -> i32 {
+pub fn binary_operation_fixed_point_scale(
+    op: BinaryOperator,
+    left_scale: i32,
+    right_scale: i32,
+) -> i32 {
     cudf_sys::ffi::binary_operation_fixed_point_scale(op.repr, left_scale, right_scale)
 }
 
@@ -282,7 +281,10 @@ mod tests {
     #[test]
     fn is_nan_basic() {
         let ds = crate::stream::Stream::default_stream().as_raw();
-        let col = Column(cudf_sys::ffi::make_column_from_host_f64(&[1.0, f64::NAN, 3.0], ds));
+        let col = Column(cudf_sys::ffi::make_column_from_host_f64(
+            &[1.0, f64::NAN, 3.0],
+            ds,
+        ));
         let result = col.view().is_nan().unwrap();
         assert_eq!(result.to_vec_bool(), vec![false, true, false]);
     }
@@ -291,7 +293,9 @@ mod tests {
     fn scalar_column_binary_op() {
         let s = Scalar::from_i32(10);
         let col = Column::from_scalar(&Scalar::from_i32(3), 2);
-        let result = s.binary_op(&col.view(), BinaryOperator::SUB, TypeId::INT32).unwrap();
+        let result = s
+            .binary_op(&col.view(), BinaryOperator::SUB, TypeId::INT32)
+            .unwrap();
         assert_eq!(result.to_vec_i32(), vec![7, 7]);
     }
 }

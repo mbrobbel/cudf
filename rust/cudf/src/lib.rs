@@ -2,9 +2,31 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
+#![deny(missing_docs)]
+#![deny(clippy::pedantic)]
+#![deny(clippy::shadow_reuse)]
+#![deny(clippy::shadow_same)]
+#![deny(clippy::shadow_unrelated)]
+// TODO: Enforce as_conversions once i32↔usize casts at the FFI boundary are
+// wrapped in explicit conversion helpers. Tracked separately.
+#![allow(clippy::as_conversions)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::cast_sign_loss)]
+// Allow common pedantic false positives in this codebase.
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::similar_names)]
+// These lints are only relevant in test code.
+#![cfg_attr(test, allow(clippy::unwrap_used))]
+#![cfg_attr(test, allow(clippy::unreadable_literal))]
+#![cfg_attr(test, allow(clippy::approx_constant))]
 
 //! Safe Rust bindings for [libcudf](https://github.com/rapidsai/cudf),
-//! the RAPIDS GPU DataFrame library.
+//! the RAPIDS GPU `DataFrame` library.
 //!
 //! This crate provides idiomatic Rust wrappers around the core cudf types:
 //!
@@ -108,11 +130,7 @@ pub fn calendrical_month_sequence(count: usize, init: &Scalar, months: i32) -> R
 }
 
 /// Select from two scalars based on boolean mask.
-pub fn copy_if_else_scalars(
-    lhs: &Scalar,
-    rhs: &Scalar,
-    mask: &ColumnView<'_>,
-) -> Result<Column> {
+pub fn copy_if_else_scalars(lhs: &Scalar, rhs: &Scalar, mask: &ColumnView<'_>) -> Result<Column> {
     let lhs_ffi = scalar::scalar_to_ffi(lhs);
     let rhs_ffi = scalar::scalar_to_ffi(rhs);
     let c = cudf_sys::ffi::copy_if_else_scalars(
