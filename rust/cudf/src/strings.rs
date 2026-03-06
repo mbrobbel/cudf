@@ -174,6 +174,29 @@ pub trait StringExt {
     fn integers_to_ipv4(&self) -> Result<Column>;
     /// Check if strings are valid IPv4.
     fn is_ipv4(&self) -> Result<Column>;
+
+    // -- More string operations --
+
+    /// Regex split to table of columns.
+    fn str_split_re(&self, pattern: &str, maxsplit: i32) -> Result<Table>;
+    /// Regex reverse split to table of columns.
+    fn str_rsplit_re(&self, pattern: &str, maxsplit: i32) -> Result<Table>;
+    /// Regex split to lists column.
+    fn str_split_record_re(&self, pattern: &str, maxsplit: i32) -> Result<Column>;
+    /// Regex reverse split to lists column.
+    fn str_rsplit_record_re(&self, pattern: &str, maxsplit: i32) -> Result<Column>;
+    /// Partition around first delimiter into 3-column table.
+    fn str_partition(&self, delimiter: &str) -> Result<Table>;
+    /// Partition around last delimiter into 3-column table.
+    fn str_rpartition(&self, delimiter: &str) -> Result<Table>;
+    /// Regex replace with back-reference template.
+    fn str_replace_with_backrefs(&self, pattern: &str, replacement: &str) -> Result<Column>;
+    /// Repeat each string by count in another column.
+    fn str_repeat_column(&self, repeat_times: &ColumnView<'_>) -> Result<Column>;
+    /// Check if strings contain multiple targets (Table of BOOL8 columns).
+    fn str_contains_multiple(&self, targets: &ColumnView<'_>) -> Result<Table>;
+    /// Find positions of multiple targets in each string (lists column).
+    fn str_find_multiple(&self, targets: &ColumnView<'_>) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -489,6 +512,46 @@ impl StringExt for ColumnView<'_> {
     }
     fn is_ipv4(&self) -> Result<Column> {
         let c = cudf_sys::ffi::strings_is_ipv4(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_split_re(&self, pattern: &str, maxsplit: i32) -> Result<Table> {
+        let t = cudf_sys::ffi::strings_split_re(self.0, pattern, maxsplit, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+    fn str_rsplit_re(&self, pattern: &str, maxsplit: i32) -> Result<Table> {
+        let t = cudf_sys::ffi::strings_rsplit_re(self.0, pattern, maxsplit, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+    fn str_split_record_re(&self, pattern: &str, maxsplit: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_split_record_re(self.0, pattern, maxsplit, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_rsplit_record_re(&self, pattern: &str, maxsplit: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_rsplit_record_re(self.0, pattern, maxsplit, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_partition(&self, delimiter: &str) -> Result<Table> {
+        let t = cudf_sys::ffi::strings_partition(self.0, delimiter, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+    fn str_rpartition(&self, delimiter: &str) -> Result<Table> {
+        let t = cudf_sys::ffi::strings_rpartition(self.0, delimiter, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+    fn str_replace_with_backrefs(&self, pattern: &str, replacement: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_replace_with_backrefs(self.0, pattern, replacement, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_repeat_column(&self, repeat_times: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_repeat_column(self.0, repeat_times.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_contains_multiple(&self, targets: &ColumnView<'_>) -> Result<Table> {
+        let t = cudf_sys::ffi::strings_contains_multiple(self.0, targets.0, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+    fn str_find_multiple(&self, targets: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_find_multiple(self.0, targets.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

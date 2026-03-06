@@ -692,6 +692,19 @@ std::unique_ptr<Table> explode_outer_table(Table const& tbl, int32_t column_idx,
 std::unique_ptr<Column> rolling_window(cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
 std::unique_ptr<Column> grouped_rolling_window(Table const& group_keys, cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
 
+// -- String operations (new batch) --
+
+std::unique_ptr<Table> strings_split_re(cudf::column_view const& col, rust::Str pattern, int32_t maxsplit, std::size_t stream);
+std::unique_ptr<Table> strings_rsplit_re(cudf::column_view const& col, rust::Str pattern, int32_t maxsplit, std::size_t stream);
+std::unique_ptr<Column> strings_split_record_re(cudf::column_view const& col, rust::Str pattern, int32_t maxsplit, std::size_t stream);
+std::unique_ptr<Column> strings_rsplit_record_re(cudf::column_view const& col, rust::Str pattern, int32_t maxsplit, std::size_t stream);
+std::unique_ptr<Table> strings_partition(cudf::column_view const& col, rust::Str delimiter, std::size_t stream);
+std::unique_ptr<Table> strings_rpartition(cudf::column_view const& col, rust::Str delimiter, std::size_t stream);
+std::unique_ptr<Column> strings_replace_with_backrefs(cudf::column_view const& col, rust::Str pattern, rust::Str replacement, std::size_t stream);
+std::unique_ptr<Column> strings_repeat_column(cudf::column_view const& col, cudf::column_view const& repeat_times, std::size_t stream);
+std::unique_ptr<Table> strings_contains_multiple(cudf::column_view const& col, cudf::column_view const& targets, std::size_t stream);
+std::unique_ptr<Column> strings_find_multiple(cudf::column_view const& col, cudf::column_view const& targets, std::size_t stream);
+
 // -- String conversions --
 
 std::unique_ptr<Column> strings_to_timestamps(cudf::column_view const& col, int32_t timestamp_type_id, rust::Str format, std::size_t stream);

@@ -1271,6 +1271,29 @@ pub mod ffi {
         /// Wraps strings onto multiple lines shorter than `width`.
         fn strings_wrap(col: &column_view, width: i32, stream: usize) -> Result<UniquePtr<Column>>;
 
+        // -- String operations (new batch) --
+
+        /// Regex split to table of columns.
+        fn strings_split_re(col: &column_view, pattern: &str, maxsplit: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Regex reverse split to table of columns.
+        fn strings_rsplit_re(col: &column_view, pattern: &str, maxsplit: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Regex split to lists column.
+        fn strings_split_record_re(col: &column_view, pattern: &str, maxsplit: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Regex reverse split to lists column.
+        fn strings_rsplit_record_re(col: &column_view, pattern: &str, maxsplit: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Partition around first delimiter into 3 columns.
+        fn strings_partition(col: &column_view, delimiter: &str, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Partition around last delimiter into 3 columns.
+        fn strings_rpartition(col: &column_view, delimiter: &str, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Regex replace with back-reference template.
+        fn strings_replace_with_backrefs(col: &column_view, pattern: &str, replacement: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Repeat each string by count in another column.
+        fn strings_repeat_column(col: &column_view, repeat_times: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if strings contain multiple targets (returns Table of BOOL8 columns).
+        fn strings_contains_multiple(col: &column_view, targets: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Find positions of multiple targets in each string (returns lists column).
+        fn strings_find_multiple(col: &column_view, targets: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
         // -- String conversions --
 
         /// Converts strings to timestamps using format pattern.

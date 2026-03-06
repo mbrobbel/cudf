@@ -48,6 +48,9 @@
 #include <cudf/strings/replace_re.hpp>
 #include <cudf/strings/slice.hpp>
 #include <cudf/strings/split/split.hpp>
+#include <cudf/strings/split/split_re.hpp>
+#include <cudf/strings/split/partition.hpp>
+#include <cudf/strings/find_multiple.hpp>
 #include <cudf/strings/strip.hpp>
 #include <cudf/strings/reverse.hpp>
 #include <cudf/strings/extract.hpp>
@@ -2273,6 +2276,95 @@ std::unique_ptr<Column> grouped_rolling_window(Table const& group_keys, cudf::co
   rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
   auto agg = make_rolling_agg(agg_kind);
   auto result = cudf::grouped_rolling_window(group_keys.cached_view(), col, preceding, following, min_periods, *agg, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- String operations (new batch) --
+
+std::unique_ptr<Table> strings_split_re(cudf::column_view const& col, rust::Str pattern, int32_t maxsplit, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto pat = std::string(pattern.data(), pattern.size());
+  auto prog = cudf::strings::regex_program::create(pat);
+  auto result = cudf::strings::split_re(scv, *prog, maxsplit, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Table> strings_rsplit_re(cudf::column_view const& col, rust::Str pattern, int32_t maxsplit, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto pat = std::string(pattern.data(), pattern.size());
+  auto prog = cudf::strings::regex_program::create(pat);
+  auto result = cudf::strings::rsplit_re(scv, *prog, maxsplit, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_split_record_re(cudf::column_view const& col, rust::Str pattern, int32_t maxsplit, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto pat = std::string(pattern.data(), pattern.size());
+  auto prog = cudf::strings::regex_program::create(pat);
+  auto result = cudf::strings::split_record_re(scv, *prog, maxsplit, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_rsplit_record_re(cudf::column_view const& col, rust::Str pattern, int32_t maxsplit, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto pat = std::string(pattern.data(), pattern.size());
+  auto prog = cudf::strings::regex_program::create(pat);
+  auto result = cudf::strings::rsplit_record_re(scv, *prog, maxsplit, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Table> strings_partition(cudf::column_view const& col, rust::Str delimiter, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto delim = std::string(delimiter.data(), delimiter.size());
+  cudf::string_scalar delim_scalar(delim, true, s);
+  auto result = cudf::strings::partition(scv, delim_scalar, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Table> strings_rpartition(cudf::column_view const& col, rust::Str delimiter, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto delim = std::string(delimiter.data(), delimiter.size());
+  cudf::string_scalar delim_scalar(delim, true, s);
+  auto result = cudf::strings::rpartition(scv, delim_scalar, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_replace_with_backrefs(cudf::column_view const& col, rust::Str pattern, rust::Str replacement, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto pat = std::string(pattern.data(), pattern.size());
+  auto repl = std::string(replacement.data(), replacement.size());
+  auto prog = cudf::strings::regex_program::create(pat);
+  auto result = cudf::strings::replace_with_backrefs(scv, *prog, repl, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_repeat_column(cudf::column_view const& col, cudf::column_view const& repeat_times, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::repeat_strings(scv, repeat_times, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Table> strings_contains_multiple(cudf::column_view const& col, cudf::column_view const& targets, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  cudf::strings_column_view tgts(targets);
+  auto result = cudf::strings::contains_multiple(scv, tgts, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_find_multiple(cudf::column_view const& col, cudf::column_view const& targets, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  cudf::strings_column_view tgts(targets);
+  auto result = cudf::strings::find_multiple(scv, tgts, s);
   return std::make_unique<Column>(std::move(result));
 }
 
