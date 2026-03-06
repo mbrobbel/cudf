@@ -8,6 +8,24 @@
 
 pub use cudf_sys::ffi::{NullOrder, Order};
 
+/// Method for resolving ties in rank.
+///
+/// Mirrors `cudf::rank_method`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(i32)]
+pub enum RankMethod {
+    /// Stable sort order ranking (no ties).
+    First = 0,
+    /// Mean of first in the group.
+    Average = 1,
+    /// Min of first in the group.
+    Min = 2,
+    /// Max of first in the group.
+    Max = 3,
+    /// Rank always increases by 1 between groups.
+    Dense = 4,
+}
+
 #[cfg(test)]
 mod tests {
     use crate::column::Column as Col;

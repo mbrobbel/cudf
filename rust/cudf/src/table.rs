@@ -832,6 +832,82 @@ impl Table {
         Ok(Column(c))
     }
 
+    // -- Sorting (new) --
+
+    /// Stable sorted order (preserves order of equal elements).
+    pub fn stable_sorted_order(&self, orders: &[Order], nulls: &[NullOrder]) -> Result<Column> {
+        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let c = cudf_sys::ffi::stable_sorted_order(&self.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Stable sort (preserves order of equal elements).
+    pub fn stable_sort(&self, orders: &[Order], nulls: &[NullOrder]) -> Result<Table> {
+        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let t = cudf_sys::ffi::stable_sort_table(&self.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Sort this (values) table by a separate keys table.
+    pub fn sort_by_key(&self, keys: &Table, orders: &[Order], nulls: &[NullOrder]) -> Result<Table> {
+        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let t = cudf_sys::ffi::sort_by_key(&self.0, &keys.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Stable sort this (values) table by a separate keys table.
+    pub fn stable_sort_by_key(&self, keys: &Table, orders: &[Order], nulls: &[NullOrder]) -> Result<Table> {
+        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let t = cudf_sys::ffi::stable_sort_by_key(&self.0, &keys.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Segmented sorted order (sort within segments).
+    pub fn segmented_sorted_order(
+        &self,
+        segment_offsets: &ColumnView<'_>,
+        orders: &[Order],
+        nulls: &[NullOrder],
+    ) -> Result<Column> {
+        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let c = cudf_sys::ffi::segmented_sorted_order(&self.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Table-level quantile rows.
+    pub fn quantiles(
+        &self,
+        q: &[f64],
+        interp: crate::quantile::Interpolation,
+        is_sorted: bool,
+        orders: &[Order],
+        nulls: &[NullOrder],
+    ) -> Result<Table> {
+        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let t = cudf_sys::ffi::quantiles_table(&self.0, q, interp.repr, is_sorted, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
+    // -- Copying (new) --
+
+    /// Scatter rows from source table into this table using boolean mask.
+    pub fn boolean_mask_scatter(&self, source: &Table, mask: &ColumnView<'_>) -> Result<Table> {
+        let t = cudf_sys::ffi::boolean_mask_scatter_table(&source.0, &self.0, mask.0, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Repeat table rows using per-row counts from a column.
+    pub fn repeat_by_column(&self, counts: &ColumnView<'_>) -> Result<Table> {
+        let t = cudf_sys::ffi::repeat_table_column(&self.0, counts.0, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
     // -- Explode --
 
     /// Explodes a list column, expanding each list element into its own row.

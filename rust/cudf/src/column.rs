@@ -861,6 +861,125 @@ impl ColumnView<'_> {
         Ok(Column(c))
     }
 
+    // -- Sorting (column-level) --
+
+    /// Compute rank of each element. method: 0=FIRST,1=AVERAGE,2=MIN,3=MAX,4=DENSE.
+    pub fn rank(
+        &self,
+        method: crate::sorting::RankMethod,
+        order: crate::sorting::Order,
+        null_handling: crate::compaction::NullPolicy,
+        null_precedence: crate::sorting::NullOrder,
+        percentage: bool,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::rank_column(
+            self.0,
+            method as i32,
+            order.repr,
+            null_handling.repr,
+            null_precedence.repr,
+            percentage,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
+    /// Top k values of the column.
+    pub fn top_k(&self, k: usize, order: crate::sorting::Order) -> Result<Column> {
+        let c = cudf_sys::ffi::top_k(self.0, k as i32, order.repr, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Top k indices of the column.
+    pub fn top_k_order(&self, k: usize, order: crate::sorting::Order) -> Result<Column> {
+        let c = cudf_sys::ffi::top_k_order(self.0, k as i32, order.repr, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Segmented top k values.
+    pub fn segmented_top_k(&self, segment_offsets: &ColumnView<'_>, k: usize, order: crate::sorting::Order) -> Result<Column> {
+        let c = cudf_sys::ffi::segmented_top_k(self.0, segment_offsets.0, k as i32, order.repr, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Segmented top k indices.
+    pub fn segmented_top_k_order(&self, segment_offsets: &ColumnView<'_>, k: usize, order: crate::sorting::Order) -> Result<Column> {
+        let c = cudf_sys::ffi::segmented_top_k_order(self.0, segment_offsets.0, k as i32, order.repr, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    // -- Copying (new) --
+
+    /// Copy range of elements from this column into target.
+    pub fn copy_range_into(
+        &self,
+        target: &ColumnView<'_>,
+        source_begin: usize,
+        source_end: usize,
+        target_begin: usize,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::copy_range(
+            self.0,
+            target.0,
+            source_begin as i32,
+            source_end as i32,
+            target_begin as i32,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
+    /// Create uninitialized column of same type and size.
+    pub fn allocate_like(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::allocate_like_column(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Check if this column has non-empty null rows (LIST/STRING).
+    pub fn has_nonempty_nulls(&self) -> Result<bool> {
+        cudf_sys::ffi::has_nonempty_nulls(self.0, Stream::default_stream().as_raw()).map_err(Into::into)
+    }
+
+    /// Purge non-empty null row contents.
+    pub fn purge_nonempty_nulls(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::purge_nonempty_nulls(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    // -- Replace (new) --
+
+    /// Replace nulls using preceding/following policy.
+    pub fn replace_nulls_policy(&self, preceding: bool) -> Result<Column> {
+        let policy = if preceding { 0 } else { 1 };
+        let c = cudf_sys::ffi::replace_nulls_policy(self.0, policy, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Clamp with separate replacement values for lo and hi.
+    pub fn clamp_with_replace(
+        &self,
+        lo: &Scalar,
+        lo_replace: &Scalar,
+        hi: &Scalar,
+        hi_replace: &Scalar,
+    ) -> Result<Column> {
+        let lo_ffi = crate::scalar::scalar_to_ffi(lo);
+        let lo_r_ffi = crate::scalar::scalar_to_ffi(lo_replace);
+        let hi_ffi = crate::scalar::scalar_to_ffi(hi);
+        let hi_r_ffi = crate::scalar::scalar_to_ffi(hi_replace);
+        let c = cudf_sys::ffi::clamp_column_with_replace(
+            self.0, &lo_ffi, &lo_r_ffi, &hi_ffi, &hi_r_ffi,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
+    /// Normalize NaNs and zeros (convert -NaN to NaN, -0.0 to 0.0).
+    pub fn normalize_nans_and_zeros(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::normalize_nans_and_zeros(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
     // -- Fill --
 
     /// Fills the range [begin, end) with a scalar value (out-of-place).

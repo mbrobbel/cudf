@@ -1423,5 +1423,71 @@ pub mod ffi {
             agg_kind: i32,
             stream: usize,
         ) -> Result<UniquePtr<Column>>;
+
+        // -- Sorting (new) --
+
+        /// Stable sorted order (preserves order of equal elements).
+        fn stable_sorted_order(tbl: &Table, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Column>>;
+        /// Stable sort table.
+        fn stable_sort_table(tbl: &Table, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+        /// Sort values table by a separate keys table.
+        fn sort_by_key(values: &Table, keys: &Table, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+        /// Stable sort values table by a separate keys table.
+        fn stable_sort_by_key(values: &Table, keys: &Table, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+        /// Compute ranks of elements in a column. method: 0=FIRST,1=AVERAGE,2=MIN,3=MAX,4=DENSE.
+        fn rank_column(col: &column_view, method: i32, column_order: i32, null_handling: i32, null_precedence: i32, percentage: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Top k values of a column.
+        fn top_k(col: &column_view, k: i32, order: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Top k indices of a column.
+        fn top_k_order(col: &column_view, k: i32, order: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Segmented sorted order.
+        fn segmented_sorted_order(tbl: &Table, segment_offsets: &column_view, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Column>>;
+        /// Segmented top k values.
+        fn segmented_top_k(col: &column_view, segment_offsets: &column_view, k: i32, order: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Segmented top k indices.
+        fn segmented_top_k_order(col: &column_view, segment_offsets: &column_view, k: i32, order: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Copying (new) --
+
+        /// Copy range of elements from source into target (out-of-place).
+        fn copy_range(source: &column_view, target: &column_view, source_begin: i32, source_end: i32, target_begin: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Create uninitialized column of same type and size.
+        fn allocate_like_column(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Scatter rows from source table into target using boolean mask.
+        fn boolean_mask_scatter_table(source: &Table, target: &Table, mask: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Check if column has non-empty null rows (LIST/STRING).
+        fn has_nonempty_nulls(col: &column_view, stream: usize) -> Result<bool>;
+        /// Purge non-empty null row contents.
+        fn purge_nonempty_nulls(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Copy-if-else with two scalars and a boolean mask.
+        fn copy_if_else_scalars(lhs: &Scalar, rhs: &Scalar, mask: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Replace (new) --
+
+        /// Replace nulls using preceding/following policy. policy: 0=PRECEDING, 1=FOLLOWING.
+        fn replace_nulls_policy(col: &column_view, policy: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Clamp with separate replacement values for lo and hi.
+        fn clamp_column_with_replace(col: &column_view, lo: &Scalar, lo_replace: &Scalar, hi: &Scalar, hi_replace: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Normalize NaNs and zeros (convert -NaN to NaN, -0.0 to 0.0).
+        fn normalize_nans_and_zeros(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Fill (new) --
+
+        /// Repeat table rows by per-row counts in a column.
+        fn repeat_table_column(tbl: &Table, counts: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Generate calendrical month sequence.
+        fn calendrical_month_sequence(count: i32, init: &Scalar, months: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Quantiles (new) --
+
+        /// Table-level quantile rows.
+        fn quantiles_table(tbl: &Table, quantiles: &[f64], interp: i32, is_input_sorted: bool, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Null mask utilities --
+
+        /// Compute bitmask allocation size in bytes.
+        fn bitmask_allocation_size_bytes(number_of_bits: i32) -> usize;
+        /// Compute number of bitmask words needed.
+        fn num_bitmask_words(number_of_bits: i32) -> i32;
     }
 }

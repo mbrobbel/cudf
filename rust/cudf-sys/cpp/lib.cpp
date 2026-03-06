@@ -78,6 +78,7 @@
 #include <cudf/lists/set_operations.hpp>
 
 #include <cudf/rolling.hpp>
+#include <cudf/null_mask.hpp>
 
 #include <cuda_runtime.h>
 
@@ -2586,6 +2587,230 @@ std::unique_ptr<Column> lists_difference_distinct(cudf::column_view const& lhs, 
   cudf::lists_column_view lrhs(rhs);
   auto result = cudf::lists::difference_distinct(llhs, lrhs, cudf::null_equality::EQUAL, cudf::nan_equality::ALL_EQUAL, s);
   return std::make_unique<Column>(std::move(result));
+}
+
+// -- Sorting (new) --
+
+// Helper: convert i32 slice to enum vectors
+static std::vector<cudf::order> to_orders(rust::Slice<int32_t const> s) {
+  std::vector<cudf::order> v;
+  v.reserve(s.size());
+  for (auto o : s) v.push_back(static_cast<cudf::order>(o));
+  return v;
+}
+static std::vector<cudf::null_order> to_null_orders(rust::Slice<int32_t const> s) {
+  std::vector<cudf::null_order> v;
+  v.reserve(s.size());
+  for (auto n : s) v.push_back(static_cast<cudf::null_order>(n));
+  return v;
+}
+
+std::unique_ptr<Column> stable_sorted_order(
+    Table const& tbl,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::stable_sorted_order(tbl.cached_view(), to_orders(column_orders), to_null_orders(null_orders), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Table> stable_sort_table(
+    Table const& tbl,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::stable_sort(tbl.cached_view(), to_orders(column_orders), to_null_orders(null_orders), s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Table> sort_by_key(
+    Table const& values,
+    Table const& keys,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::sort_by_key(values.cached_view(), keys.cached_view(), to_orders(column_orders), to_null_orders(null_orders), s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Table> stable_sort_by_key(
+    Table const& values,
+    Table const& keys,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::stable_sort_by_key(values.cached_view(), keys.cached_view(), to_orders(column_orders), to_null_orders(null_orders), s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Column> rank_column(
+    cudf::column_view const& col,
+    int32_t method,
+    int32_t column_order,
+    int32_t null_handling,
+    int32_t null_precedence,
+    bool percentage,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::rank(
+      col,
+      static_cast<cudf::rank_method>(method),
+      static_cast<cudf::order>(column_order),
+      static_cast<cudf::null_policy>(null_handling),
+      static_cast<cudf::null_order>(null_precedence),
+      percentage,
+      s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> top_k(cudf::column_view const& col, int32_t k, int32_t order, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::top_k(col, k, static_cast<cudf::order>(order), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> top_k_order(cudf::column_view const& col, int32_t k, int32_t order, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::top_k_order(col, k, static_cast<cudf::order>(order), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> segmented_sorted_order(
+    Table const& tbl,
+    cudf::column_view const& segment_offsets,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::segmented_sorted_order(tbl.cached_view(), segment_offsets, to_orders(column_orders), to_null_orders(null_orders), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> segmented_top_k(cudf::column_view const& col, cudf::column_view const& segment_offsets, int32_t k, int32_t order, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::segmented_top_k(col, segment_offsets, k, static_cast<cudf::order>(order), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> segmented_top_k_order(cudf::column_view const& col, cudf::column_view const& segment_offsets, int32_t k, int32_t order, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::segmented_top_k_order(col, segment_offsets, k, static_cast<cudf::order>(order), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Copying (new) --
+
+std::unique_ptr<Column> copy_range(
+    cudf::column_view const& source,
+    cudf::column_view const& target,
+    int32_t source_begin,
+    int32_t source_end,
+    int32_t target_begin,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::copy_range(source, target, source_begin, source_end, target_begin, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> allocate_like_column(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::allocate_like(col, cudf::mask_allocation_policy::RETAIN, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Table> boolean_mask_scatter_table(Table const& source, Table const& target, cudf::column_view const& mask, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::boolean_mask_scatter(source.cached_view(), target.cached_view(), mask, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+bool has_nonempty_nulls(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  return cudf::has_nonempty_nulls(col, s);
+}
+
+std::unique_ptr<Column> purge_nonempty_nulls(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::purge_nonempty_nulls(col, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> copy_if_else_scalars(Scalar const& lhs, Scalar const& rhs, cudf::column_view const& mask, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::copy_if_else(lhs.inner(), rhs.inner(), mask, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Replace (new) --
+
+std::unique_ptr<Column> replace_nulls_policy(cudf::column_view const& col, int32_t policy, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::replace_nulls(col, static_cast<cudf::replace_policy>(policy), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> clamp_column_with_replace(cudf::column_view const& col, Scalar const& lo, Scalar const& lo_replace, Scalar const& hi, Scalar const& hi_replace, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::clamp(col, lo.inner(), lo_replace.inner(), hi.inner(), hi_replace.inner(), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> normalize_nans_and_zeros(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::normalize_nans_and_zeros(col, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Fill (new) --
+
+std::unique_ptr<Table> repeat_table_column(Table const& tbl, cudf::column_view const& counts, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::repeat(tbl.cached_view(), counts, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Column> calendrical_month_sequence(int32_t count, Scalar const& init, int32_t months, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::calendrical_month_sequence(count, init.inner(), months, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Quantiles (new) --
+
+std::unique_ptr<Table> quantiles_table(
+    Table const& tbl,
+    rust::Slice<double const> quantiles,
+    int32_t interp,
+    bool is_input_sorted,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  std::vector<double> q(quantiles.begin(), quantiles.end());
+  auto sorted = is_input_sorted ? cudf::sorted::YES : cudf::sorted::NO;
+  auto result = cudf::quantiles(
+      tbl.cached_view(),
+      q,
+      static_cast<cudf::interpolation>(interp),
+      sorted,
+      to_orders(column_orders),
+      to_null_orders(null_orders),
+      s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+// -- Null mask utilities --
+
+std::size_t bitmask_allocation_size_bytes(int32_t number_of_bits) {
+  return cudf::bitmask_allocation_size_bytes(number_of_bits);
+}
+
+int32_t num_bitmask_words(int32_t number_of_bits) {
+  return cudf::num_bitmask_words(number_of_bits);
 }
 
 }  // namespace cudf_sys

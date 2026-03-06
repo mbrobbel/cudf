@@ -62,8 +62,52 @@ pub use groupby::AggregationKind;
 pub use ops::{BinaryOp, BinaryOperator, UnaryOperator};
 pub use replace::ReplaceNullsWith;
 pub use scalar::Scalar;
-pub use sorting::{NullOrder, Order};
+pub use sorting::{NullOrder, Order, RankMethod};
+pub use compaction::NullPolicy;
 pub use stream::Stream;
 pub use lists::ListExt;
 pub use strings::StringExt;
 pub use table::{Table, TableBuilder};
+
+// -- Null mask utilities --
+
+/// Compute the bytes required for a bitmask of the given number of bits.
+pub fn bitmask_allocation_size_bytes(number_of_bits: usize) -> usize {
+    cudf_sys::ffi::bitmask_allocation_size_bytes(number_of_bits as i32)
+}
+
+/// Compute the number of bitmask words needed for the given number of bits.
+pub fn num_bitmask_words(number_of_bits: usize) -> usize {
+    cudf_sys::ffi::num_bitmask_words(number_of_bits as i32) as usize
+}
+
+// -- Fill utilities --
+
+/// Generate a calendrical month sequence starting from `init`, adding `months` each step.
+pub fn calendrical_month_sequence(count: usize, init: &Scalar, months: i32) -> Result<Column> {
+    let ffi = scalar::scalar_to_ffi(init);
+    let c = cudf_sys::ffi::calendrical_month_sequence(
+        count as i32,
+        &ffi,
+        months,
+        Stream::default_stream().as_raw(),
+    )?;
+    Ok(Column(c))
+}
+
+/// Select from two scalars based on boolean mask.
+pub fn copy_if_else_scalars(
+    lhs: &Scalar,
+    rhs: &Scalar,
+    mask: &ColumnView<'_>,
+) -> Result<Column> {
+    let lhs_ffi = scalar::scalar_to_ffi(lhs);
+    let rhs_ffi = scalar::scalar_to_ffi(rhs);
+    let c = cudf_sys::ffi::copy_if_else_scalars(
+        &lhs_ffi,
+        &rhs_ffi,
+        mask.0,
+        Stream::default_stream().as_raw(),
+    )?;
+    Ok(Column(c))
+}

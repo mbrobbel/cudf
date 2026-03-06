@@ -6,6 +6,7 @@
 pub use cudf_sys::ffi::DuplicateKeepOption;
 pub use cudf_sys::ffi::NanEquality;
 pub use cudf_sys::ffi::NullEquality;
+pub use cudf_sys::ffi::NullPolicy;
 
 #[cfg(test)]
 mod tests {

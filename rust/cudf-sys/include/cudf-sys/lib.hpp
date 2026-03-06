@@ -755,4 +755,97 @@ std::unique_ptr<Column> lists_intersect_distinct(cudf::column_view const& lhs, c
 std::unique_ptr<Column> lists_union_distinct(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream);
 std::unique_ptr<Column> lists_difference_distinct(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream);
 
+// -- Sorting (new) --
+
+std::unique_ptr<Column> stable_sorted_order(
+    Table const& tbl,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
+
+std::unique_ptr<Table> stable_sort_table(
+    Table const& tbl,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
+
+std::unique_ptr<Table> sort_by_key(
+    Table const& values,
+    Table const& keys,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
+
+std::unique_ptr<Table> stable_sort_by_key(
+    Table const& values,
+    Table const& keys,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
+
+std::unique_ptr<Column> rank_column(
+    cudf::column_view const& col,
+    int32_t method,
+    int32_t column_order,
+    int32_t null_handling,
+    int32_t null_precedence,
+    bool percentage,
+    std::size_t stream);
+
+std::unique_ptr<Column> top_k(cudf::column_view const& col, int32_t k, int32_t order, std::size_t stream);
+std::unique_ptr<Column> top_k_order(cudf::column_view const& col, int32_t k, int32_t order, std::size_t stream);
+
+std::unique_ptr<Column> segmented_sorted_order(
+    Table const& tbl,
+    cudf::column_view const& segment_offsets,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
+
+std::unique_ptr<Column> segmented_top_k(cudf::column_view const& col, cudf::column_view const& segment_offsets, int32_t k, int32_t order, std::size_t stream);
+std::unique_ptr<Column> segmented_top_k_order(cudf::column_view const& col, cudf::column_view const& segment_offsets, int32_t k, int32_t order, std::size_t stream);
+
+// -- Copying (new) --
+
+std::unique_ptr<Column> copy_range(
+    cudf::column_view const& source,
+    cudf::column_view const& target,
+    int32_t source_begin,
+    int32_t source_end,
+    int32_t target_begin,
+    std::size_t stream);
+
+std::unique_ptr<Column> allocate_like_column(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Table> boolean_mask_scatter_table(Table const& source, Table const& target, cudf::column_view const& mask, std::size_t stream);
+bool has_nonempty_nulls(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> purge_nonempty_nulls(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> copy_if_else_scalars(Scalar const& lhs, Scalar const& rhs, cudf::column_view const& mask, std::size_t stream);
+
+// -- Replace (new) --
+
+std::unique_ptr<Column> replace_nulls_policy(cudf::column_view const& col, int32_t policy, std::size_t stream);
+std::unique_ptr<Column> clamp_column_with_replace(cudf::column_view const& col, Scalar const& lo, Scalar const& lo_replace, Scalar const& hi, Scalar const& hi_replace, std::size_t stream);
+std::unique_ptr<Column> normalize_nans_and_zeros(cudf::column_view const& col, std::size_t stream);
+
+// -- Fill (new) --
+
+std::unique_ptr<Table> repeat_table_column(Table const& tbl, cudf::column_view const& counts, std::size_t stream);
+std::unique_ptr<Column> calendrical_month_sequence(int32_t count, Scalar const& init, int32_t months, std::size_t stream);
+
+// -- Quantiles (new) --
+
+std::unique_ptr<Table> quantiles_table(
+    Table const& tbl,
+    rust::Slice<double const> quantiles,
+    int32_t interp,
+    bool is_input_sorted,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream);
+
+// -- Null mask utilities --
+
+std::size_t bitmask_allocation_size_bytes(int32_t number_of_bits);
+int32_t num_bitmask_words(int32_t number_of_bits);
+
 }  // namespace cudf_sys
