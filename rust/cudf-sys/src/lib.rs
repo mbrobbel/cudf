@@ -1700,5 +1700,16 @@ pub mod ffi {
         /// Returns the null count implied by a mask_state for a given number of rows.
         fn state_null_count(mask_state: i32, num_rows: i32) -> i32;
 
+        // -- Type checking utilities --
+
+        /// Check if two column types are equivalent (ignoring scale for fixed-point).
+        fn column_types_equivalent(lhs: &column_view, rhs: &column_view) -> bool;
+        /// Check if two columns have the same types (including scale, nested types).
+        fn columns_have_same_types(lhs: &column_view, rhs: &column_view) -> bool;
+        /// Check if two tables have columns of the same types.
+        fn tables_have_same_types(lhs: &Table, rhs: &Table) -> bool;
+        /// Check if a cast from one data type to another is supported.
+        fn is_supported_cast(from_type_id: i32, from_scale: i32, to_type_id: i32, to_scale: i32) -> bool;
+
     }
 }

@@ -1006,4 +1006,11 @@ std::unique_ptr<Column> get_json_object(cudf::column_view const& col, rust::Str 
 
 int32_t state_null_count(int32_t mask_state, int32_t num_rows);
 
+// -- Type checking utilities --
+
+bool column_types_equivalent(cudf::column_view const& lhs, cudf::column_view const& rhs);
+bool columns_have_same_types(cudf::column_view const& lhs, cudf::column_view const& rhs);
+bool tables_have_same_types(Table const& lhs, Table const& rhs);
+bool is_supported_cast(int32_t from_type_id, int32_t from_scale, int32_t to_type_id, int32_t to_scale);
+
 }  // namespace cudf_sys

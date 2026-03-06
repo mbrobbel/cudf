@@ -93,6 +93,7 @@
 #include <cudf/rolling.hpp>
 #include <cudf/null_mask.hpp>
 #include <cudf/json/json.hpp>
+#include <cudf/utilities/type_checks.hpp>
 
 #include <cuda_runtime.h>
 
@@ -3503,6 +3504,26 @@ std::unique_ptr<Column> get_json_object(
 
 int32_t state_null_count(int32_t mask_state, int32_t num_rows) {
   return cudf::state_null_count(static_cast<cudf::mask_state>(mask_state), num_rows);
+}
+
+// -- Type checking utilities --
+
+bool column_types_equivalent(cudf::column_view const& lhs, cudf::column_view const& rhs) {
+  return cudf::column_types_equivalent(lhs, rhs);
+}
+
+bool columns_have_same_types(cudf::column_view const& lhs, cudf::column_view const& rhs) {
+  return cudf::have_same_types(lhs, rhs);
+}
+
+bool tables_have_same_types(Table const& lhs, Table const& rhs) {
+  return cudf::have_same_types(lhs.cached_view(), rhs.cached_view());
+}
+
+bool is_supported_cast(int32_t from_type_id, int32_t from_scale, int32_t to_type_id, int32_t to_scale) {
+  auto from = cudf::data_type{static_cast<cudf::type_id>(from_type_id), from_scale};
+  auto to = cudf::data_type{static_cast<cudf::type_id>(to_type_id), to_scale};
+  return cudf::is_supported_cast(from, to);
 }
 
 }  // namespace cudf_sys

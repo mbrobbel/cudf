@@ -88,6 +88,28 @@ pub fn state_null_count(mask_state: MaskState, num_rows: usize) -> usize {
     cudf_sys::ffi::state_null_count(mask_state as i32, num_rows as i32) as usize
 }
 
+// -- Type checking utilities --
+
+/// Check if two column types are equivalent (ignoring scale for fixed-point).
+pub fn column_types_equivalent(lhs: &ColumnView<'_>, rhs: &ColumnView<'_>) -> bool {
+    cudf_sys::ffi::column_types_equivalent(lhs.0, rhs.0)
+}
+
+/// Check if two columns have the same types (including scale and nested types).
+pub fn columns_have_same_types(lhs: &ColumnView<'_>, rhs: &ColumnView<'_>) -> bool {
+    cudf_sys::ffi::columns_have_same_types(lhs.0, rhs.0)
+}
+
+/// Check if two tables have columns of the same types.
+pub fn tables_have_same_types(lhs: &table::Table, rhs: &table::Table) -> bool {
+    cudf_sys::ffi::tables_have_same_types(&lhs.0, &rhs.0)
+}
+
+/// Check if a cast between two data types is supported.
+pub fn is_supported_cast(from: DataType, to: DataType) -> bool {
+    cudf_sys::ffi::is_supported_cast(from.id().repr, from.scale(), to.id().repr, to.scale())
+}
+
 // -- Fill utilities --
 
 /// Generate a calendrical month sequence starting from `init`, adding `months` each step.
