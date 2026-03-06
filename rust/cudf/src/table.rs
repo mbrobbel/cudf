@@ -1310,6 +1310,29 @@ impl Table {
             Stream::default_stream().as_raw(),
         )
     }
+
+    /// Concatenates all columns in this table into a single column.
+    ///
+    /// All columns must have the same data type.
+    pub fn concatenate_columns(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::concatenate_columns(
+            &self.0,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
+    /// Concatenates two tables vertically (row-wise append).
+    ///
+    /// Both tables must have the same number of columns with matching types.
+    pub fn concatenate(&self, other: &Table) -> Result<Table> {
+        let t = cudf_sys::ffi::concatenate_tables(
+            &self.0,
+            &other.0,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Table(t))
+    }
 }
 
 /// An iterator over the columns of a [`Table`].

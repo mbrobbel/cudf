@@ -1946,5 +1946,22 @@ pub mod ffi {
         /// Returns the number of child columns.
         fn column_view_num_children(col: &column_view) -> i32;
 
+        // -- Concatenate operations --
+
+        /// Concatenates all columns from a table into a single column.
+        fn concatenate_columns(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Concatenates two tables vertically (row-wise).
+        fn concatenate_tables(lhs: &Table, rhs: &Table, stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Repeat string scalar --
+
+        /// Repeats a string scalar N times.
+        fn repeat_string_scalar(input: &Scalar, repeat_times: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        // -- Column with null mask from bools --
+
+        /// Creates a copy of the column with a null mask derived from a boolean validity column.
+        fn column_with_null_mask_from_bools(col: &Column, validity: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
     }
 }

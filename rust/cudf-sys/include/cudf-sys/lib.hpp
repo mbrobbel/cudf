@@ -1185,4 +1185,17 @@ std::size_t approx_distinct_count(Table const& tbl, int32_t precision, std::size
 std::unique_ptr<Column> column_view_child_copy(cudf::column_view const& col, int32_t index, std::size_t stream);
 int32_t column_view_num_children(cudf::column_view const& col);
 
+// -- Concatenate operations --
+
+std::unique_ptr<Column> concatenate_columns(Table const& tbl, std::size_t stream);
+std::unique_ptr<Table> concatenate_tables(Table const& lhs, Table const& rhs, std::size_t stream);
+
+// -- Repeat string scalar --
+
+std::unique_ptr<Scalar> repeat_string_scalar(Scalar const& input, int32_t repeat_times, std::size_t stream);
+
+// -- Column with null mask from bools --
+
+std::unique_ptr<Column> column_with_null_mask_from_bools(Column const& col, cudf::column_view const& validity, std::size_t stream);
+
 }  // namespace cudf_sys

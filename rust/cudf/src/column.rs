@@ -363,6 +363,12 @@ impl Column {
         cudf_sys::ffi::set_null_mask_from_bools(self.0.pin_mut(), bools.0, ds())?;
         Ok(())
     }
+
+    /// Returns a copy of this column with a null mask from a BOOL8 validity column.
+    pub fn with_null_mask_from_bools(&self, validity: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::column_with_null_mask_from_bools(&self.0, validity.0, ds())?;
+        Ok(Column(c))
+    }
 }
 
 /// A non-owning, immutable view of a GPU column.

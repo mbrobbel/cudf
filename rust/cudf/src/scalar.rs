@@ -231,6 +231,17 @@ impl Scalar {
             _ => None,
         }
     }
+
+    /// Repeats a string scalar N times, returning a new string scalar.
+    pub fn repeat_string(&self, times: i32) -> crate::error::Result<Self> {
+        let ffi = scalar_to_ffi(self);
+        let result = cudf_sys::ffi::repeat_string_scalar(
+            &ffi,
+            times,
+            crate::stream::Stream::default_stream().as_raw(),
+        )?;
+        Ok(scalar_from_ffi(&result))
+    }
 }
 
 /// Converts a Rust `Scalar` enum into an FFI scalar for libcudf calls.

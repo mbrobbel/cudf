@@ -4319,4 +4319,46 @@ int32_t column_view_num_children(cudf::column_view const& col) {
   return col.num_children();
 }
 
+// -- Concatenate operations --
+
+std::unique_ptr<Column> concatenate_columns(Table const& tbl, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto view = tbl.cached_view();
+  std::vector<cudf::column_view> columns;
+  columns.reserve(view.num_columns());
+  for (int i = 0; i < view.num_columns(); ++i) {
+    columns.push_back(view.column(i));
+  }
+  auto result = cudf::concatenate(columns, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Table> concatenate_tables(Table const& lhs, Table const& rhs, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  std::vector<cudf::table_view> views{lhs.cached_view(), rhs.cached_view()};
+  auto result = cudf::concatenate(views, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+// -- Repeat string scalar --
+
+std::unique_ptr<Scalar> repeat_string_scalar(Scalar const& input, int32_t repeat_times, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto const& str_scalar = static_cast<cudf::string_scalar const&>(input.inner());
+  auto result = cudf::strings::repeat_string(str_scalar, repeat_times, s);
+  return std::make_unique<Scalar>(std::move(result));
+}
+
+// -- Column with null mask from bools --
+
+std::unique_ptr<Column> column_with_null_mask_from_bools(Column const& col, cudf::column_view const& validity, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  // Convert bool column to bitmask
+  auto [null_mask, null_count] = cudf::bools_to_mask(validity, s);
+  // Deep-copy the source column
+  auto result = std::make_unique<cudf::column>(col.cached_view(), s);
+  result->set_null_mask(std::move(*null_mask), null_count);
+  return std::make_unique<Column>(std::move(result));
+}
+
 }  // namespace cudf_sys
