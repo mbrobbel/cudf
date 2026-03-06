@@ -10,6 +10,8 @@ use crate::scalar::Scalar;
 use crate::stream::Stream;
 
 pub use cudf_sys::ffi::BinaryOperator;
+pub use cudf_sys::ffi::UnaryOperator;
+pub use cudf_sys::ffi::RoundingMethod;
 
 /// Extension trait for generic binary operations.
 pub trait BinaryOp<Rhs> {

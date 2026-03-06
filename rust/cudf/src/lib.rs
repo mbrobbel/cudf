@@ -14,6 +14,7 @@
 //! and exposed via the [`rmm`] module.
 
 pub mod column;
+pub mod compaction;
 pub mod concatenate;
 pub mod copying;
 pub mod data_type;
@@ -25,6 +26,8 @@ pub mod groupby;
 pub mod hashing;
 pub mod io;
 pub mod join;
+pub mod labeling;
+pub mod lists;
 pub mod merge;
 pub mod ops;
 pub mod partitioning;
@@ -33,6 +36,7 @@ pub mod reduction;
 pub mod replace;
 pub mod reshape;
 pub mod rmm;
+pub mod rolling;
 pub mod scalar;
 pub mod search;
 pub mod sorting;
@@ -55,10 +59,11 @@ pub use data_type::{DataType, TypeId};
 pub use datetime::DatetimeExt;
 pub use error::{Error, Result};
 pub use groupby::AggregationKind;
-pub use ops::{BinaryOp, BinaryOperator};
+pub use ops::{BinaryOp, BinaryOperator, UnaryOperator};
 pub use replace::ReplaceNullsWith;
 pub use scalar::Scalar;
 pub use sorting::{NullOrder, Order};
 pub use stream::Stream;
+pub use lists::ListExt;
 pub use strings::StringExt;
 pub use table::{Table, TableBuilder};

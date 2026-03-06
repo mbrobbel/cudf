@@ -8,6 +8,9 @@ use crate::data_type::TypeId;
 use crate::error::Result;
 use crate::scalar::Scalar;
 use crate::stream::Stream;
+use crate::table::Table;
+
+pub use cudf_sys::ffi::SideType;
 
 /// Extension trait for string operations on GPU columns.
 pub trait StringExt {
@@ -75,6 +78,61 @@ pub trait StringExt {
     fn str_to_floats(&self, output_type: TypeId) -> Result<Column>;
     /// str_to_floats on a custom CUDA stream.
     fn str_to_floats_on(&self, output_type: TypeId, stream: Stream) -> Result<Column>;
+
+    // -- New string operations --
+
+    /// Pads strings to a minimum width.
+    fn str_pad(&self, width: usize, side: SideType, fill_char: &str) -> Result<Column>;
+    /// Zero-fills strings to a minimum width.
+    fn str_zfill(&self, width: usize) -> Result<Column>;
+    /// Extracts a substring [start, stop) with optional step.
+    fn str_slice(&self, start: i32, stop: i32, step: i32) -> Result<Column>;
+    /// Repeats each string N times.
+    fn str_repeat(&self, times: usize) -> Result<Column>;
+    /// Splits strings by a delimiter into a table of columns.
+    fn str_split(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Table>;
+    /// Right-splits strings by a delimiter into a table of columns.
+    fn str_rsplit(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Table>;
+    /// Returns the Nth part after splitting by delimiter.
+    fn str_split_part(&self, delimiter: &Scalar, index: i32) -> Result<Column>;
+    /// Joins all strings into a single string.
+    fn str_join(&self, separator: &Scalar, narep: &Scalar) -> Result<Column>;
+    /// SQL LIKE pattern matching.
+    fn str_like(&self, pattern: &str, escape_char: &str) -> Result<Column>;
+    /// Regex contains check.
+    fn str_contains_re(&self, pattern: &str) -> Result<Column>;
+    /// Regex match from start of string.
+    fn str_matches_re(&self, pattern: &str) -> Result<Column>;
+    /// Counts regex matches per string.
+    fn str_count_re(&self, pattern: &str) -> Result<Column>;
+    /// Replaces regex matches.
+    fn str_replace_re(&self, pattern: &str, replacement: &str) -> Result<Column>;
+    /// Swap case (upper→lower, lower→upper).
+    fn swapcase(&self) -> Result<Column>;
+    /// Strip specified characters from sides of strings.
+    fn str_strip_chars(&self, side: SideType, to_strip: &str) -> Result<Column>;
+    /// Replace literal target with replacement (max `maxrepl` times, -1 = all).
+    fn str_replace_literal(&self, target: &str, repl: &str, maxrepl: i32) -> Result<Column>;
+    /// Find first position of literal target in range [start, stop).
+    fn str_find_str(&self, target: &str, start: i32, stop: i32) -> Result<Column>;
+    /// Find last position of literal target (reverse find).
+    fn str_rfind(&self, target: &str, start: i32, stop: i32) -> Result<Column>;
+    /// Check if string contains literal target.
+    fn str_contains_literal(&self, target: &str) -> Result<Column>;
+    /// Check if string starts with literal target.
+    fn str_starts_with_str(&self, target: &str) -> Result<Column>;
+    /// Check if string ends with literal target.
+    fn str_ends_with_str(&self, target: &str) -> Result<Column>;
+    /// Reverse characters within each string.
+    fn str_reverse(&self) -> Result<Column>;
+    /// Regex extract groups into a Table (one column per group).
+    fn str_extract(&self, pattern: &str) -> Result<Table>;
+    /// Regex extract all matches into a lists column.
+    fn str_extract_all(&self, pattern: &str) -> Result<Column>;
+    /// Find all regex matches as a lists column.
+    fn str_findall(&self, pattern: &str) -> Result<Column>;
+    /// Find first regex match position.
+    fn str_find_re(&self, pattern: &str) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -204,6 +262,116 @@ impl StringExt for ColumnView<'_> {
     }
     fn str_to_floats_on(&self, output_type: TypeId, stream: Stream) -> Result<Column> {
         let c = cudf_sys::ffi::strings_to_floats(self.0, output_type.repr, stream.as_raw())?;
+        Ok(Column(c))
+    }
+
+    fn str_pad(&self, width: usize, side: SideType, fill_char: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_pad(self.0, width as i32, side.repr, fill_char, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_zfill(&self, width: usize) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_zfill(self.0, width as i32, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_slice(&self, start: i32, stop: i32, step: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_slice(self.0, start, stop, step, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_repeat(&self, times: usize) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_repeat(self.0, times as i32, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_split(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Table> {
+        let ffi = crate::scalar::scalar_to_ffi(delimiter);
+        let t = cudf_sys::ffi::strings_split_to_table(self.0, &ffi, maxsplit, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+    fn str_rsplit(&self, delimiter: &Scalar, maxsplit: i32) -> Result<Table> {
+        let ffi = crate::scalar::scalar_to_ffi(delimiter);
+        let t = cudf_sys::ffi::strings_rsplit_to_table(self.0, &ffi, maxsplit, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+    fn str_split_part(&self, delimiter: &Scalar, index: i32) -> Result<Column> {
+        let ffi = crate::scalar::scalar_to_ffi(delimiter);
+        let c = cudf_sys::ffi::strings_split_part(self.0, &ffi, index, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_join(&self, separator: &Scalar, narep: &Scalar) -> Result<Column> {
+        let sep_ffi = crate::scalar::scalar_to_ffi(separator);
+        let na_ffi = crate::scalar::scalar_to_ffi(narep);
+        let c = cudf_sys::ffi::strings_join(self.0, &sep_ffi, &na_ffi, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_like(&self, pattern: &str, escape_char: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_like(self.0, pattern, escape_char, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_contains_re(&self, pattern: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_contains_re(self.0, pattern, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_matches_re(&self, pattern: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_matches_re(self.0, pattern, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_count_re(&self, pattern: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_count_re(self.0, pattern, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_replace_re(&self, pattern: &str, replacement: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_replace_re(self.0, pattern, replacement, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn swapcase(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_swapcase(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_strip_chars(&self, side: SideType, to_strip: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_strip_chars(self.0, side.repr, to_strip, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_replace_literal(&self, target: &str, repl: &str, maxrepl: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_replace_literal(self.0, target, repl, maxrepl, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_find_str(&self, target: &str, start: i32, stop: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_find_str(self.0, target, start, stop, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_rfind(&self, target: &str, start: i32, stop: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_rfind(self.0, target, start, stop, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_contains_literal(&self, target: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_contains_str(self.0, target, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_starts_with_str(&self, target: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_starts_with_str(self.0, target, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_ends_with_str(&self, target: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_ends_with_str(self.0, target, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_reverse(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_reverse(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_extract(&self, pattern: &str) -> Result<Table> {
+        let t = cudf_sys::ffi::strings_extract(self.0, pattern, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+    fn str_extract_all(&self, pattern: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_extract_all_record(self.0, pattern, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_findall(&self, pattern: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_findall(self.0, pattern, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_find_re(&self, pattern: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_find_re(self.0, pattern, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

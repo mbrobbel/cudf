@@ -568,6 +568,271 @@ impl ColumnView<'_> {
         Ok(Column(col))
     }
 
+    // -- Generic unary operation --
+
+    /// Applies a unary operation to this column.
+    pub fn unary_op(&self, op: crate::ops::UnaryOperator) -> Result<Column> {
+        self.unary_op_on(op, Stream::default_stream())
+    }
+
+    /// unary_op on a custom CUDA stream.
+    pub fn unary_op_on(&self, op: crate::ops::UnaryOperator, stream: Stream) -> Result<Column> {
+        let c = cudf_sys::ffi::unary_operation(self.0, op.repr, stream.as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Returns a BOOL8 column where `true` indicates a non-NaN value.
+    pub fn is_not_nan(&self) -> Result<Column> {
+        self.is_not_nan_on(Stream::default_stream())
+    }
+
+    /// is_not_nan on a custom CUDA stream.
+    pub fn is_not_nan_on(&self, stream: Stream) -> Result<Column> {
+        let c = cudf_sys::ffi::unary_is_not_nan(self.0, stream.as_raw())?;
+        Ok(Column(c))
+    }
+
+    // -- Math convenience methods --
+
+    /// Computes the sine of each element.
+    pub fn sin(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::SIN) }
+    /// Computes the cosine of each element.
+    pub fn cos(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::COS) }
+    /// Computes the tangent of each element.
+    pub fn tan(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::TAN) }
+    /// Computes the arcsine of each element.
+    pub fn arcsin(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCSIN) }
+    /// Computes the arccosine of each element.
+    pub fn arccos(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCCOS) }
+    /// Computes the arctangent of each element.
+    pub fn arctan(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCTAN) }
+    /// Computes the hyperbolic sine of each element.
+    pub fn sinh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::SINH) }
+    /// Computes the hyperbolic cosine of each element.
+    pub fn cosh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::COSH) }
+    /// Computes the hyperbolic tangent of each element.
+    pub fn tanh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::TANH) }
+    /// Computes the inverse hyperbolic sine of each element.
+    pub fn arcsinh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCSINH) }
+    /// Computes the inverse hyperbolic cosine of each element.
+    pub fn arccosh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCCOSH) }
+    /// Computes the inverse hyperbolic tangent of each element.
+    pub fn arctanh(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::ARCTANH) }
+    /// Computes e^x for each element.
+    pub fn exp(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::EXP) }
+    /// Computes the natural log of each element.
+    pub fn log(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::LOG) }
+    /// Computes the square root of each element.
+    pub fn sqrt(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::SQRT) }
+    /// Computes the cube root of each element.
+    pub fn cbrt(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::CBRT) }
+    /// Computes the ceiling of each element.
+    pub fn ceil(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::CEIL) }
+    /// Computes the floor of each element.
+    pub fn floor(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::FLOOR) }
+    /// Rounds each element to the nearest integer (round half to even).
+    pub fn rint(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::RINT) }
+    /// Bitwise inversion of each element.
+    pub fn bit_invert(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::BIT_INVERT) }
+    /// Logical NOT of each element.
+    pub fn logical_not(&self) -> Result<Column> { self.unary_op(crate::ops::UnaryOperator::NOT) }
+
+    // -- Round --
+
+    /// Rounds column values to the given number of decimal places.
+    pub fn round(&self, decimal_places: i32) -> Result<Column> {
+        self.round_on(decimal_places, Stream::default_stream())
+    }
+
+    /// round on a custom CUDA stream.
+    pub fn round_on(&self, decimal_places: i32, stream: Stream) -> Result<Column> {
+        let c = cudf_sys::ffi::round_column(self.0, decimal_places, 0, stream.as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Rounds with a specific rounding method.
+    pub fn round_with_method(
+        &self,
+        decimal_places: i32,
+        method: crate::ops::RoundingMethod,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::round_column(
+            self.0,
+            decimal_places,
+            method.repr,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
+    // -- Reductions (new) --
+
+    /// Computes the mean of all elements.
+    pub fn mean(&self, output_type: TypeId) -> Result<Scalar> {
+        self.mean_on(output_type, Stream::default_stream())
+    }
+
+    /// Mean on a custom CUDA stream.
+    pub fn mean_on(&self, output_type: TypeId, stream: Stream) -> Result<Scalar> {
+        let s = cudf_sys::ffi::reduce_mean(self.0, output_type.repr, stream.as_raw())?;
+        Ok(scalar_from_ffi(&s))
+    }
+
+    /// Computes the standard deviation.
+    pub fn std_dev(&self, output_type: TypeId, ddof: i32) -> Result<Scalar> {
+        self.std_dev_on(output_type, ddof, Stream::default_stream())
+    }
+
+    /// std_dev on a custom CUDA stream.
+    pub fn std_dev_on(&self, output_type: TypeId, ddof: i32, stream: Stream) -> Result<Scalar> {
+        let s = cudf_sys::ffi::reduce_std(self.0, output_type.repr, ddof, stream.as_raw())?;
+        Ok(scalar_from_ffi(&s))
+    }
+
+    /// Computes the variance.
+    pub fn variance(&self, output_type: TypeId, ddof: i32) -> Result<Scalar> {
+        self.variance_on(output_type, ddof, Stream::default_stream())
+    }
+
+    /// variance on a custom CUDA stream.
+    pub fn variance_on(&self, output_type: TypeId, ddof: i32, stream: Stream) -> Result<Scalar> {
+        let s = cudf_sys::ffi::reduce_var(self.0, output_type.repr, ddof, stream.as_raw())?;
+        Ok(scalar_from_ffi(&s))
+    }
+
+    /// Computes the median.
+    pub fn median(&self, output_type: TypeId) -> Result<Scalar> {
+        self.median_on(output_type, Stream::default_stream())
+    }
+
+    /// median on a custom CUDA stream.
+    pub fn median_on(&self, output_type: TypeId, stream: Stream) -> Result<Scalar> {
+        let s = cudf_sys::ffi::reduce_median(self.0, output_type.repr, stream.as_raw())?;
+        Ok(scalar_from_ffi(&s))
+    }
+
+    /// Counts the number of unique elements.
+    pub fn nunique(&self) -> Result<Scalar> {
+        self.nunique_on(Stream::default_stream())
+    }
+
+    /// nunique on a custom CUDA stream.
+    pub fn nunique_on(&self, stream: Stream) -> Result<Scalar> {
+        let s = cudf_sys::ffi::reduce_nunique(self.0, 0, stream.as_raw())?;
+        Ok(scalar_from_ffi(&s))
+    }
+
+    /// Returns the minimum via minmax.
+    pub fn minmax_min(&self) -> Result<Scalar> {
+        let s = cudf_sys::ffi::minmax_min(self.0, Stream::default_stream().as_raw())?;
+        Ok(scalar_from_ffi(&s))
+    }
+
+    /// Returns the maximum via minmax.
+    pub fn minmax_max(&self) -> Result<Scalar> {
+        let s = cudf_sys::ffi::minmax_max(self.0, Stream::default_stream().as_raw())?;
+        Ok(scalar_from_ffi(&s))
+    }
+
+    // -- Scan --
+
+    /// Computes a prefix scan (cumulative operation).
+    pub fn scan(&self, agg_kind: crate::groupby::AggregationKind, inclusive: bool) -> Result<Column> {
+        self.scan_on(agg_kind, inclusive, Stream::default_stream())
+    }
+
+    /// scan on a custom CUDA stream.
+    pub fn scan_on(
+        &self,
+        agg_kind: crate::groupby::AggregationKind,
+        inclusive: bool,
+        stream: Stream,
+    ) -> Result<Column> {
+        let scan_type = if inclusive { 0 } else { 1 };
+        let c = cudf_sys::ffi::scan_column(
+            self.0,
+            agg_kind.repr,
+            scan_type,
+            0, // null_policy: EXCLUDE
+            stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
+    // -- Copying extras --
+
+    /// Shifts column values by offset, filling with the given scalar.
+    pub fn shift(&self, offset: i32, fill_value: &Scalar) -> Result<Column> {
+        self.shift_on(offset, fill_value, Stream::default_stream())
+    }
+
+    /// shift on a custom CUDA stream.
+    pub fn shift_on(&self, offset: i32, fill_value: &Scalar, stream: Stream) -> Result<Column> {
+        let ffi = crate::scalar::scalar_to_ffi(fill_value);
+        let c = cudf_sys::ffi::shift_column(self.0, offset, &ffi, stream.as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Returns a single element as a scalar.
+    pub fn get_element(&self, index: usize) -> Result<Scalar> {
+        let s = cudf_sys::ffi::get_element(self.0, index as i32, Stream::default_stream().as_raw())?;
+        Ok(scalar_from_ffi(&s))
+    }
+
+    /// Reverses the elements of this column.
+    pub fn reverse(&self) -> Result<Column> {
+        self.reverse_on(Stream::default_stream())
+    }
+
+    /// reverse on a custom CUDA stream.
+    pub fn reverse_on(&self, stream: Stream) -> Result<Column> {
+        let c = cudf_sys::ffi::reverse_column(self.0, stream.as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Extracts a slice [begin, end) as a new owned column.
+    pub fn slice(&self, begin: usize, end: usize) -> Result<Column> {
+        self.slice_on(begin, end, Stream::default_stream())
+    }
+
+    /// slice on a custom CUDA stream.
+    pub fn slice_on(&self, begin: usize, end: usize, stream: Stream) -> Result<Column> {
+        let c = cudf_sys::ffi::slice_column(self.0, begin as i32, end as i32, stream.as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Selects elements from lhs (self) or rhs based on a boolean mask.
+    pub fn copy_if_else(&self, rhs: &ColumnView<'_>, mask: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::copy_if_else_columns(
+            self.0,
+            rhs.0,
+            mask.0,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
+    // -- Label bins --
+
+    /// Assigns bin labels to column values.
+    pub fn label_bins(
+        &self,
+        left_edges: &ColumnView<'_>,
+        left_inclusive: crate::labeling::Inclusive,
+        right_edges: &ColumnView<'_>,
+        right_inclusive: crate::labeling::Inclusive,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::label_bins_column(
+            self.0,
+            left_edges.0,
+            left_inclusive.repr,
+            right_edges.0,
+            right_inclusive.repr,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
     // -- Search --
 
     /// Checks if a scalar value exists in this column.

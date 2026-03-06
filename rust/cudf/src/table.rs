@@ -592,6 +592,154 @@ impl Table {
         Ok(Table(tbl))
     }
 
+    // -- Stream compaction --
+
+    /// Drops rows where any of the specified key columns contain NaN.
+    pub fn drop_nans(&self, keys: &[i32]) -> Result<Table> {
+        self.drop_nans_on(keys, Stream::default_stream())
+    }
+
+    /// drop_nans on a custom CUDA stream.
+    pub fn drop_nans_on(&self, keys: &[i32], stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::drop_nans(&self.0, keys, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Drops rows where the number of non-null key values is below the threshold.
+    pub fn drop_nulls_with_threshold(&self, keys: &[i32], threshold: usize) -> Result<Table> {
+        self.drop_nulls_with_threshold_on(keys, threshold, Stream::default_stream())
+    }
+
+    /// drop_nulls_with_threshold on a custom CUDA stream.
+    pub fn drop_nulls_with_threshold_on(
+        &self,
+        keys: &[i32],
+        threshold: usize,
+        stream: Stream,
+    ) -> Result<Table> {
+        let t = cudf_sys::ffi::drop_nulls_with_threshold(
+            &self.0,
+            keys,
+            threshold as i32,
+            stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+
+    /// Returns unique consecutive rows based on key columns.
+    pub fn unique(&self, keys: &[i32]) -> Result<Table> {
+        self.unique_on(keys, Stream::default_stream())
+    }
+
+    /// unique on a custom CUDA stream.
+    pub fn unique_on(&self, keys: &[i32], stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::unique_table(&self.0, keys, 0, 0, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Returns distinct rows based on key columns.
+    pub fn distinct(&self, keys: &[i32]) -> Result<Table> {
+        self.distinct_on(keys, Stream::default_stream())
+    }
+
+    /// distinct on a custom CUDA stream.
+    pub fn distinct_on(&self, keys: &[i32], stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::distinct_table(&self.0, keys, 0, 0, 0, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Returns distinct rows preserving input order.
+    pub fn stable_distinct(&self, keys: &[i32]) -> Result<Table> {
+        self.stable_distinct_on(keys, Stream::default_stream())
+    }
+
+    /// stable_distinct on a custom CUDA stream.
+    pub fn stable_distinct_on(&self, keys: &[i32], stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::stable_distinct_table(&self.0, keys, 0, 0, 0, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    // -- Copying extras --
+
+    /// Scatters source table rows into this table at given indices.
+    pub fn scatter(&self, source: &Table, scatter_map: &ColumnView<'_>) -> Result<Table> {
+        self.scatter_on(source, scatter_map, Stream::default_stream())
+    }
+
+    /// scatter on a custom CUDA stream.
+    pub fn scatter_on(
+        &self,
+        source: &Table,
+        scatter_map: &ColumnView<'_>,
+        stream: Stream,
+    ) -> Result<Table> {
+        let t = cudf_sys::ffi::scatter_table(
+            &source.0,
+            scatter_map.0,
+            &self.0,
+            stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+
+    /// Reverses the rows of the table.
+    pub fn reverse(&self) -> Result<Table> {
+        self.reverse_on(Stream::default_stream())
+    }
+
+    /// reverse on a custom CUDA stream.
+    pub fn reverse_on(&self, stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::reverse_table(&self.0, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Extracts a slice [begin, end) of the table as a new owned table.
+    pub fn slice(&self, begin: usize, end: usize) -> Result<Table> {
+        self.slice_on(begin, end, Stream::default_stream())
+    }
+
+    /// slice on a custom CUDA stream.
+    pub fn slice_on(&self, begin: usize, end: usize, stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::slice_table(&self.0, begin as i32, end as i32, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Randomly samples rows from the table.
+    pub fn sample(&self, n: usize, with_replacement: bool, seed: i64) -> Result<Table> {
+        self.sample_on(n, with_replacement, seed, Stream::default_stream())
+    }
+
+    /// sample on a custom CUDA stream.
+    pub fn sample_on(
+        &self,
+        n: usize,
+        with_replacement: bool,
+        seed: i64,
+        stream: Stream,
+    ) -> Result<Table> {
+        let t = cudf_sys::ffi::sample_table(
+            &self.0,
+            n as i32,
+            with_replacement,
+            seed,
+            stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+
+    // -- Transpose --
+
+    /// Transposes the table (rows become columns).
+    pub fn transpose(&self) -> Result<Table> {
+        self.transpose_on(Stream::default_stream())
+    }
+
+    /// transpose on a custom CUDA stream.
+    pub fn transpose_on(&self, stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::transpose_table(&self.0, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
     // -- Search --
 
     /// Finds lower bound insertion points in this sorted table.
@@ -652,6 +800,41 @@ impl Table {
             stream.as_raw(),
         )?;
         Ok(Column(c))
+    }
+
+    // -- Explode --
+
+    /// Explodes a list column, expanding each list element into its own row.
+    pub fn explode(&self, column_idx: usize) -> Result<Table> {
+        self.explode_on(column_idx, Stream::default_stream())
+    }
+
+    /// explode on a custom CUDA stream.
+    pub fn explode_on(&self, column_idx: usize, stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::explode_table(&self.0, column_idx as i32, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Explodes a list column with a position column added.
+    pub fn explode_position(&self, column_idx: usize) -> Result<Table> {
+        self.explode_position_on(column_idx, Stream::default_stream())
+    }
+
+    /// explode_position on a custom CUDA stream.
+    pub fn explode_position_on(&self, column_idx: usize, stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::explode_position_table(&self.0, column_idx as i32, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Explodes a list column, keeping null/empty list rows as null rows.
+    pub fn explode_outer(&self, column_idx: usize) -> Result<Table> {
+        self.explode_outer_on(column_idx, Stream::default_stream())
+    }
+
+    /// explode_outer on a custom CUDA stream.
+    pub fn explode_outer_on(&self, column_idx: usize, stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::explode_outer_table(&self.0, column_idx as i32, stream.as_raw())?;
+        Ok(Table(t))
     }
 }
 

@@ -152,6 +152,101 @@ pub mod ffi {
         NEAREST = 4,
     }
 
+    /// Unary operation types.
+    ///
+    /// Mirrors `cudf::unary_operator`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum UnaryOperator {
+        SIN = 0,
+        COS = 1,
+        TAN = 2,
+        ARCSIN = 3,
+        ARCCOS = 4,
+        ARCTAN = 5,
+        SINH = 6,
+        COSH = 7,
+        TANH = 8,
+        ARCSINH = 9,
+        ARCCOSH = 10,
+        ARCTANH = 11,
+        EXP = 12,
+        LOG = 13,
+        SQRT = 14,
+        CBRT = 15,
+        CEIL = 16,
+        FLOOR = 17,
+        ABS = 18,
+        RINT = 19,
+        BIT_COUNT = 20,
+        BIT_INVERT = 21,
+        NOT = 22,
+        NEGATE = 23,
+    }
+
+    /// Rounding method for round operations.
+    ///
+    /// Mirrors `cudf::rounding_method`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum RoundingMethod {
+        HALF_UP = 0,
+        HALF_EVEN = 1,
+    }
+
+    /// Which duplicate rows to keep.
+    ///
+    /// Mirrors `cudf::duplicate_keep_option`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum DuplicateKeepOption {
+        KEEP_ANY = 0,
+        KEEP_FIRST = 1,
+        KEEP_LAST = 2,
+        KEEP_NONE = 3,
+    }
+
+    /// Whether NaN values compare equal.
+    ///
+    /// Mirrors `cudf::nan_equality`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum NanEquality {
+        ALL_EQUAL = 0,
+        UNEQUAL = 1,
+    }
+
+    /// Scan direction (inclusive or exclusive prefix scan).
+    ///
+    /// Mirrors `cudf::scan_type`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum ScanType {
+        INCLUSIVE = 0,
+        EXCLUSIVE = 1,
+    }
+
+    /// Whether a bin edge is inclusive.
+    ///
+    /// Mirrors `cudf::inclusive`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum Inclusive {
+        YES = 0,
+        NO = 1,
+    }
+
+    /// Side for string padding.
+    ///
+    /// Mirrors `cudf::strings::side_type`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(i32)]
+    enum SideType {
+        LEFT = 0,
+        RIGHT = 1,
+        BOTH = 2,
+    }
+
     unsafe extern "C++" {
         include!("cudf-sys/lib.hpp");
 
@@ -905,5 +1000,312 @@ pub mod ffi {
             start_partition: i32,
             stream: usize,
         ) -> Result<Vec<i32>>;
+
+        // -- Generic unary operation --
+
+        /// Applies a unary operation to a column.
+        fn unary_operation(col: &column_view, op: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Returns a BOOL8 column where true indicates a non-NaN value.
+        fn unary_is_not_nan(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Round --
+
+        /// Rounds column values to the given number of decimal places.
+        fn round_column(
+            col: &column_view,
+            decimal_places: i32,
+            method: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        // -- Stream compaction --
+
+        /// Drops rows from a table where any of the specified key columns contain NaN.
+        fn drop_nans(tbl: &Table, keys: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+
+        /// Drops rows where the number of non-null key values is below the threshold.
+        fn drop_nulls_with_threshold(
+            tbl: &Table,
+            keys: &[i32],
+            threshold: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Returns unique consecutive rows based on key columns.
+        fn unique_table(
+            tbl: &Table,
+            keys: &[i32],
+            keep: i32,
+            null_equal: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Returns distinct rows based on key columns.
+        fn distinct_table(
+            tbl: &Table,
+            keys: &[i32],
+            keep: i32,
+            null_equal: i32,
+            nan_equal: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Returns indices of distinct rows.
+        fn distinct_indices_column(
+            tbl: &Table,
+            keep: i32,
+            null_equal: i32,
+            nan_equal: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Returns distinct rows preserving input order.
+        fn stable_distinct_table(
+            tbl: &Table,
+            keys: &[i32],
+            keep: i32,
+            null_equal: i32,
+            nan_equal: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        // -- Copying extras --
+
+        /// Scatters source table rows into target table at given indices.
+        fn scatter_table(
+            source: &Table,
+            scatter_map: &column_view,
+            target: &Table,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Reverses the elements of a column.
+        fn reverse_column(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Reverses the rows of a table.
+        fn reverse_table(tbl: &Table, stream: usize) -> Result<UniquePtr<Table>>;
+
+        /// Shifts column values by offset, filling with the given scalar.
+        fn shift_column(
+            col: &column_view,
+            offset: i32,
+            fill_value: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Returns a single element from a column as a scalar.
+        fn get_element(col: &column_view, index: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        /// Selects elements from lhs or rhs based on a boolean mask.
+        fn copy_if_else_columns(
+            lhs: &column_view,
+            rhs: &column_view,
+            mask: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Selects elements from a scalar or column based on a boolean mask.
+        fn copy_if_else_scalar_column(
+            lhs: &Scalar,
+            rhs: &column_view,
+            mask: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Selects elements from a column or scalar based on a boolean mask.
+        fn copy_if_else_column_scalar(
+            lhs: &column_view,
+            rhs: &Scalar,
+            mask: &column_view,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Extracts a slice [begin, end) of a column as a new owned column.
+        fn slice_column(col: &column_view, begin: i32, end: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Extracts a slice [begin, end) of a table as a new owned table.
+        fn slice_table(tbl: &Table, begin: i32, end: i32, stream: usize) -> Result<UniquePtr<Table>>;
+
+        /// Randomly samples rows from a table.
+        fn sample_table(
+            tbl: &Table,
+            n: i32,
+            with_replacement: bool,
+            seed: i64,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        // -- Additional reductions --
+
+        /// Computes the mean of all elements.
+        fn reduce_mean(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        /// Computes the standard deviation.
+        fn reduce_std(col: &column_view, output_type_id: i32, ddof: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        /// Computes the variance.
+        fn reduce_var(col: &column_view, output_type_id: i32, ddof: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        /// Computes the median.
+        fn reduce_median(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        /// Counts the number of unique elements.
+        fn reduce_nunique(col: &column_view, null_policy: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        /// Prefix scan (cumulative operation).
+        fn scan_column(
+            col: &column_view,
+            agg_kind: i32,
+            scan_type: i32,
+            null_policy: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Returns the minimum value from a column (via minmax).
+        fn minmax_min(col: &column_view, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        /// Returns the maximum value from a column (via minmax).
+        fn minmax_max(col: &column_view, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        // -- Transpose --
+
+        /// Transposes a table.
+        fn transpose_table(tbl: &Table, stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Label bins --
+
+        /// Assigns bin labels to column values.
+        fn label_bins_column(
+            col: &column_view,
+            left_edges: &column_view,
+            left_inclusive: i32,
+            right_edges: &column_view,
+            right_inclusive: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        // -- String extras --
+
+        /// Pads strings to a minimum width.
+        fn strings_pad(col: &column_view, width: i32, side: i32, fill_char: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Zero-fills strings to a minimum width.
+        fn strings_zfill(col: &column_view, width: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Extracts a substring [start, stop) with optional step.
+        fn strings_slice(col: &column_view, start: i32, stop: i32, step: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Repeats each string N times.
+        fn strings_repeat(col: &column_view, repeat_times: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Splits strings by a delimiter into a table of columns.
+        fn strings_split_to_table(col: &column_view, delimiter: &Scalar, maxsplit: i32, stream: usize) -> Result<UniquePtr<Table>>;
+
+        /// Right-splits strings by a delimiter into a table of columns.
+        fn strings_rsplit_to_table(col: &column_view, delimiter: &Scalar, maxsplit: i32, stream: usize) -> Result<UniquePtr<Table>>;
+
+        /// Returns the Nth part after splitting by delimiter.
+        fn strings_split_part(col: &column_view, delimiter: &Scalar, index: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Joins all strings in a column into a single string column of size 1.
+        fn strings_join(col: &column_view, separator: &Scalar, narep: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Concatenates string columns element-wise with a separator.
+        fn strings_concatenate_columns(tbl: &Table, separator: &Scalar, narep: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// SQL LIKE pattern matching.
+        fn strings_like(col: &column_view, pattern: &str, escape_char: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Regex contains check.
+        fn strings_contains_re(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Regex match from start of string.
+        fn strings_matches_re(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Counts regex matches per string.
+        fn strings_count_re(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
+        /// Replaces regex matches with a replacement string.
+        fn strings_replace_re(
+            col: &column_view,
+            pattern: &str,
+            replacement: &str,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        // -- String extras (batch 6) --
+
+        /// Swap case (upper→lower, lower→upper).
+        fn strings_swapcase(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Strip specified characters from sides of strings.
+        fn strings_strip_chars(col: &column_view, side: i32, to_strip: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Literal string replace with maxrepl.
+        fn strings_replace_literal(col: &column_view, target: &str, repl: &str, maxrepl: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Find first position of target in range [start, stop).
+        fn strings_find_str(col: &column_view, target: &str, start: i32, stop: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Find last position of target (reverse find).
+        fn strings_rfind(col: &column_view, target: &str, start: i32, stop: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if string contains literal target.
+        fn strings_contains_str(col: &column_view, target: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if string starts with literal target.
+        fn strings_starts_with_str(col: &column_view, target: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if string ends with literal target.
+        fn strings_ends_with_str(col: &column_view, target: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Reverse characters within each string.
+        fn strings_reverse(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Regex extract groups into a Table (one column per group).
+        fn strings_extract(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Regex extract all matches into a lists column.
+        fn strings_extract_all_record(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Find all regex matches as a lists column.
+        fn strings_findall(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Find first regex match position.
+        fn strings_find_re(col: &column_view, pattern: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Lists operations --
+
+        /// Count elements in each list row.
+        fn lists_count_elements(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Extract element at given index from each list row.
+        fn lists_extract_element(col: &column_view, index: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Sort elements within each list row.
+        fn lists_sort(col: &column_view, ascending: bool, nulls_last: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Reverse elements within each list row.
+        fn lists_reverse(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if each list contains nulls.
+        fn lists_contains_nulls(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Explode --
+
+        /// Explode a list column in a table.
+        fn explode_table(tbl: &Table, column_idx: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Explode a list column with position column.
+        fn explode_position_table(tbl: &Table, column_idx: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Explode a list column, keeping null/empty list rows.
+        fn explode_outer_table(tbl: &Table, column_idx: i32, stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Rolling window --
+
+        /// Fixed-size rolling window aggregation.
+        fn rolling_window(
+            col: &column_view,
+            preceding: i32,
+            following: i32,
+            min_periods: i32,
+            agg_kind: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        /// Grouped fixed-size rolling window aggregation.
+        fn grouped_rolling_window(
+            group_keys: &Table,
+            col: &column_view,
+            preceding: i32,
+            following: i32,
+            min_periods: i32,
+            agg_kind: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
     }
 }

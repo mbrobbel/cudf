@@ -550,8 +550,15 @@ rust::Vec<int32_t> round_robin_partition_offsets(
     int32_t start_partition,
     std::size_t stream);
 
-// -- CXX shared enum (generated from Rust bridge) --
+// -- CXX shared enums (generated from Rust bridge) --
 enum class AggregationKind : ::std::int32_t;
+enum class UnaryOperator : ::std::int32_t;
+enum class RoundingMethod : ::std::int32_t;
+enum class DuplicateKeepOption : ::std::int32_t;
+enum class NanEquality : ::std::int32_t;
+enum class ScanType : ::std::int32_t;
+enum class Inclusive : ::std::int32_t;
+enum class SideType : ::std::int32_t;
 
 // -- GroupBy operations --
 
@@ -568,5 +575,114 @@ std::unique_ptr<Table> groupby_multi(
     rust::Slice<int32_t const> value_indices,
     rust::Slice<int32_t const> agg_kinds,
     std::size_t stream);
+
+// -- Generic unary operation --
+
+std::unique_ptr<Column> unary_operation(cudf::column_view const& col, int32_t op, std::size_t stream);
+std::unique_ptr<Column> unary_is_not_nan(cudf::column_view const& col, std::size_t stream);
+
+// -- Round --
+
+std::unique_ptr<Column> round_column(cudf::column_view const& col, int32_t decimal_places, int32_t method, std::size_t stream);
+
+// -- Stream compaction --
+
+std::unique_ptr<Table> drop_nans(Table const& tbl, rust::Slice<int32_t const> keys, std::size_t stream);
+std::unique_ptr<Table> drop_nulls_with_threshold(Table const& tbl, rust::Slice<int32_t const> keys, int32_t threshold, std::size_t stream);
+std::unique_ptr<Table> unique_table(Table const& tbl, rust::Slice<int32_t const> keys, int32_t keep, int32_t null_equal, std::size_t stream);
+std::unique_ptr<Table> distinct_table(Table const& tbl, rust::Slice<int32_t const> keys, int32_t keep, int32_t null_equal, int32_t nan_equal, std::size_t stream);
+std::unique_ptr<Column> distinct_indices_column(Table const& tbl, int32_t keep, int32_t null_equal, int32_t nan_equal, std::size_t stream);
+std::unique_ptr<Table> stable_distinct_table(Table const& tbl, rust::Slice<int32_t const> keys, int32_t keep, int32_t null_equal, int32_t nan_equal, std::size_t stream);
+
+// -- Copying extras --
+
+std::unique_ptr<Table> scatter_table(Table const& source, cudf::column_view const& scatter_map, Table const& target, std::size_t stream);
+std::unique_ptr<Column> reverse_column(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Table> reverse_table(Table const& tbl, std::size_t stream);
+std::unique_ptr<Column> shift_column(cudf::column_view const& col, int32_t offset, Scalar const& fill_value, std::size_t stream);
+std::unique_ptr<Scalar> get_element(cudf::column_view const& col, int32_t index, std::size_t stream);
+std::unique_ptr<Column> copy_if_else_columns(cudf::column_view const& lhs, cudf::column_view const& rhs, cudf::column_view const& mask, std::size_t stream);
+std::unique_ptr<Column> copy_if_else_scalar_column(Scalar const& lhs, cudf::column_view const& rhs, cudf::column_view const& mask, std::size_t stream);
+std::unique_ptr<Column> copy_if_else_column_scalar(cudf::column_view const& lhs, Scalar const& rhs, cudf::column_view const& mask, std::size_t stream);
+std::unique_ptr<Column> slice_column(cudf::column_view const& col, int32_t begin, int32_t end, std::size_t stream);
+std::unique_ptr<Table> slice_table(Table const& tbl, int32_t begin, int32_t end, std::size_t stream);
+std::unique_ptr<Table> sample_table(Table const& tbl, int32_t n, bool with_replacement, int64_t seed, std::size_t stream);
+
+// -- Additional reductions --
+
+std::unique_ptr<Scalar> reduce_mean(cudf::column_view const& col, int32_t output_type_id, std::size_t stream);
+std::unique_ptr<Scalar> reduce_std(cudf::column_view const& col, int32_t output_type_id, int32_t ddof, std::size_t stream);
+std::unique_ptr<Scalar> reduce_var(cudf::column_view const& col, int32_t output_type_id, int32_t ddof, std::size_t stream);
+std::unique_ptr<Scalar> reduce_median(cudf::column_view const& col, int32_t output_type_id, std::size_t stream);
+std::unique_ptr<Scalar> reduce_nunique(cudf::column_view const& col, int32_t null_policy, std::size_t stream);
+std::unique_ptr<Column> scan_column(cudf::column_view const& col, int32_t agg_kind, int32_t scan_type, int32_t null_policy, std::size_t stream);
+std::unique_ptr<Scalar> minmax_min(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Scalar> minmax_max(cudf::column_view const& col, std::size_t stream);
+
+// -- Transpose --
+
+std::unique_ptr<Table> transpose_table(Table const& tbl, std::size_t stream);
+
+// -- Label bins --
+
+std::unique_ptr<Column> label_bins_column(
+    cudf::column_view const& col,
+    cudf::column_view const& left_edges,
+    int32_t left_inclusive,
+    cudf::column_view const& right_edges,
+    int32_t right_inclusive,
+    std::size_t stream);
+
+// -- String extras --
+
+std::unique_ptr<Column> strings_pad(cudf::column_view const& col, int32_t width, int32_t side, rust::Str fill_char, std::size_t stream);
+std::unique_ptr<Column> strings_zfill(cudf::column_view const& col, int32_t width, std::size_t stream);
+std::unique_ptr<Column> strings_slice(cudf::column_view const& col, int32_t start, int32_t stop, int32_t step, std::size_t stream);
+std::unique_ptr<Column> strings_repeat(cudf::column_view const& col, int32_t repeat_times, std::size_t stream);
+std::unique_ptr<Table> strings_split_to_table(cudf::column_view const& col, Scalar const& delimiter, int32_t maxsplit, std::size_t stream);
+std::unique_ptr<Table> strings_rsplit_to_table(cudf::column_view const& col, Scalar const& delimiter, int32_t maxsplit, std::size_t stream);
+std::unique_ptr<Column> strings_split_part(cudf::column_view const& col, Scalar const& delimiter, int32_t index, std::size_t stream);
+std::unique_ptr<Column> strings_join(cudf::column_view const& col, Scalar const& separator, Scalar const& narep, std::size_t stream);
+std::unique_ptr<Column> strings_concatenate_columns(Table const& tbl, Scalar const& separator, Scalar const& narep, std::size_t stream);
+std::unique_ptr<Column> strings_like(cudf::column_view const& col, rust::Str pattern, rust::Str escape_char, std::size_t stream);
+std::unique_ptr<Column> strings_contains_re(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
+std::unique_ptr<Column> strings_matches_re(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
+std::unique_ptr<Column> strings_count_re(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
+std::unique_ptr<Column> strings_replace_re(cudf::column_view const& col, rust::Str pattern, rust::Str replacement, std::size_t stream);
+
+// -- String extras (batch 6) --
+
+std::unique_ptr<Column> strings_swapcase(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_strip_chars(cudf::column_view const& col, int32_t side, rust::Str to_strip, std::size_t stream);
+std::unique_ptr<Column> strings_replace_literal(cudf::column_view const& col, rust::Str target, rust::Str repl, int32_t maxrepl, std::size_t stream);
+std::unique_ptr<Column> strings_find_str(cudf::column_view const& col, rust::Str target, int32_t start, int32_t stop, std::size_t stream);
+std::unique_ptr<Column> strings_rfind(cudf::column_view const& col, rust::Str target, int32_t start, int32_t stop, std::size_t stream);
+std::unique_ptr<Column> strings_contains_str(cudf::column_view const& col, rust::Str target, std::size_t stream);
+std::unique_ptr<Column> strings_starts_with_str(cudf::column_view const& col, rust::Str target, std::size_t stream);
+std::unique_ptr<Column> strings_ends_with_str(cudf::column_view const& col, rust::Str target, std::size_t stream);
+std::unique_ptr<Column> strings_reverse(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Table> strings_extract(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
+std::unique_ptr<Column> strings_extract_all_record(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
+std::unique_ptr<Column> strings_findall(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
+std::unique_ptr<Column> strings_find_re(cudf::column_view const& col, rust::Str pattern, std::size_t stream);
+
+// -- Lists operations --
+
+std::unique_ptr<Column> lists_count_elements(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> lists_extract_element(cudf::column_view const& col, int32_t index, std::size_t stream);
+std::unique_ptr<Column> lists_sort(cudf::column_view const& col, bool ascending, bool nulls_last, std::size_t stream);
+std::unique_ptr<Column> lists_reverse(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> lists_contains_nulls(cudf::column_view const& col, std::size_t stream);
+
+// -- Explode --
+
+std::unique_ptr<Table> explode_table(Table const& tbl, int32_t column_idx, std::size_t stream);
+std::unique_ptr<Table> explode_position_table(Table const& tbl, int32_t column_idx, std::size_t stream);
+std::unique_ptr<Table> explode_outer_table(Table const& tbl, int32_t column_idx, std::size_t stream);
+
+// -- Rolling window --
+
+std::unique_ptr<Column> rolling_window(cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
+std::unique_ptr<Column> grouped_rolling_window(Table const& group_keys, cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
 
 }  // namespace cudf_sys
