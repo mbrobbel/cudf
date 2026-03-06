@@ -1681,5 +1681,24 @@ pub mod ffi {
         /// Compute SHA-512 hash of each row (returns STRING column).
         fn hash_sha512(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
 
+        // -- Column factories --
+
+        /// Create an uninitialized fixed-width column. mask_state: 0=UNALLOCATED, 1=UNINITIALIZED, 2=ALL_VALID, 3=ALL_NULL.
+        fn make_fixed_width_column(type_id: i32, scale: i32, num_rows: i32, mask_state: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Create an empty lists column with the given child element type.
+        fn make_empty_lists_column(child_type_id: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Create a dictionary column filled with a single scalar value.
+        fn make_dictionary_from_scalar(scalar: &Scalar, num_rows: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- JSON path extraction --
+
+        /// Extract values from JSON strings using a JSONPath expression.
+        fn get_json_object(col: &column_view, json_path: &str, allow_single_quotes: bool, strip_quotes: bool, missing_fields_as_nulls: bool, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Null mask utility --
+
+        /// Returns the null count implied by a mask_state for a given number of rows.
+        fn state_null_count(mask_state: i32, num_rows: i32) -> i32;
+
     }
 }

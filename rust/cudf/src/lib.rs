@@ -55,7 +55,7 @@ pub(crate) unsafe fn enum_slice_as_i32<T>(slice: &[T]) -> &[i32] {
     unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const i32, slice.len()) }
 }
 
-pub use column::{Column, ColumnView};
+pub use column::{Column, ColumnView, MaskState};
 pub use data_type::{DataType, TypeId};
 pub use datetime::{DatetimeExt, RoundingFrequency};
 pub use error::{Error, Result};
@@ -81,6 +81,11 @@ pub fn bitmask_allocation_size_bytes(number_of_bits: usize) -> usize {
 /// Compute the number of bitmask words needed for the given number of bits.
 pub fn num_bitmask_words(number_of_bits: usize) -> usize {
     cudf_sys::ffi::num_bitmask_words(number_of_bits as i32) as usize
+}
+
+/// Returns the null count implied by a mask state for a given number of rows.
+pub fn state_null_count(mask_state: MaskState, num_rows: usize) -> usize {
+    cudf_sys::ffi::state_null_count(mask_state as i32, num_rows as i32) as usize
 }
 
 // -- Fill utilities --

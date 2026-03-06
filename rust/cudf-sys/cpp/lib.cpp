@@ -92,6 +92,7 @@
 
 #include <cudf/rolling.hpp>
 #include <cudf/null_mask.hpp>
+#include <cudf/json/json.hpp>
 
 #include <cuda_runtime.h>
 
@@ -3442,6 +3443,66 @@ std::unique_ptr<Column> hash_sha512(Table const& tbl, std::size_t stream) {
   rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
   auto result = cudf::hashing::sha512(tbl.cached_view(), s);
   return std::make_unique<Column>(std::move(result));
+}
+
+// -- Column factories --
+
+std::unique_ptr<Column> make_fixed_width_column(
+    int32_t type_id,
+    int32_t scale,
+    int32_t num_rows,
+    int32_t mask_state,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto dt = cudf::data_type{static_cast<cudf::type_id>(type_id), scale};
+  auto result = cudf::make_fixed_width_column(dt, num_rows,
+      static_cast<cudf::mask_state>(mask_state), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> make_empty_lists_column(
+    int32_t child_type_id,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto dt = cudf::data_type{static_cast<cudf::type_id>(child_type_id)};
+  auto result = cudf::make_empty_lists_column(dt, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> make_dictionary_from_scalar(
+    Scalar const& scalar,
+    int32_t num_rows,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::make_dictionary_from_scalar(scalar.inner(), num_rows, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- JSON path extraction --
+
+std::unique_ptr<Column> get_json_object(
+    cudf::column_view const& col,
+    rust::Str json_path,
+    bool allow_single_quotes,
+    bool strip_quotes,
+    bool missing_fields_as_nulls,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto path_str = std::string(json_path.data(), json_path.size());
+  cudf::string_scalar path_scalar(path_str, true, s);
+  cudf::get_json_object_options opts;
+  opts.set_allow_single_quotes(allow_single_quotes);
+  opts.set_strip_quotes_from_single_strings(strip_quotes);
+  opts.set_missing_fields_as_nulls(missing_fields_as_nulls);
+  auto result = cudf::get_json_object(scv, path_scalar, opts, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Null mask utility --
+
+int32_t state_null_count(int32_t mask_state, int32_t num_rows) {
+  return cudf::state_null_count(static_cast<cudf::mask_state>(mask_state), num_rows);
 }
 
 }  // namespace cudf_sys

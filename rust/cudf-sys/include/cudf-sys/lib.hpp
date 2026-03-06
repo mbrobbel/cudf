@@ -992,4 +992,18 @@ std::unique_ptr<Column> hash_sha224(Table const& tbl, std::size_t stream);
 std::unique_ptr<Column> hash_sha384(Table const& tbl, std::size_t stream);
 std::unique_ptr<Column> hash_sha512(Table const& tbl, std::size_t stream);
 
+// -- Column factories --
+
+std::unique_ptr<Column> make_fixed_width_column(int32_t type_id, int32_t scale, int32_t num_rows, int32_t mask_state, std::size_t stream);
+std::unique_ptr<Column> make_empty_lists_column(int32_t child_type_id, std::size_t stream);
+std::unique_ptr<Column> make_dictionary_from_scalar(Scalar const& scalar, int32_t num_rows, std::size_t stream);
+
+// -- JSON path extraction --
+
+std::unique_ptr<Column> get_json_object(cudf::column_view const& col, rust::Str json_path, bool allow_single_quotes, bool strip_quotes, bool missing_fields_as_nulls, std::size_t stream);
+
+// -- Null mask utility --
+
+int32_t state_null_count(int32_t mask_state, int32_t num_rows);
+
 }  // namespace cudf_sys

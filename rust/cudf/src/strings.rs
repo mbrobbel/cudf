@@ -727,6 +727,28 @@ pub fn concatenate_strings_with_separator(
     Ok(Column(c))
 }
 
+/// Extract values from JSON strings using a JSONPath expression.
+///
+/// Each row in the input column must be a valid JSON string. The JSONPath
+/// expression is applied to every row, returning the matched values as strings.
+pub fn get_json_object(
+    col: &ColumnView<'_>,
+    json_path: &str,
+    allow_single_quotes: bool,
+    strip_quotes: bool,
+    missing_fields_as_nulls: bool,
+) -> Result<Column> {
+    let c = cudf_sys::ffi::get_json_object(
+        col.0,
+        json_path,
+        allow_single_quotes,
+        strip_quotes,
+        missing_fields_as_nulls,
+        Stream::default_stream().as_raw(),
+    )?;
+    Ok(Column(c))
+}
+
 /// String character type bitmask constants.
 pub mod char_types {
     pub const DECIMAL: u32 = 1;

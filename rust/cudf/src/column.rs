@@ -13,6 +13,20 @@ fn ds() -> usize {
     Stream::default_stream().as_raw()
 }
 
+/// Null mask allocation state for column factories.
+#[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MaskState {
+    /// No null mask allocated.
+    Unallocated = 0,
+    /// Null mask allocated but uninitialized.
+    Uninitialized = 1,
+    /// All elements valid (no nulls).
+    AllValid = 2,
+    /// All elements null.
+    AllNull = 3,
+}
+
 /// An owning GPU column.
 ///
 /// Wraps a `cudf::column` via the CXX FFI layer. Dropping this value
@@ -37,6 +51,41 @@ impl Column {
     /// Creates an empty column of the given type.
     pub fn empty(type_id: TypeId) -> Self {
         Self(cudf_sys::ffi::make_empty_column_by_type(type_id.repr))
+    }
+
+    /// Creates an uninitialized fixed-width column with `num_rows` elements.
+    ///
+    /// `mask_state` controls null mask allocation:
+    /// - `MaskState::Unallocated` — no null mask
+    /// - `MaskState::AllValid` — all valid (no nulls)
+    /// - `MaskState::AllNull` — all null
+    pub fn fixed_width(
+        type_id: TypeId,
+        scale: i32,
+        num_rows: usize,
+        mask_state: MaskState,
+    ) -> Result<Self> {
+        let c = cudf_sys::ffi::make_fixed_width_column(
+            type_id.repr,
+            scale,
+            num_rows as i32,
+            mask_state as i32,
+            ds(),
+        )?;
+        Ok(Self(c))
+    }
+
+    /// Creates an empty lists column with the given child element type.
+    pub fn empty_lists(child_type: TypeId) -> Result<Self> {
+        let c = cudf_sys::ffi::make_empty_lists_column(child_type.repr, ds())?;
+        Ok(Self(c))
+    }
+
+    /// Creates a dictionary column filled with a single scalar value.
+    pub fn dictionary_from_scalar(scalar: &Scalar, count: usize) -> Result<Self> {
+        let ffi = crate::scalar::scalar_to_ffi(scalar);
+        let c = cudf_sys::ffi::make_dictionary_from_scalar(&ffi, count as i32, ds())?;
+        Ok(Self(c))
     }
 
     /// Returns the number of elements.
