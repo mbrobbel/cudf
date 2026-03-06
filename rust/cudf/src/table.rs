@@ -420,6 +420,24 @@ impl Table {
         Ok(Column(c))
     }
 
+    /// SHA-224 hash of each row (returns STRING column).
+    pub fn sha224(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::hash_sha224(&self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// SHA-384 hash of each row (returns STRING column).
+    pub fn sha384(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::hash_sha384(&self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// SHA-512 hash of each row (returns STRING column).
+    pub fn sha512(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::hash_sha512(&self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
     /// Approximate per-row bit count.
     pub fn row_bit_count(&self) -> Result<Column> {
         let c = cudf_sys::ffi::row_bit_count(&self.0, Stream::default_stream().as_raw())?;

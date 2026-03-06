@@ -1667,5 +1667,19 @@ pub mod ffi {
         /// Join lists of strings with per-row separator column.
         fn strings_join_list_elements_column(col: &column_view, separators: &column_view, separator_narep: &str, string_narep: &str, stream: usize) -> Result<UniquePtr<Column>>;
 
+        // -- Strings: zfill_by_widths --
+
+        /// Zero-fill strings using per-row widths column.
+        fn strings_zfill_by_widths(col: &column_view, widths: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Hashing: sha224 / sha384 / sha512 --
+
+        /// Compute SHA-224 hash of each row (returns STRING column).
+        fn hash_sha224(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Compute SHA-384 hash of each row (returns STRING column).
+        fn hash_sha384(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Compute SHA-512 hash of each row (returns STRING column).
+        fn hash_sha512(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
+
     }
 }

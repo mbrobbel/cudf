@@ -982,4 +982,14 @@ std::unique_ptr<Column> lists_sequences_with_step(cudf::column_view const& start
 std::unique_ptr<Column> strings_concatenate_columns_sep_col(Table const& tbl, cudf::column_view const& separators, rust::Str separator_narep, rust::Str col_narep, std::size_t stream);
 std::unique_ptr<Column> strings_join_list_elements_column(cudf::column_view const& col, cudf::column_view const& separators, rust::Str separator_narep, rust::Str string_narep, std::size_t stream);
 
+// -- Strings: zfill_by_widths --
+
+std::unique_ptr<Column> strings_zfill_by_widths(cudf::column_view const& col, cudf::column_view const& widths, std::size_t stream);
+
+// -- Hashing: sha224 / sha384 / sha512 --
+
+std::unique_ptr<Column> hash_sha224(Table const& tbl, std::size_t stream);
+std::unique_ptr<Column> hash_sha384(Table const& tbl, std::size_t stream);
+std::unique_ptr<Column> hash_sha512(Table const& tbl, std::size_t stream);
+
 }  // namespace cudf_sys

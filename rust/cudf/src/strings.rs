@@ -85,6 +85,8 @@ pub trait StringExt {
     fn str_pad(&self, width: usize, side: SideType, fill_char: &str) -> Result<Column>;
     /// Zero-fills strings to a minimum width.
     fn str_zfill(&self, width: usize) -> Result<Column>;
+    /// Zero-fills strings using per-row widths from a column.
+    fn str_zfill_by_widths(&self, widths: &ColumnView<'_>) -> Result<Column>;
     /// Extracts a substring [start, stop) with optional step.
     fn str_slice(&self, start: i32, stop: i32, step: i32) -> Result<Column>;
     /// Repeats each string N times.
@@ -403,6 +405,10 @@ impl StringExt for ColumnView<'_> {
     }
     fn str_zfill(&self, width: usize) -> Result<Column> {
         let c = cudf_sys::ffi::strings_zfill(self.0, width as i32, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_zfill_by_widths(&self, widths: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_zfill_by_widths(self.0, widths.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn str_slice(&self, start: i32, stop: i32, step: i32) -> Result<Column> {

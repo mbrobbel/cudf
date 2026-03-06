@@ -3412,4 +3412,36 @@ std::unique_ptr<Column> strings_join_list_elements_column(
   return std::make_unique<Column>(std::move(result));
 }
 
+// -- Strings: zfill_by_widths --
+
+std::unique_ptr<Column> strings_zfill_by_widths(
+    cudf::column_view const& col,
+    cudf::column_view const& widths,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::zfill_by_widths(scv, widths, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Hashing: sha224 / sha384 / sha512 --
+
+std::unique_ptr<Column> hash_sha224(Table const& tbl, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::hashing::sha224(tbl.cached_view(), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> hash_sha384(Table const& tbl, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::hashing::sha384(tbl.cached_view(), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> hash_sha512(Table const& tbl, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::hashing::sha512(tbl.cached_view(), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
 }  // namespace cudf_sys
