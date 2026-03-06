@@ -4046,4 +4046,17 @@ std::size_t approx_distinct_count(Table const& tbl, int32_t precision, std::size
   return adc.estimate(s);
 }
 
+// -- Column child access --
+
+std::unique_ptr<Column> column_view_child_copy(cudf::column_view const& col, int32_t index, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto child_view = col.child(index);
+  auto result = std::make_unique<cudf::column>(child_view, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+int32_t column_view_num_children(cudf::column_view const& col) {
+  return col.num_children();
+}
+
 }  // namespace cudf_sys

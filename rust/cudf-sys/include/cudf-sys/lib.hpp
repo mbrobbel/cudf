@@ -1159,4 +1159,9 @@ std::unique_ptr<Table> drop_nans_with_threshold(Table const& tbl, rust::Slice<in
 
 std::size_t approx_distinct_count(Table const& tbl, int32_t precision, std::size_t stream);
 
+// -- Column child access --
+
+std::unique_ptr<Column> column_view_child_copy(cudf::column_view const& col, int32_t index, std::size_t stream);
+int32_t column_view_num_children(cudf::column_view const& col);
+
 }  // namespace cudf_sys

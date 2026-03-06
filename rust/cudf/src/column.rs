@@ -308,6 +308,23 @@ impl ColumnView<'_> {
         unsafe { std::mem::transmute::<i32, TypeId>(id) }
     }
 
+    // -- Child column access --
+
+    /// Returns the number of child columns (e.g. struct fields, list offsets/child).
+    pub fn num_children(&self) -> usize {
+        cudf_sys::ffi::column_view_num_children(self.0) as usize
+    }
+
+    /// Deep-copies a child column by index.
+    ///
+    /// For STRUCT columns: index 0..N-1 are the struct fields.
+    /// For LIST columns: index 0 is offsets, index 1 is child values.
+    /// For DICTIONARY columns: index 0 is indices, index 1 is keys.
+    pub fn child(&self, index: usize) -> Result<Column> {
+        let c = cudf_sys::ffi::column_view_child_copy(self.0, index as i32, ds())?;
+        Ok(Column(c))
+    }
+
     // -- Unary ops --
 
     /// Casts the column to a different type.

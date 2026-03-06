@@ -1876,5 +1876,12 @@ pub mod ffi {
         /// Approximate distinct count using HyperLogLog. Precision 4-18 (default 12).
         fn approx_distinct_count(tbl: &Table, precision: i32, stream: usize) -> usize;
 
+        // -- Column child access --
+
+        /// Deep-copies a child column by index (for STRUCT, LIST, DICTIONARY columns).
+        fn column_view_child_copy(col: &column_view, index: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Returns the number of child columns.
+        fn column_view_num_children(col: &column_view) -> i32;
+
     }
 }
