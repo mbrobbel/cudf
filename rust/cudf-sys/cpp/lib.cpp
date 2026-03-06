@@ -3291,6 +3291,47 @@ bool may_have_nonempty_nulls(cudf::column_view const& col) {
   return cudf::may_have_nonempty_nulls(col);
 }
 
+// -- Sorting: segmented_sort_by_key (non-stable) --
+
+std::unique_ptr<Table> segmented_sort_by_key(
+    Table const& values,
+    Table const& keys,
+    cudf::column_view const& segment_offsets,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::segmented_sort_by_key(
+      values.cached_view(), keys.cached_view(), segment_offsets,
+      to_orders(column_orders), to_null_orders(null_orders), s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+// -- Partitioning: partition by map column --
+
+std::unique_ptr<Table> partition_by_map(
+    Table const& tbl,
+    cudf::column_view const& partition_map,
+    int32_t num_partitions,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto [result_table, offsets] = cudf::partition(tbl.cached_view(), partition_map, num_partitions, s);
+  return std::make_unique<Table>(std::move(result_table));
+}
+
+rust::Vec<int32_t> partition_by_map_offsets(
+    Table const& tbl,
+    cudf::column_view const& partition_map,
+    int32_t num_partitions,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto [result_table, offsets] = cudf::partition(tbl.cached_view(), partition_map, num_partitions, s);
+  rust::Vec<int32_t> result;
+  result.reserve(offsets.size());
+  for (auto o : offsets) result.push_back(o);
+  return result;
+}
+
 // -- Datetime: fractional seconds --
 
 std::unique_ptr<Column> datetime_extract_millisecond(cudf::column_view const& col, std::size_t stream) {

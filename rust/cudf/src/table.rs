@@ -898,6 +898,20 @@ impl Table {
         Ok(Column(c))
     }
 
+    /// Segmented sort by key.
+    pub fn segmented_sort_by_key(
+        &self,
+        keys: &Table,
+        segment_offsets: &ColumnView<'_>,
+        orders: &[Order],
+        nulls: &[NullOrder],
+    ) -> Result<Table> {
+        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let t = cudf_sys::ffi::segmented_sort_by_key(&self.0, &keys.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
     /// Stable segmented sort by key.
     pub fn stable_segmented_sort_by_key(
         &self,
@@ -1009,6 +1023,56 @@ impl Table {
     pub fn cross_join_on(&self, right: &Table, stream: Stream) -> Result<Table> {
         let t = cudf_sys::ffi::cross_join(&self.0, &right.0, stream.as_raw())?;
         Ok(Table(t))
+    }
+
+    /// Partitions the table by a map column that assigns each row to a partition.
+    pub fn partition_by_map(
+        &self,
+        partition_map: &ColumnView<'_>,
+        num_partitions: usize,
+    ) -> Result<Table> {
+        self.partition_by_map_on(partition_map, num_partitions, Stream::default_stream())
+    }
+
+    /// partition_by_map on a custom CUDA stream.
+    pub fn partition_by_map_on(
+        &self,
+        partition_map: &ColumnView<'_>,
+        num_partitions: usize,
+        stream: Stream,
+    ) -> Result<Table> {
+        let t = cudf_sys::ffi::partition_by_map(
+            &self.0,
+            partition_map.0,
+            num_partitions as i32,
+            stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+
+    /// Returns partition offsets for partition-by-map.
+    pub fn partition_by_map_offsets(
+        &self,
+        partition_map: &ColumnView<'_>,
+        num_partitions: usize,
+    ) -> Result<Vec<usize>> {
+        self.partition_by_map_offsets_on(partition_map, num_partitions, Stream::default_stream())
+    }
+
+    /// partition_by_map_offsets on a custom CUDA stream.
+    pub fn partition_by_map_offsets_on(
+        &self,
+        partition_map: &ColumnView<'_>,
+        num_partitions: usize,
+        stream: Stream,
+    ) -> Result<Vec<usize>> {
+        let offsets = cudf_sys::ffi::partition_by_map_offsets(
+            &self.0,
+            partition_map.0,
+            num_partitions as i32,
+            stream.as_raw(),
+        )?;
+        Ok(offsets.into_iter().map(|o| o as usize).collect())
     }
 }
 

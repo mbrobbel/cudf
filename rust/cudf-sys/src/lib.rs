@@ -1629,6 +1629,18 @@ pub mod ffi {
         /// Check if a column may have non-empty data in null rows (no stream needed).
         fn may_have_nonempty_nulls(col: &column_view) -> bool;
 
+        // -- Sorting: segmented_sort_by_key (non-stable) --
+
+        /// Segmented sort by key (returns reordered values table).
+        fn segmented_sort_by_key(values: &Table, keys: &Table, segment_offsets: &column_view, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Partitioning: partition by map column --
+
+        /// Partition table rows by a map column.
+        fn partition_by_map(tbl: &Table, partition_map: &column_view, num_partitions: i32, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Get partition offsets for partition by map.
+        fn partition_by_map_offsets(tbl: &Table, partition_map: &column_view, num_partitions: i32, stream: usize) -> Result<Vec<i32>>;
+
         // -- Datetime: fractional seconds --
 
         /// Extract millisecond fraction from timestamp.
