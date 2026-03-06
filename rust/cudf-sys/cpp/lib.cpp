@@ -10,6 +10,7 @@
 #include <cudf/binaryop.hpp>
 #include <cudf/quantiles.hpp>
 #include <cudf/tdigest/tdigest_column_view.hpp>
+#include <cudf/interop.hpp>
 #include <cudf/replace.hpp>
 #include <cudf/search.hpp>
 #include <cudf/column/column_factories.hpp>
@@ -4348,6 +4349,21 @@ std::unique_ptr<Scalar> repeat_string_scalar(Scalar const& input, int32_t repeat
   auto const& str_scalar = static_cast<cudf::string_scalar const&>(input.inner());
   auto result = cudf::strings::repeat_string(str_scalar, repeat_times, s);
   return std::make_unique<Scalar>(std::move(result));
+}
+
+// -- DLPack interop --
+
+std::unique_ptr<Table> from_dlpack(std::size_t managed_tensor_ptr, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto* tensor = reinterpret_cast<DLManagedTensor const*>(managed_tensor_ptr);
+  auto result = cudf::from_dlpack(tensor, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::size_t to_dlpack(Table const& tbl, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto* tensor = cudf::to_dlpack(tbl.cached_view(), s);
+  return reinterpret_cast<std::size_t>(tensor);
 }
 
 // -- Grouped rolling window with defaults --

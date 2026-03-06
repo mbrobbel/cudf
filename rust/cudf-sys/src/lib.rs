@@ -1946,6 +1946,15 @@ pub mod ffi {
         /// Returns the number of child columns.
         fn column_view_num_children(col: &column_view) -> i32;
 
+        // -- DLPack interop --
+
+        /// Converts a DLPack DLManagedTensor pointer into a cudf Table.
+        /// The pointer must point to a valid DLManagedTensor.
+        fn from_dlpack(managed_tensor_ptr: usize, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Converts a cudf Table into a DLPack DLManagedTensor pointer.
+        /// Returns the pointer as usize; caller must free via the tensor's deleter.
+        fn to_dlpack(tbl: &Table, stream: usize) -> usize;
+
         // -- Grouped rolling window with defaults --
 
         /// Grouped rolling window with default output values (for LEAD/LAG).

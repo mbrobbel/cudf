@@ -1326,6 +1326,30 @@ impl Table {
         cudf_sys::ffi::table_has_nested_nullable_columns(&self.0)
     }
 
+    /// Creates a table from a DLPack DLManagedTensor pointer.
+    ///
+    /// # Safety
+    /// The `managed_tensor_ptr` must point to a valid `DLManagedTensor`.
+    pub unsafe fn from_dlpack(managed_tensor_ptr: usize) -> Result<Table> {
+        let t = cudf_sys::ffi::from_dlpack(
+            managed_tensor_ptr,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+
+    /// Converts this table into a DLPack DLManagedTensor pointer.
+    ///
+    /// All columns must have the same numeric type and zero null count.
+    /// Returns the pointer as `usize`; the caller is responsible for calling
+    /// the DLManagedTensor's `deleter` to free it.
+    pub fn to_dlpack(&self) -> usize {
+        cudf_sys::ffi::to_dlpack(
+            &self.0,
+            Stream::default_stream().as_raw(),
+        )
+    }
+
     /// Concatenates all columns in this table into a single column.
     ///
     /// All columns must have the same data type.

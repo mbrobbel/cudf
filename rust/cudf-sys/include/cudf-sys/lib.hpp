@@ -1185,6 +1185,11 @@ std::size_t approx_distinct_count(Table const& tbl, int32_t precision, std::size
 std::unique_ptr<Column> column_view_child_copy(cudf::column_view const& col, int32_t index, std::size_t stream);
 int32_t column_view_num_children(cudf::column_view const& col);
 
+// -- DLPack interop --
+
+std::unique_ptr<Table> from_dlpack(std::size_t managed_tensor_ptr, std::size_t stream);
+std::size_t to_dlpack(Table const& tbl, std::size_t stream);
+
 // -- Grouped rolling window with defaults --
 
 std::unique_ptr<Column> grouped_rolling_window_with_defaults(Table const& group_keys, cudf::column_view const& col, cudf::column_view const& default_outputs, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
