@@ -1066,6 +1066,22 @@ std::unique_ptr<StructColumnBuilder> new_struct_column_builder();
 void struct_column_builder_add(StructColumnBuilder& builder, std::unique_ptr<Column> col);
 std::unique_ptr<Column> struct_column_builder_build(StructColumnBuilder& builder, int32_t num_rows, std::size_t stream);
 
+// -- GroupBy scan/replace_nulls --
+
+std::unique_ptr<Table> groupby_scan(
+    Table const& tbl,
+    rust::Slice<int32_t const> key_indices,
+    rust::Slice<int32_t const> value_indices,
+    rust::Slice<int32_t const> agg_kinds,
+    std::size_t stream);
+
+std::unique_ptr<Table> groupby_replace_nulls(
+    Table const& tbl,
+    rust::Slice<int32_t const> key_indices,
+    rust::Slice<int32_t const> value_indices,
+    rust::Slice<int32_t const> policies,
+    std::size_t stream);
+
 // -- ORC I/O --
 
 std::unique_ptr<Table> read_orc(rust::Str filepath);
@@ -1100,5 +1116,28 @@ std::unique_ptr<ScalarList> new_scalar_list();
 void scalar_list_add(ScalarList& list, std::unique_ptr<Scalar> s);
 std::unique_ptr<Table> scatter_scalars(ScalarList& sources, cudf::column_view const& indices, Table const& target, std::size_t stream);
 std::unique_ptr<Table> boolean_mask_scatter_scalars(ScalarList& sources, Table const& target, cudf::column_view const& mask, std::size_t stream);
+
+// -- GroupBy shift --
+
+std::unique_ptr<Table> groupby_shift(
+    Table const& tbl,
+    rust::Slice<int32_t const> key_indices,
+    rust::Slice<int32_t const> value_indices,
+    rust::Slice<int32_t const> offsets,
+    ScalarList& fill_values,
+    std::size_t stream);
+
+// -- Unique count --
+
+int32_t unique_count_column(cudf::column_view const& col, int32_t null_policy, bool nan_is_null, std::size_t stream);
+int32_t unique_count_table(Table const& tbl, int32_t null_equality, std::size_t stream);
+
+// -- Additional hashing --
+
+std::unique_ptr<Column> hash_murmurhash3_x86_32(Table const& tbl, uint32_t seed, std::size_t stream);
+
+// -- Drop NaNs with threshold --
+
+std::unique_ptr<Table> drop_nans_with_threshold(Table const& tbl, rust::Slice<int32_t const> keys, int32_t threshold, std::size_t stream);
 
 }  // namespace cudf_sys

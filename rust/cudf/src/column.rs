@@ -517,6 +517,17 @@ impl ColumnView<'_> {
         ) as usize
     }
 
+    /// Counts consecutive unique values in the column.
+    pub fn unique_count(&self, include_nulls: bool, nan_is_null: bool) -> usize {
+        let null_policy = if include_nulls { 1 } else { 0 };
+        cudf_sys::ffi::unique_count_column(
+            self.0,
+            null_policy,
+            nan_is_null,
+            ds(),
+        ) as usize
+    }
+
     // -- Binary ops (convenience) --
 
     /// Element-wise addition with another column.

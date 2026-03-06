@@ -1167,6 +1167,135 @@ impl Table {
         )?;
         Ok(offsets.into_iter().map(|o| o as usize).collect())
     }
+
+    // -- Groupby scan/shift/replace_nulls --
+
+    /// Performs cumulative (scan) aggregation within groups.
+    pub fn groupby_scan(
+        &self,
+        key_columns: &[i32],
+        value_columns: &[i32],
+        aggs: &[AggregationKind],
+    ) -> Result<Table> {
+        self.groupby_scan_on(key_columns, value_columns, aggs, Stream::default_stream())
+    }
+
+    /// Cumulative aggregation within groups on a custom CUDA stream.
+    pub fn groupby_scan_on(
+        &self,
+        key_columns: &[i32],
+        value_columns: &[i32],
+        aggs: &[AggregationKind],
+        stream: Stream,
+    ) -> Result<Table> {
+        if value_columns.len() != aggs.len() {
+            return Err(crate::error::Error::OutOfBounds {
+                index: aggs.len(),
+                len: value_columns.len(),
+            });
+        }
+        let agg_kinds = unsafe { crate::enum_slice_as_i32(aggs) };
+        let result = cudf_sys::ffi::groupby_scan(
+            &self.0,
+            key_columns,
+            value_columns,
+            agg_kinds,
+            stream.as_raw(),
+        )?;
+        Ok(Table(result))
+    }
+
+    /// Shifts values within groups by specified offsets, filling with scalars.
+    pub fn groupby_shift(
+        &self,
+        key_columns: &[i32],
+        value_columns: &[i32],
+        offsets: &[i32],
+        fill_values: &[Scalar],
+    ) -> Result<Table> {
+        self.groupby_shift_on(key_columns, value_columns, offsets, fill_values, Stream::default_stream())
+    }
+
+    /// Grouped shift on a custom CUDA stream.
+    pub fn groupby_shift_on(
+        &self,
+        key_columns: &[i32],
+        value_columns: &[i32],
+        offsets: &[i32],
+        fill_values: &[Scalar],
+        stream: Stream,
+    ) -> Result<Table> {
+        let mut list = cudf_sys::ffi::new_scalar_list();
+        for s in fill_values {
+            let ffi = crate::scalar::scalar_to_ffi(s);
+            cudf_sys::ffi::scalar_list_add(list.pin_mut(), ffi);
+        }
+        let result = cudf_sys::ffi::groupby_shift(
+            &self.0,
+            key_columns,
+            value_columns,
+            offsets,
+            list.pin_mut(),
+            stream.as_raw(),
+        )?;
+        Ok(Table(result))
+    }
+
+    /// Replaces null values within groups using forward or backward fill.
+    ///
+    /// `policies` should be 0 (PRECEDING/forward) or 1 (FOLLOWING/backward)
+    /// for each value column.
+    pub fn groupby_replace_nulls(
+        &self,
+        key_columns: &[i32],
+        value_columns: &[i32],
+        policies: &[i32],
+    ) -> Result<Table> {
+        self.groupby_replace_nulls_on(key_columns, value_columns, policies, Stream::default_stream())
+    }
+
+    /// Grouped replace_nulls on a custom CUDA stream.
+    pub fn groupby_replace_nulls_on(
+        &self,
+        key_columns: &[i32],
+        value_columns: &[i32],
+        policies: &[i32],
+        stream: Stream,
+    ) -> Result<Table> {
+        let result = cudf_sys::ffi::groupby_replace_nulls(
+            &self.0,
+            key_columns,
+            value_columns,
+            policies,
+            stream.as_raw(),
+        )?;
+        Ok(Table(result))
+    }
+
+    // -- Unique count --
+
+    /// Counts consecutive unique rows in the table.
+    pub fn unique_count(&self, nulls_equal: bool) -> usize {
+        let ne = if nulls_equal { 0 } else { 1 };
+        cudf_sys::ffi::unique_count_table(
+            &self.0,
+            ne,
+            Stream::default_stream().as_raw(),
+        ) as usize
+    }
+
+    // -- Drop NaNs with threshold --
+
+    /// Drops rows with NaN values, keeping rows with at least `threshold` non-NaN values.
+    pub fn drop_nans_with_threshold(&self, keys: &[i32], threshold: usize) -> Result<Table> {
+        let t = cudf_sys::ffi::drop_nans_with_threshold(
+            &self.0,
+            keys,
+            threshold as i32,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Table(t))
+    }
 }
 
 /// An iterator over the columns of a [`Table`].

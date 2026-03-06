@@ -137,6 +137,19 @@ pub mod ffi {
         MEDIAN = 6,
         STD = 7,
         VAR = 8,
+        PRODUCT = 9,
+        ANY = 10,
+        ALL = 11,
+        ARGMAX = 12,
+        ARGMIN = 13,
+        COLLECT_LIST = 14,
+        COLLECT_SET = 15,
+        HISTOGRAM = 16,
+        SUM_OF_SQUARES = 17,
+        M2 = 18,
+        MERGE_LISTS = 19,
+        MERGE_M2 = 20,
+        MERGE_HISTOGRAM = 21,
     }
 
     /// Interpolation strategy for quantile computation.
@@ -899,6 +912,36 @@ pub mod ffi {
             key_indices: &[i32],
             value_indices: &[i32],
             agg_kinds: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Performs groupby scan (cumulative aggregation within groups).
+        /// value_indices and agg_kinds must have the same length.
+        fn groupby_scan(
+            tbl: &Table,
+            key_indices: &[i32],
+            value_indices: &[i32],
+            agg_kinds: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Shifts values within groups by specified offsets, filling with scalars.
+        fn groupby_shift(
+            tbl: &Table,
+            key_indices: &[i32],
+            value_indices: &[i32],
+            offsets: &[i32],
+            fill_values: Pin<&mut ScalarList>,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Replaces null values within groups using preceding/following policy.
+        /// policies: 0 = PRECEDING, 1 = FOLLOWING.
+        fn groupby_replace_nulls(
+            tbl: &Table,
+            key_indices: &[i32],
+            value_indices: &[i32],
+            policies: &[i32],
             stream: usize,
         ) -> Result<UniquePtr<Table>>;
 
@@ -1800,6 +1843,23 @@ pub mod ffi {
         fn scatter_scalars(sources: Pin<&mut ScalarList>, indices: &column_view, target: &Table, stream: usize) -> Result<UniquePtr<Table>>;
         /// Scatter scalar values into target where boolean mask is true.
         fn boolean_mask_scatter_scalars(sources: Pin<&mut ScalarList>, target: &Table, mask: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Unique count (consecutive) --
+
+        /// Count consecutive unique values in a column.
+        fn unique_count_column(col: &column_view, null_policy: i32, nan_is_null: bool, stream: usize) -> i32;
+        /// Count consecutive unique rows in a table.
+        fn unique_count_table(tbl: &Table, null_equality: i32, stream: usize) -> i32;
+
+        // -- Additional hashing --
+
+        /// Compute MurmurHash3 x86 32-bit hash of each row (returns UINT32 column).
+        fn hash_murmurhash3_x86_32(tbl: &Table, seed: u32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Drop NaNs with threshold --
+
+        /// Drop rows with NaN values, keeping rows with at least threshold non-NaN values.
+        fn drop_nans_with_threshold(tbl: &Table, keys: &[i32], threshold: i32, stream: usize) -> Result<UniquePtr<Table>>;
 
     }
 }
