@@ -930,4 +930,28 @@ std::unique_ptr<Column> lists_extract_element_column(cudf::column_view const& co
 std::unique_ptr<Column> lists_stable_sort(cudf::column_view const& col, bool ascending, bool nulls_last, std::size_t stream);
 std::unique_ptr<Column> lists_concatenate_rows(Table const& tbl, std::size_t stream);
 
+// -- Binary: fixed_point_scale / is_supported_operation --
+
+int32_t binary_operation_fixed_point_scale(int32_t op, int32_t left_scale, int32_t right_scale);
+bool is_supported_binaryop(int32_t out_type_id, int32_t lhs_type_id, int32_t rhs_type_id, int32_t op);
+
+// -- Sorting: stable segmented --
+
+std::unique_ptr<Column> stable_segmented_sorted_order(Table const& tbl, cudf::column_view const& segment_offsets, rust::Slice<int32_t const> column_orders, rust::Slice<int32_t const> null_orders, std::size_t stream);
+std::unique_ptr<Table> stable_segmented_sort_by_key(Table const& values, Table const& keys, cudf::column_view const& segment_offsets, rust::Slice<int32_t const> column_orders, rust::Slice<int32_t const> null_orders, std::size_t stream);
+
+// -- Explode: outer_position --
+
+std::unique_ptr<Table> explode_outer_position_table(Table const& tbl, int32_t column_idx, std::size_t stream);
+
+// -- Strings: slice by column, extract_single --
+
+std::unique_ptr<Column> strings_slice_column(cudf::column_view const& col, cudf::column_view const& starts, cudf::column_view const& stops, std::size_t stream);
+std::unique_ptr<Column> strings_extract_single(cudf::column_view const& col, rust::Str pattern, int32_t group_index, std::size_t stream);
+
+// -- Copying: gather_checked, may_have_nonempty_nulls --
+
+std::unique_ptr<Table> gather_table_checked(Table const& tbl, cudf::column_view const& gather_map, bool nullify_oob, std::size_t stream);
+bool may_have_nonempty_nulls(cudf::column_view const& col);
+
 }  // namespace cudf_sys

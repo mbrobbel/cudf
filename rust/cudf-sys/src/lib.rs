@@ -1596,5 +1596,38 @@ pub mod ffi {
         /// Row-wise concatenation of list columns from a table into a single list column.
         fn lists_concatenate_rows(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
 
+        // -- Binary: fixed_point_scale / is_supported_operation --
+
+        /// Compute the output scale for a fixed-point binary operation.
+        fn binary_operation_fixed_point_scale(op: i32, left_scale: i32, right_scale: i32) -> i32;
+        /// Check if a binary operation is supported for the given types.
+        fn is_supported_binaryop(out_type_id: i32, lhs_type_id: i32, rhs_type_id: i32, op: i32) -> bool;
+
+        // -- Sorting: stable segmented --
+
+        /// Stable segmented sorted order (returns index column).
+        fn stable_segmented_sorted_order(tbl: &Table, segment_offsets: &column_view, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Column>>;
+        /// Stable segmented sort by key (returns reordered values table).
+        fn stable_segmented_sort_by_key(values: &Table, keys: &Table, segment_offsets: &column_view, column_orders: &[i32], null_orders: &[i32], stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Explode: outer_position --
+
+        /// Explode outer with position column.
+        fn explode_outer_position_table(tbl: &Table, column_idx: i32, stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Strings: slice by column, extract_single --
+
+        /// Slice strings using per-row start/stop columns.
+        fn strings_slice_column(col: &column_view, starts: &column_view, stops: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Extract a single regex group from each string.
+        fn strings_extract_single(col: &column_view, pattern: &str, group_index: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Copying: gather_checked, may_have_nonempty_nulls --
+
+        /// Gather rows with out-of-bounds policy (nullify_oob=true → NULLIFY).
+        fn gather_table_checked(tbl: &Table, gather_map: &column_view, nullify_oob: bool, stream: usize) -> Result<UniquePtr<Table>>;
+        /// Check if a column may have non-empty data in null rows (no stream needed).
+        fn may_have_nonempty_nulls(col: &column_view) -> bool;
+
     }
 }

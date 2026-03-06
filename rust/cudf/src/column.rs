@@ -940,6 +940,12 @@ impl ColumnView<'_> {
         cudf_sys::ffi::has_nonempty_nulls(self.0, Stream::default_stream().as_raw()).map_err(Into::into)
     }
 
+    /// Check if this column *may* have non-empty data in null rows.
+    /// This is a fast check (no stream needed) that may return false positives.
+    pub fn may_have_nonempty_nulls(&self) -> bool {
+        cudf_sys::ffi::may_have_nonempty_nulls(self.0)
+    }
+
     /// Purge non-empty null row contents.
     pub fn purge_nonempty_nulls(&self) -> Result<Column> {
         let c = cudf_sys::ffi::purge_nonempty_nulls(self.0, Stream::default_stream().as_raw())?;

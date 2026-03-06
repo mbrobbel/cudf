@@ -885,6 +885,33 @@ impl Table {
         Ok(Column(c))
     }
 
+    /// Stable segmented sorted order (preserves relative order of equal elements).
+    pub fn stable_segmented_sorted_order(
+        &self,
+        segment_offsets: &ColumnView<'_>,
+        orders: &[Order],
+        nulls: &[NullOrder],
+    ) -> Result<Column> {
+        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let c = cudf_sys::ffi::stable_segmented_sorted_order(&self.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Stable segmented sort by key.
+    pub fn stable_segmented_sort_by_key(
+        &self,
+        keys: &Table,
+        segment_offsets: &ColumnView<'_>,
+        orders: &[Order],
+        nulls: &[NullOrder],
+    ) -> Result<Table> {
+        let orders_i32 = unsafe { crate::enum_slice_as_i32(orders) };
+        let nulls_i32 = unsafe { crate::enum_slice_as_i32(nulls) };
+        let t = cudf_sys::ffi::stable_segmented_sort_by_key(&self.0, &keys.0, segment_offsets.0, orders_i32, nulls_i32, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
     /// Table-level quantile rows.
     pub fn quantiles(
         &self,
@@ -946,6 +973,30 @@ impl Table {
     /// explode_outer on a custom CUDA stream.
     pub fn explode_outer_on(&self, column_idx: usize, stream: Stream) -> Result<Table> {
         let t = cudf_sys::ffi::explode_outer_table(&self.0, column_idx as i32, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Explode outer with position column.
+    pub fn explode_outer_position(&self, column_idx: usize) -> Result<Table> {
+        self.explode_outer_position_on(column_idx, Stream::default_stream())
+    }
+
+    /// explode_outer_position on a custom CUDA stream.
+    pub fn explode_outer_position_on(&self, column_idx: usize, stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::explode_outer_position_table(&self.0, column_idx as i32, stream.as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// Gather rows with out-of-bounds policy.
+    /// If `nullify_oob` is true, out-of-bounds indices produce null rows;
+    /// otherwise behavior is undefined for out-of-bounds indices.
+    pub fn gather_checked(&self, indices: &ColumnView<'_>, nullify_oob: bool) -> Result<Table> {
+        self.gather_checked_on(indices, nullify_oob, Stream::default_stream())
+    }
+
+    /// gather_checked on a custom CUDA stream.
+    pub fn gather_checked_on(&self, indices: &ColumnView<'_>, nullify_oob: bool, stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::gather_table_checked(&self.0, indices.0, nullify_oob, stream.as_raw())?;
         Ok(Table(t))
     }
 }

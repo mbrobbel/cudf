@@ -3193,4 +3193,102 @@ std::unique_ptr<Column> lists_concatenate_rows(
   return std::make_unique<Column>(std::move(result));
 }
 
+// -- Binary: fixed_point_scale / is_supported_operation --
+
+int32_t binary_operation_fixed_point_scale(int32_t op, int32_t left_scale, int32_t right_scale) {
+  return cudf::binary_operation_fixed_point_scale(
+      static_cast<cudf::binary_operator>(op), left_scale, right_scale);
+}
+
+bool is_supported_binaryop(int32_t out_type_id, int32_t lhs_type_id, int32_t rhs_type_id, int32_t op) {
+  return cudf::binops::is_supported_operation(
+      cudf::data_type{static_cast<cudf::type_id>(out_type_id)},
+      cudf::data_type{static_cast<cudf::type_id>(lhs_type_id)},
+      cudf::data_type{static_cast<cudf::type_id>(rhs_type_id)},
+      static_cast<cudf::binary_operator>(op));
+}
+
+// -- Sorting: stable segmented --
+
+std::unique_ptr<Column> stable_segmented_sorted_order(
+    Table const& tbl,
+    cudf::column_view const& segment_offsets,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::stable_segmented_sorted_order(
+      tbl.cached_view(), segment_offsets,
+      to_orders(column_orders), to_null_orders(null_orders), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Table> stable_segmented_sort_by_key(
+    Table const& values,
+    Table const& keys,
+    cudf::column_view const& segment_offsets,
+    rust::Slice<int32_t const> column_orders,
+    rust::Slice<int32_t const> null_orders,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::stable_segmented_sort_by_key(
+      values.cached_view(), keys.cached_view(), segment_offsets,
+      to_orders(column_orders), to_null_orders(null_orders), s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+// -- Explode: outer_position --
+
+std::unique_ptr<Table> explode_outer_position_table(Table const& tbl, int32_t column_idx, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::explode_outer_position(tbl.cached_view(), column_idx, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+// -- Strings: slice by column offsets --
+
+std::unique_ptr<Column> strings_slice_column(
+    cudf::column_view const& col,
+    cudf::column_view const& starts,
+    cudf::column_view const& stops,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::slice_strings(scv, starts, stops, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Strings: extract_single --
+
+std::unique_ptr<Column> strings_extract_single(
+    cudf::column_view const& col,
+    rust::Str pattern,
+    int32_t group_index,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto pat = std::string(pattern.data(), pattern.size());
+  auto prog = cudf::strings::regex_program::create(pat);
+  auto result = cudf::strings::extract_single(scv, *prog, group_index, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Copying: gather_checked, may_have_nonempty_nulls --
+
+std::unique_ptr<Table> gather_table_checked(
+    Table const& tbl,
+    cudf::column_view const& gather_map,
+    bool nullify_oob,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto policy = nullify_oob ? cudf::out_of_bounds_policy::NULLIFY
+                            : cudf::out_of_bounds_policy::DONT_CHECK;
+  auto result = cudf::gather(tbl.cached_view(), gather_map, policy, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+bool may_have_nonempty_nulls(cudf::column_view const& col) {
+  return cudf::may_have_nonempty_nulls(col);
+}
+
 }  // namespace cudf_sys

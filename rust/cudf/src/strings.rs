@@ -256,6 +256,13 @@ pub trait StringExt {
     fn str_cast_to_integer(&self, output_type: TypeId, big_endian: bool) -> Result<Column>;
     /// Decode integer-encoded bytes back to strings.
     fn str_cast_from_integer(&self, big_endian: bool) -> Result<Column>;
+
+    // -- Slice by column / extract_single --
+
+    /// Slice strings using per-row start/stop columns (INT32).
+    fn str_slice_column(&self, starts: &ColumnView<'_>, stops: &ColumnView<'_>) -> Result<Column>;
+    /// Extract a single regex capture group from each string.
+    fn str_extract_single(&self, pattern: &str, group_index: i32) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -685,6 +692,14 @@ impl StringExt for ColumnView<'_> {
     }
     fn str_cast_from_integer(&self, big_endian: bool) -> Result<Column> {
         let c = cudf_sys::ffi::strings_cast_from_integer(self.0, big_endian, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_slice_column(&self, starts: &ColumnView<'_>, stops: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_slice_column(self.0, starts.0, stops.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_extract_single(&self, pattern: &str, group_index: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_extract_single(self.0, pattern, group_index, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

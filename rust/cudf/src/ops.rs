@@ -110,6 +110,16 @@ impl BinaryOp<ColumnView<'_>> for Scalar {
     }
 }
 
+/// Compute the output scale for a fixed-point binary operation.
+pub fn binary_operation_fixed_point_scale(op: BinaryOperator, left_scale: i32, right_scale: i32) -> i32 {
+    cudf_sys::ffi::binary_operation_fixed_point_scale(op.repr, left_scale, right_scale)
+}
+
+/// Check if a binary operation is supported for the given type combination.
+pub fn is_supported_binaryop(out: TypeId, lhs: TypeId, rhs: TypeId, op: BinaryOperator) -> bool {
+    cudf_sys::ffi::is_supported_binaryop(out.repr, lhs.repr, rhs.repr, op.repr)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
