@@ -1296,6 +1296,20 @@ impl Table {
         )?;
         Ok(Table(t))
     }
+
+    // -- Approximate distinct count --
+
+    /// Estimates the approximate number of distinct rows using HyperLogLog.
+    ///
+    /// `precision` controls accuracy vs memory (4-18, default 12).
+    /// Standard error ≈ 1.04 / sqrt(2^precision).
+    pub fn approx_distinct_count(&self, precision: i32) -> usize {
+        cudf_sys::ffi::approx_distinct_count(
+            &self.0,
+            precision,
+            Stream::default_stream().as_raw(),
+        )
+    }
 }
 
 /// An iterator over the columns of a [`Table`].

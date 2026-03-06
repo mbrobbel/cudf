@@ -38,6 +38,7 @@
 #include <cudf/io/json.hpp>
 #include <cudf/io/avro.hpp>
 #include <cudf/stream_compaction.hpp>
+#include <cudf/reduction/approx_distinct_count.hpp>
 
 #include <cudf/strings/attributes.hpp>
 #include <cudf/strings/case.hpp>
@@ -2112,9 +2113,67 @@ static std::unique_ptr<cudf::scan_aggregation> make_scan_agg(int32_t kind) {
     case 1: return cudf::make_min_aggregation<cudf::scan_aggregation>();
     case 2: return cudf::make_max_aggregation<cudf::scan_aggregation>();
     case 4: return cudf::make_count_aggregation<cudf::scan_aggregation>();
+    case 9: return cudf::make_product_aggregation<cudf::scan_aggregation>();
     default:
       throw std::invalid_argument("Unsupported scan aggregation kind: " + std::to_string(kind));
   }
+}
+
+static std::unique_ptr<cudf::reduce_aggregation> make_reduce_agg(int32_t kind, int32_t ddof) {
+  switch (kind) {
+    case 0: return cudf::make_sum_aggregation<cudf::reduce_aggregation>();
+    case 1: return cudf::make_min_aggregation<cudf::reduce_aggregation>();
+    case 2: return cudf::make_max_aggregation<cudf::reduce_aggregation>();
+    case 3: return cudf::make_mean_aggregation<cudf::reduce_aggregation>();
+    case 4: return cudf::make_count_aggregation<cudf::reduce_aggregation>();
+    case 5: return cudf::make_nunique_aggregation<cudf::reduce_aggregation>();
+    case 6: return cudf::make_median_aggregation<cudf::reduce_aggregation>();
+    case 7: return cudf::make_std_aggregation<cudf::reduce_aggregation>(ddof);
+    case 8: return cudf::make_variance_aggregation<cudf::reduce_aggregation>(ddof);
+    case 9: return cudf::make_product_aggregation<cudf::reduce_aggregation>();
+    case 10: return cudf::make_any_aggregation<cudf::reduce_aggregation>();
+    case 11: return cudf::make_all_aggregation<cudf::reduce_aggregation>();
+    case 17: return cudf::make_sum_of_squares_aggregation<cudf::reduce_aggregation>();
+    default:
+      throw std::invalid_argument("Unsupported reduce aggregation kind: " + std::to_string(kind));
+  }
+}
+
+std::unique_ptr<Scalar> reduce_generic(cudf::column_view const& col, int32_t agg_kind, int32_t ddof, int32_t output_type_id, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::reduce(col, *make_reduce_agg(agg_kind, ddof),
+      cudf::data_type{static_cast<cudf::type_id>(output_type_id)}, s);
+  return std::make_unique<Scalar>(std::move(result));
+}
+
+static std::unique_ptr<cudf::rolling_aggregation> make_rolling_agg(int32_t kind) {
+  switch (kind) {
+    case 0: return cudf::make_sum_aggregation<cudf::rolling_aggregation>();
+    case 1: return cudf::make_min_aggregation<cudf::rolling_aggregation>();
+    case 2: return cudf::make_max_aggregation<cudf::rolling_aggregation>();
+    case 3: return cudf::make_mean_aggregation<cudf::rolling_aggregation>();
+    case 4: return cudf::make_count_aggregation<cudf::rolling_aggregation>();
+    case 12: return cudf::make_argmax_aggregation<cudf::rolling_aggregation>();
+    case 13: return cudf::make_argmin_aggregation<cudf::rolling_aggregation>();
+    case 14: return cudf::make_collect_list_aggregation<cudf::rolling_aggregation>();
+    case 15: return cudf::make_collect_set_aggregation<cudf::rolling_aggregation>();
+    default:
+      throw std::invalid_argument("Unsupported rolling aggregation kind: " + std::to_string(kind));
+  }
+}
+
+std::unique_ptr<Column> rolling_window_with_defaults(
+    cudf::column_view const& col,
+    cudf::column_view const& default_outputs,
+    int32_t preceding,
+    int32_t following,
+    int32_t min_periods,
+    int32_t agg_kind,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::rolling_window(col, default_outputs, preceding, following, min_periods,
+      *make_rolling_agg(agg_kind), s);
+  return std::make_unique<Column>(std::move(result));
 }
 
 std::unique_ptr<Column> scan_column(cudf::column_view const& col, int32_t agg_kind, int32_t scan_type, int32_t null_policy, std::size_t stream) {
@@ -2504,17 +2563,6 @@ std::unique_ptr<Table> explode_outer_table(Table const& tbl, int32_t column_idx,
 }
 
 // -- Rolling window --
-
-static std::unique_ptr<cudf::rolling_aggregation> make_rolling_agg(int32_t kind) {
-  switch (kind) {
-    case 0: return cudf::make_sum_aggregation<cudf::rolling_aggregation>();
-    case 1: return cudf::make_min_aggregation<cudf::rolling_aggregation>();
-    case 2: return cudf::make_max_aggregation<cudf::rolling_aggregation>();
-    case 3: return cudf::make_mean_aggregation<cudf::rolling_aggregation>();
-    case 4: return cudf::make_count_aggregation<cudf::rolling_aggregation>();
-    default: throw std::invalid_argument("Unknown rolling aggregation kind");
-  }
-}
 
 std::unique_ptr<Column> rolling_window(cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream) {
   rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
@@ -3987,6 +4035,15 @@ std::unique_ptr<Table> drop_nans_with_threshold(Table const& tbl, rust::Slice<in
   std::vector<cudf::size_type> key_cols(keys.begin(), keys.end());
   auto result = cudf::drop_nans(tbl.cached_view(), key_cols, threshold, s);
   return std::make_unique<Table>(std::move(result));
+}
+
+// -- Approximate distinct count --
+
+std::size_t approx_distinct_count(Table const& tbl, int32_t precision, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::approx_distinct_count adc(tbl.cached_view(), precision,
+      cudf::null_policy::EXCLUDE, cudf::nan_policy::NAN_IS_NULL, s);
+  return adc.estimate(s);
 }
 
 }  // namespace cudf_sys

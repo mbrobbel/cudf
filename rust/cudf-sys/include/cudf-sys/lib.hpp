@@ -1136,8 +1136,27 @@ int32_t unique_count_table(Table const& tbl, int32_t null_equality, std::size_t 
 
 std::unique_ptr<Column> hash_murmurhash3_x86_32(Table const& tbl, uint32_t seed, std::size_t stream);
 
+// -- Generic reduce --
+
+std::unique_ptr<Scalar> reduce_generic(cudf::column_view const& col, int32_t agg_kind, int32_t ddof, int32_t output_type_id, std::size_t stream);
+
+// -- Rolling window with defaults --
+
+std::unique_ptr<Column> rolling_window_with_defaults(
+    cudf::column_view const& col,
+    cudf::column_view const& default_outputs,
+    int32_t preceding,
+    int32_t following,
+    int32_t min_periods,
+    int32_t agg_kind,
+    std::size_t stream);
+
 // -- Drop NaNs with threshold --
 
 std::unique_ptr<Table> drop_nans_with_threshold(Table const& tbl, rust::Slice<int32_t const> keys, int32_t threshold, std::size_t stream);
+
+// -- Approximate distinct count --
+
+std::size_t approx_distinct_count(Table const& tbl, int32_t precision, std::size_t stream);
 
 }  // namespace cudf_sys

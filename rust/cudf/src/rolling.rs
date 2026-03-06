@@ -83,4 +83,43 @@ impl ColumnView<'_> {
         )?;
         Ok(Column(c))
     }
+
+    /// Rolling window with default output values (for LEAD/LAG aggregations).
+    ///
+    /// When the window extends beyond column boundaries, values from
+    /// `default_outputs` are used instead of null.
+    pub fn rolling_window_with_defaults(
+        &self,
+        default_outputs: &ColumnView<'_>,
+        preceding: i32,
+        following: i32,
+        min_periods: i32,
+        agg_kind: AggregationKind,
+    ) -> Result<Column> {
+        self.rolling_window_with_defaults_on(
+            default_outputs, preceding, following, min_periods, agg_kind, Stream::default_stream(),
+        )
+    }
+
+    /// rolling_window_with_defaults on a custom CUDA stream.
+    pub fn rolling_window_with_defaults_on(
+        &self,
+        default_outputs: &ColumnView<'_>,
+        preceding: i32,
+        following: i32,
+        min_periods: i32,
+        agg_kind: AggregationKind,
+        stream: Stream,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::rolling_window_with_defaults(
+            self.0,
+            default_outputs.0,
+            preceding,
+            following,
+            min_periods,
+            agg_kind.repr,
+            stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
 }

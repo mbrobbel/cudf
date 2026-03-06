@@ -1861,5 +1861,20 @@ pub mod ffi {
         /// Drop rows with NaN values, keeping rows with at least threshold non-NaN values.
         fn drop_nans_with_threshold(tbl: &Table, keys: &[i32], threshold: i32, stream: usize) -> Result<UniquePtr<Table>>;
 
+        // -- Generic reduce --
+
+        /// Reduce a column with any aggregation kind (ddof used for STD/VAR).
+        fn reduce_generic(col: &column_view, agg_kind: i32, ddof: i32, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        // -- Rolling window with defaults --
+
+        /// Rolling window aggregation with default output values (for LEAD/LAG).
+        fn rolling_window_with_defaults(col: &column_view, default_outputs: &column_view, preceding: i32, following: i32, min_periods: i32, agg_kind: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Approximate distinct count --
+
+        /// Approximate distinct count using HyperLogLog. Precision 4-18 (default 12).
+        fn approx_distinct_count(tbl: &Table, precision: i32, stream: usize) -> usize;
+
     }
 }

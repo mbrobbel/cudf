@@ -886,6 +886,38 @@ impl ColumnView<'_> {
         Ok(scalar_from_ffi(&s))
     }
 
+    // -- Generic reduce --
+
+    /// Reduces the column using any aggregation kind.
+    ///
+    /// `ddof` is only used for STD and VAR aggregations.
+    pub fn reduce(
+        &self,
+        agg: crate::groupby::AggregationKind,
+        output_type: TypeId,
+        ddof: i32,
+    ) -> Result<Scalar> {
+        self.reduce_on(agg, output_type, ddof, Stream::default_stream())
+    }
+
+    /// Generic reduce on a custom CUDA stream.
+    pub fn reduce_on(
+        &self,
+        agg: crate::groupby::AggregationKind,
+        output_type: TypeId,
+        ddof: i32,
+        stream: Stream,
+    ) -> Result<Scalar> {
+        let s = cudf_sys::ffi::reduce_generic(
+            self.0,
+            agg.repr,
+            ddof,
+            output_type.repr,
+            stream.as_raw(),
+        )?;
+        Ok(crate::scalar::scalar_from_ffi(&s))
+    }
+
     // -- Scan --
 
     /// Computes a prefix scan (cumulative operation).
