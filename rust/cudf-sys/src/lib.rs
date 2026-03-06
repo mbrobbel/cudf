@@ -1946,6 +1946,15 @@ pub mod ffi {
         /// Returns the number of child columns.
         fn column_view_num_children(col: &column_view) -> i32;
 
+        // -- Strings: join_strings, find_instance, like_column --
+
+        /// Joins all strings in a column with a separator into a single-row column.
+        fn strings_join_strings(col: &column_view, separator: &str, narep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Finds the nth instance of target in each string, returns position (-1 if not found).
+        fn strings_find_instance(col: &column_view, target: &str, instance: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// SQL LIKE with per-row patterns from a strings column.
+        fn strings_like_column(col: &column_view, patterns: &column_view, escape_char: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
         // -- DLPack interop --
 
         /// Converts a DLPack DLManagedTensor pointer into a cudf Table.

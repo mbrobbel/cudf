@@ -4351,6 +4351,38 @@ std::unique_ptr<Scalar> repeat_string_scalar(Scalar const& input, int32_t repeat
   return std::make_unique<Scalar>(std::move(result));
 }
 
+// -- Strings: join_strings, find_instance, like_column --
+
+std::unique_ptr<Column> strings_join_strings(cudf::column_view const& col, rust::Str separator, rust::Str narep, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  std::string sep_str(separator.data(), separator.size());
+  std::string narep_str(narep.data(), narep.size());
+  cudf::string_scalar sep(sep_str);
+  cudf::string_scalar na(narep_str);
+  auto result = cudf::strings::join_strings(scv, sep, na, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_find_instance(cudf::column_view const& col, rust::Str target, int32_t instance, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  std::string target_str(target.data(), target.size());
+  cudf::string_scalar tgt(target_str);
+  auto result = cudf::strings::find_instance(scv, tgt, instance, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_like_column(cudf::column_view const& col, cudf::column_view const& patterns, rust::Str escape_char, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  cudf::strings_column_view patterns_scv(patterns);
+  std::string esc_str(escape_char.data(), escape_char.size());
+  cudf::string_scalar esc(esc_str);
+  auto result = cudf::strings::like(scv, patterns_scv, esc, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
 // -- DLPack interop --
 
 std::unique_ptr<Table> from_dlpack(std::size_t managed_tensor_ptr, std::size_t stream) {

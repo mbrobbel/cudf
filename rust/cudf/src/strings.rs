@@ -267,6 +267,12 @@ pub trait StringExt {
     fn str_extract_single(&self, pattern: &str, group_index: i32) -> Result<Column>;
     /// Join lists of strings with per-row separator column.
     fn str_join_list_elements_column(&self, separators: &ColumnView<'_>, separator_narep: &str, string_narep: &str) -> Result<Column>;
+    /// Join all strings in a column into a single-row column using a string separator.
+    fn str_join_strings(&self, separator: &str, narep: &str) -> Result<Column>;
+    /// Find the Nth occurrence of a target substring, returning INT32 positions.
+    fn str_find_instance(&self, target: &str, instance: i32) -> Result<Column>;
+    /// SQL LIKE pattern matching with per-row patterns from another column.
+    fn str_like_column(&self, patterns: &ColumnView<'_>, escape_char: &str) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -712,6 +718,18 @@ impl StringExt for ColumnView<'_> {
     }
     fn str_join_list_elements_column(&self, separators: &ColumnView<'_>, separator_narep: &str, string_narep: &str) -> Result<Column> {
         let c = cudf_sys::ffi::strings_join_list_elements_column(self.0, separators.0, separator_narep, string_narep, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_join_strings(&self, separator: &str, narep: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_join_strings(self.0, separator, narep, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_find_instance(&self, target: &str, instance: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_find_instance(self.0, target, instance, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_like_column(&self, patterns: &ColumnView<'_>, escape_char: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_like_column(self.0, patterns.0, escape_char, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

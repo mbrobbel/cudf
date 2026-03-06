@@ -1185,6 +1185,12 @@ std::size_t approx_distinct_count(Table const& tbl, int32_t precision, std::size
 std::unique_ptr<Column> column_view_child_copy(cudf::column_view const& col, int32_t index, std::size_t stream);
 int32_t column_view_num_children(cudf::column_view const& col);
 
+// -- Strings: join_strings, find_instance, like_column --
+
+std::unique_ptr<Column> strings_join_strings(cudf::column_view const& col, rust::Str separator, rust::Str narep, std::size_t stream);
+std::unique_ptr<Column> strings_find_instance(cudf::column_view const& col, rust::Str target, int32_t instance, std::size_t stream);
+std::unique_ptr<Column> strings_like_column(cudf::column_view const& col, cudf::column_view const& patterns, rust::Str escape_char, std::size_t stream);
+
 // -- DLPack interop --
 
 std::unique_ptr<Table> from_dlpack(std::size_t managed_tensor_ptr, std::size_t stream);
