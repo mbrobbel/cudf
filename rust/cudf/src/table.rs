@@ -1311,6 +1311,21 @@ impl Table {
         )
     }
 
+    /// Returns true if this table contains any nested columns (LIST, STRUCT).
+    pub fn has_nested_columns(&self) -> bool {
+        cudf_sys::ffi::table_has_nested_columns(&self.0)
+    }
+
+    /// Returns true if any nested column in this table has null values.
+    pub fn has_nested_nulls(&self) -> bool {
+        cudf_sys::ffi::table_has_nested_nulls(&self.0)
+    }
+
+    /// Returns true if any nested column in this table is nullable.
+    pub fn has_nested_nullable_columns(&self) -> bool {
+        cudf_sys::ffi::table_has_nested_nullable_columns(&self.0)
+    }
+
     /// Concatenates all columns in this table into a single column.
     ///
     /// All columns must have the same data type.

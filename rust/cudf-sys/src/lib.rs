@@ -1946,6 +1946,20 @@ pub mod ffi {
         /// Returns the number of child columns.
         fn column_view_num_children(col: &column_view) -> i32;
 
+        // -- Datetime: add months with scalar --
+
+        /// Adds months (scalar) to a timestamp column.
+        fn datetime_add_months_scalar(timestamps: &column_view, months: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Table nested column queries --
+
+        /// Returns true if the table contains any nested columns (LIST, STRUCT).
+        fn table_has_nested_columns(tbl: &Table) -> bool;
+        /// Returns true if any nested column in the table has nulls.
+        fn table_has_nested_nulls(tbl: &Table) -> bool;
+        /// Returns true if any nested column in the table is nullable.
+        fn table_has_nested_nullable_columns(tbl: &Table) -> bool;
+
         // -- Concatenate operations --
 
         /// Concatenates all columns from a table into a single column.

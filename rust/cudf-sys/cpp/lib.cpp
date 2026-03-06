@@ -4349,6 +4349,28 @@ std::unique_ptr<Scalar> repeat_string_scalar(Scalar const& input, int32_t repeat
   return std::make_unique<Scalar>(std::move(result));
 }
 
+// -- Datetime: add months with scalar --
+
+std::unique_ptr<Column> datetime_add_months_scalar(cudf::column_view const& timestamps, Scalar const& months, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::datetime::add_calendrical_months(timestamps, months.inner(), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Table nested column queries --
+
+bool table_has_nested_columns(Table const& tbl) {
+  return cudf::has_nested_columns(tbl.cached_view());
+}
+
+bool table_has_nested_nulls(Table const& tbl) {
+  return cudf::has_nested_nulls(tbl.cached_view());
+}
+
+bool table_has_nested_nullable_columns(Table const& tbl) {
+  return cudf::has_nested_nullable_columns(tbl.cached_view());
+}
+
 // -- Column with null mask from bools --
 
 std::unique_ptr<Column> column_with_null_mask_from_bools(Column const& col, cudf::column_view const& validity, std::size_t stream) {

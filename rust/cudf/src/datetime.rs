@@ -65,6 +65,8 @@ pub trait DatetimeExt {
     fn dt_round(&self, freq: RoundingFrequency) -> Result<Column>;
     /// Add months (from another column) to timestamps.
     fn dt_add_months(&self, months: &ColumnView<'_>) -> Result<Column>;
+    /// Add months (from a scalar) to timestamps.
+    fn dt_add_months_scalar(&self, months: &crate::scalar::Scalar) -> Result<Column>;
     /// Extracts the millisecond fraction component (returns INT16).
     fn extract_millisecond(&self) -> Result<Column>;
     /// Extracts the microsecond fraction component (returns INT16).
@@ -185,6 +187,11 @@ impl DatetimeExt for ColumnView<'_> {
     }
     fn dt_add_months(&self, months: &ColumnView<'_>) -> Result<Column> {
         let c = cudf_sys::ffi::datetime_add_months(self.0, months.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn dt_add_months_scalar(&self, months: &crate::scalar::Scalar) -> Result<Column> {
+        let ffi_scalar = crate::scalar::scalar_to_ffi(months);
+        let c = cudf_sys::ffi::datetime_add_months_scalar(self.0, &ffi_scalar, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
     fn extract_millisecond(&self) -> Result<Column> {

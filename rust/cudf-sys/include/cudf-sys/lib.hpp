@@ -1185,6 +1185,16 @@ std::size_t approx_distinct_count(Table const& tbl, int32_t precision, std::size
 std::unique_ptr<Column> column_view_child_copy(cudf::column_view const& col, int32_t index, std::size_t stream);
 int32_t column_view_num_children(cudf::column_view const& col);
 
+// -- Datetime: add months with scalar --
+
+std::unique_ptr<Column> datetime_add_months_scalar(cudf::column_view const& timestamps, Scalar const& months, std::size_t stream);
+
+// -- Table nested column queries --
+
+bool table_has_nested_columns(Table const& tbl);
+bool table_has_nested_nulls(Table const& tbl);
+bool table_has_nested_nullable_columns(Table const& tbl);
+
 // -- Concatenate operations --
 
 std::unique_ptr<Column> concatenate_columns(Table const& tbl, std::size_t stream);
