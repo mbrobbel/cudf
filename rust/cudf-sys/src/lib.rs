@@ -376,6 +376,24 @@ pub mod ffi {
 
         /// Creates a STRING scalar.
         fn make_string_scalar(value: &str) -> UniquePtr<Scalar>;
+        fn make_int8_scalar(value: i8, valid: bool) -> UniquePtr<Scalar>;
+        fn make_int16_scalar(value: i16, valid: bool) -> UniquePtr<Scalar>;
+        fn make_uint8_scalar(value: u8, valid: bool) -> UniquePtr<Scalar>;
+        fn make_uint16_scalar(value: u16, valid: bool) -> UniquePtr<Scalar>;
+        fn make_uint32_scalar(value: u32, valid: bool) -> UniquePtr<Scalar>;
+        fn make_uint64_scalar(value: u64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_timestamp_s_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_timestamp_ms_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_timestamp_us_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_timestamp_ns_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_duration_s_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_duration_ms_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_duration_us_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_duration_ns_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        /// Create a default-constructed scalar of the given type (invalid, zero-initialized).
+        fn make_default_constructed_scalar(type_id: i32, scale: i32) -> UniquePtr<Scalar>;
+        /// Create an empty scalar with the same type as the given column.
+        fn make_empty_scalar_like(col: &column_view) -> UniquePtr<Scalar>;
 
         /// Returns whether the scalar holds a valid (non-null) value.
         fn scalar_is_valid(s: &Scalar) -> bool;

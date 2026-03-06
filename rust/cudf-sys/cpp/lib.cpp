@@ -18,6 +18,7 @@
 #include <cudf/join/filtered_join.hpp>
 #include <cudf/reduction.hpp>
 #include <cudf/scalar/scalar.hpp>
+#include <cudf/scalar/scalar_factories.hpp>
 #include <cudf/sorting.hpp>
 #include <cudf/stream_compaction.hpp>
 #include <cudf/types.hpp>
@@ -225,6 +226,95 @@ std::unique_ptr<Scalar> make_bool_scalar(bool value, bool valid) {
 std::unique_ptr<Scalar> make_string_scalar(rust::Str value) {
   auto sv = std::string_view(value.data(), value.size());
   auto s = std::make_unique<cudf::string_scalar>(sv, true);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_int8_scalar(int8_t value, bool valid) {
+  auto s = std::make_unique<cudf::numeric_scalar<int8_t>>(value, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_int16_scalar(int16_t value, bool valid) {
+  auto s = std::make_unique<cudf::numeric_scalar<int16_t>>(value, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_uint8_scalar(uint8_t value, bool valid) {
+  auto s = std::make_unique<cudf::numeric_scalar<uint8_t>>(value, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_uint16_scalar(uint16_t value, bool valid) {
+  auto s = std::make_unique<cudf::numeric_scalar<uint16_t>>(value, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_uint32_scalar(uint32_t value, bool valid) {
+  auto s = std::make_unique<cudf::numeric_scalar<uint32_t>>(value, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_uint64_scalar(uint64_t value, bool valid) {
+  auto s = std::make_unique<cudf::numeric_scalar<uint64_t>>(value, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_timestamp_s_scalar(int64_t value, bool valid) {
+  auto s = std::make_unique<cudf::timestamp_scalar<cudf::timestamp_s>>(
+      cudf::timestamp_s{cudf::duration_s{value}}, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_timestamp_ms_scalar(int64_t value, bool valid) {
+  auto s = std::make_unique<cudf::timestamp_scalar<cudf::timestamp_ms>>(
+      cudf::timestamp_ms{cudf::duration_ms{value}}, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_timestamp_us_scalar(int64_t value, bool valid) {
+  auto s = std::make_unique<cudf::timestamp_scalar<cudf::timestamp_us>>(
+      cudf::timestamp_us{cudf::duration_us{value}}, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_timestamp_ns_scalar(int64_t value, bool valid) {
+  auto s = std::make_unique<cudf::timestamp_scalar<cudf::timestamp_ns>>(
+      cudf::timestamp_ns{cudf::duration_ns{value}}, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_duration_s_scalar(int64_t value, bool valid) {
+  auto s = std::make_unique<cudf::duration_scalar<cudf::duration_s>>(
+      cudf::duration_s{value}, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_duration_ms_scalar(int64_t value, bool valid) {
+  auto s = std::make_unique<cudf::duration_scalar<cudf::duration_ms>>(
+      cudf::duration_ms{value}, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_duration_us_scalar(int64_t value, bool valid) {
+  auto s = std::make_unique<cudf::duration_scalar<cudf::duration_us>>(
+      cudf::duration_us{value}, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_duration_ns_scalar(int64_t value, bool valid) {
+  auto s = std::make_unique<cudf::duration_scalar<cudf::duration_ns>>(
+      cudf::duration_ns{value}, valid);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_default_constructed_scalar(int32_t type_id, int32_t scale) {
+  auto dt = cudf::data_type{static_cast<cudf::type_id>(type_id), scale};
+  auto s = cudf::make_default_constructed_scalar(dt);
+  return std::make_unique<Scalar>(std::move(s));
+}
+
+std::unique_ptr<Scalar> make_empty_scalar_like(cudf::column_view const& col) {
+  auto s = cudf::make_empty_scalar_like(col);
   return std::make_unique<Scalar>(std::move(s));
 }
 

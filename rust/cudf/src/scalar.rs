@@ -85,9 +85,79 @@ impl Scalar {
         Scalar::Null(TypeId::BOOL8)
     }
 
+    /// Creates a valid INT8 scalar.
+    pub fn from_i8(value: i8) -> Self {
+        Scalar::Int8(value)
+    }
+
+    /// Creates a valid INT16 scalar.
+    pub fn from_i16(value: i16) -> Self {
+        Scalar::Int16(value)
+    }
+
+    /// Creates a valid UINT8 scalar.
+    pub fn from_u8(value: u8) -> Self {
+        Scalar::UInt8(value)
+    }
+
+    /// Creates a valid UINT16 scalar.
+    pub fn from_u16(value: u16) -> Self {
+        Scalar::UInt16(value)
+    }
+
+    /// Creates a valid UINT32 scalar.
+    pub fn from_u32(value: u32) -> Self {
+        Scalar::UInt32(value)
+    }
+
+    /// Creates a valid UINT64 scalar.
+    pub fn from_u64(value: u64) -> Self {
+        Scalar::UInt64(value)
+    }
+
     /// Creates a valid STRING scalar.
     pub fn from_string(value: &str) -> Self {
         Scalar::String(value.to_owned())
+    }
+
+    /// Creates a valid TIMESTAMP_SECONDS scalar from epoch seconds.
+    pub fn from_timestamp_s(value: i64) -> Self {
+        Scalar::TimestampSeconds(value)
+    }
+
+    /// Creates a valid TIMESTAMP_MILLISECONDS scalar.
+    pub fn from_timestamp_ms(value: i64) -> Self {
+        Scalar::TimestampMilliseconds(value)
+    }
+
+    /// Creates a valid TIMESTAMP_MICROSECONDS scalar.
+    pub fn from_timestamp_us(value: i64) -> Self {
+        Scalar::TimestampMicroseconds(value)
+    }
+
+    /// Creates a valid TIMESTAMP_NANOSECONDS scalar.
+    pub fn from_timestamp_ns(value: i64) -> Self {
+        Scalar::TimestampNanoseconds(value)
+    }
+
+    /// Creates a valid DURATION_SECONDS scalar.
+    pub fn from_duration_s(value: i64) -> Self {
+        Scalar::DurationSeconds(value)
+    }
+
+    /// Creates a valid DURATION_MILLISECONDS scalar.
+    pub fn from_duration_ms(value: i64) -> Self {
+        Scalar::DurationMilliseconds(value)
+    }
+
+    /// Creates a valid DURATION_MICROSECONDS scalar.
+    pub fn from_duration_us(value: i64) -> Self {
+        Scalar::DurationMicroseconds(value)
+    }
+
+    /// Creates a valid DURATION_NANOSECONDS scalar.
+    pub fn from_duration_ns(value: i64) -> Self {
+        Scalar::DurationNanoseconds(value)
     }
 
     /// Returns `true` if the scalar holds a valid (non-null) value.
@@ -166,38 +236,29 @@ impl Scalar {
 /// Converts a Rust `Scalar` enum into an FFI scalar for libcudf calls.
 pub(crate) fn scalar_to_ffi(s: &Scalar) -> UniquePtr<cudf_sys::ffi::Scalar> {
     match s {
-        Scalar::Int8(v) => cudf_sys::ffi::make_int32_scalar(*v as i32, true),
-        Scalar::Int16(v) => cudf_sys::ffi::make_int32_scalar(*v as i32, true),
+        Scalar::Int8(v) => cudf_sys::ffi::make_int8_scalar(*v, true),
+        Scalar::Int16(v) => cudf_sys::ffi::make_int16_scalar(*v, true),
         Scalar::Int32(v) => cudf_sys::ffi::make_int32_scalar(*v, true),
         Scalar::Int64(v) => cudf_sys::ffi::make_int64_scalar(*v, true),
-        Scalar::UInt8(v) => cudf_sys::ffi::make_int32_scalar(*v as i32, true),
-        Scalar::UInt16(v) => cudf_sys::ffi::make_int32_scalar(*v as i32, true),
-        Scalar::UInt32(v) => cudf_sys::ffi::make_int64_scalar(*v as i64, true),
-        Scalar::UInt64(v) => cudf_sys::ffi::make_int64_scalar(*v as i64, true),
+        Scalar::UInt8(v) => cudf_sys::ffi::make_uint8_scalar(*v, true),
+        Scalar::UInt16(v) => cudf_sys::ffi::make_uint16_scalar(*v, true),
+        Scalar::UInt32(v) => cudf_sys::ffi::make_uint32_scalar(*v, true),
+        Scalar::UInt64(v) => cudf_sys::ffi::make_uint64_scalar(*v, true),
         Scalar::Float32(v) => cudf_sys::ffi::make_float32_scalar(*v, true),
         Scalar::Float64(v) => cudf_sys::ffi::make_float64_scalar(*v, true),
         Scalar::Bool(v) => cudf_sys::ffi::make_bool_scalar(*v, true),
         Scalar::String(v) => cudf_sys::ffi::make_string_scalar(v),
-        Scalar::TimestampSeconds(v)
-        | Scalar::TimestampMilliseconds(v)
-        | Scalar::TimestampMicroseconds(v)
-        | Scalar::TimestampNanoseconds(v)
-        | Scalar::DurationSeconds(v)
-        | Scalar::DurationMilliseconds(v)
-        | Scalar::DurationMicroseconds(v)
-        | Scalar::DurationNanoseconds(v) => cudf_sys::ffi::make_int64_scalar(*v, true),
-        Scalar::Null(tid) => match *tid {
-            TypeId::INT8 | TypeId::INT16 | TypeId::INT32 | TypeId::UINT8 | TypeId::UINT16 => {
-                cudf_sys::ffi::make_int32_scalar(0, false)
-            }
-            TypeId::INT64 | TypeId::UINT32 | TypeId::UINT64 => {
-                cudf_sys::ffi::make_int64_scalar(0, false)
-            }
-            TypeId::FLOAT32 => cudf_sys::ffi::make_float32_scalar(0.0, false),
-            TypeId::FLOAT64 => cudf_sys::ffi::make_float64_scalar(0.0, false),
-            TypeId::BOOL8 => cudf_sys::ffi::make_bool_scalar(false, false),
-            _ => cudf_sys::ffi::make_int32_scalar(0, false),
-        },
+        Scalar::TimestampSeconds(v) => cudf_sys::ffi::make_timestamp_s_scalar(*v, true),
+        Scalar::TimestampMilliseconds(v) => cudf_sys::ffi::make_timestamp_ms_scalar(*v, true),
+        Scalar::TimestampMicroseconds(v) => cudf_sys::ffi::make_timestamp_us_scalar(*v, true),
+        Scalar::TimestampNanoseconds(v) => cudf_sys::ffi::make_timestamp_ns_scalar(*v, true),
+        Scalar::DurationSeconds(v) => cudf_sys::ffi::make_duration_s_scalar(*v, true),
+        Scalar::DurationMilliseconds(v) => cudf_sys::ffi::make_duration_ms_scalar(*v, true),
+        Scalar::DurationMicroseconds(v) => cudf_sys::ffi::make_duration_us_scalar(*v, true),
+        Scalar::DurationNanoseconds(v) => cudf_sys::ffi::make_duration_ns_scalar(*v, true),
+        Scalar::Null(tid) => {
+            cudf_sys::ffi::make_default_constructed_scalar(tid.repr, 0)
+        }
     }
 }
 
