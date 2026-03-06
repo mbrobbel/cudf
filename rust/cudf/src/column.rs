@@ -148,6 +148,11 @@ impl Column {
         ColumnView(cudf_sys::ffi::column_view_of(&self.0))
     }
 
+    /// Copies the column data to host as `Vec<i8>`.
+    pub fn to_vec_i8(&self) -> Vec<i8> {
+        cudf_sys::ffi::column_to_host_i8(&self.0, ds())
+    }
+
     /// Copies the column data to host as `Vec<i16>`.
     pub fn to_vec_i16(&self) -> Vec<i16> {
         cudf_sys::ffi::column_to_host_i16(&self.0, ds())
@@ -173,6 +178,26 @@ impl Column {
         cudf_sys::ffi::column_to_host_f64(&self.0, ds())
     }
 
+    /// Copies the column data to host as `Vec<u8>`.
+    pub fn to_vec_u8(&self) -> Vec<u8> {
+        cudf_sys::ffi::column_to_host_u8(&self.0, ds())
+    }
+
+    /// Copies the column data to host as `Vec<u16>`.
+    pub fn to_vec_u16(&self) -> Vec<u16> {
+        cudf_sys::ffi::column_to_host_u16(&self.0, ds())
+    }
+
+    /// Copies the column data to host as `Vec<u32>`.
+    pub fn to_vec_u32(&self) -> Vec<u32> {
+        cudf_sys::ffi::column_to_host_u32(&self.0, ds())
+    }
+
+    /// Copies the column data to host as `Vec<u64>`.
+    pub fn to_vec_u64(&self) -> Vec<u64> {
+        cudf_sys::ffi::column_to_host_u64(&self.0, ds())
+    }
+
     /// Copies the column data to host as `Vec<bool>`.
     pub fn to_vec_bool(&self) -> Vec<bool> {
         cudf_sys::ffi::column_to_host_bool(&self.0, ds())
@@ -186,6 +211,16 @@ impl Column {
     /// Copies string column data to a host vector of strings.
     pub fn to_vec_string(&self) -> Vec<String> {
         cudf_sys::ffi::column_to_host_strings(&self.0, ds())
+    }
+
+    /// Creates an INT8 column from a host slice.
+    pub fn from_slice_i8(data: &[i8]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_i8(data, ds()))
+    }
+
+    /// Creates an INT16 column from a host slice.
+    pub fn from_slice_i16(data: &[i16]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_i16(data, ds()))
     }
 
     /// Creates an INT32 column from a host slice.
@@ -203,6 +238,31 @@ impl Column {
         Self(cudf_sys::ffi::make_column_from_host_f64(data, ds()))
     }
 
+    /// Creates a FLOAT32 column from a host slice.
+    pub fn from_slice_f32(data: &[f32]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_f32(data, ds()))
+    }
+
+    /// Creates a UINT8 column from a host slice.
+    pub fn from_slice_u8(data: &[u8]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_u8(data, ds()))
+    }
+
+    /// Creates a UINT16 column from a host slice.
+    pub fn from_slice_u16(data: &[u16]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_u16(data, ds()))
+    }
+
+    /// Creates a UINT32 column from a host slice.
+    pub fn from_slice_u32(data: &[u32]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_u32(data, ds()))
+    }
+
+    /// Creates a UINT64 column from a host slice.
+    pub fn from_slice_u64(data: &[u64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_u64(data, ds()))
+    }
+
     /// Creates a BOOL8 column from a host slice.
     pub fn from_slice_bool(data: &[bool]) -> Self {
         Self(cudf_sys::ffi::make_column_from_host_bool(data, ds()))
@@ -211,6 +271,41 @@ impl Column {
     /// Creates a TIMESTAMP_SECONDS column from epoch-second values.
     pub fn from_timestamps_s(data: &[i64]) -> Self {
         Self(cudf_sys::ffi::make_column_from_host_timestamp_s(data, ds()))
+    }
+
+    /// Creates a TIMESTAMP_MILLISECONDS column from epoch-millisecond values.
+    pub fn from_timestamps_ms(data: &[i64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_timestamp_ms(data, ds()))
+    }
+
+    /// Creates a TIMESTAMP_MICROSECONDS column from epoch-microsecond values.
+    pub fn from_timestamps_us(data: &[i64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_timestamp_us(data, ds()))
+    }
+
+    /// Creates a TIMESTAMP_NANOSECONDS column from epoch-nanosecond values.
+    pub fn from_timestamps_ns(data: &[i64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_timestamp_ns(data, ds()))
+    }
+
+    /// Creates a DURATION_SECONDS column from host data.
+    pub fn from_durations_s(data: &[i64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_duration_s(data, ds()))
+    }
+
+    /// Creates a DURATION_MILLISECONDS column from host data.
+    pub fn from_durations_ms(data: &[i64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_duration_ms(data, ds()))
+    }
+
+    /// Creates a DURATION_MICROSECONDS column from host data.
+    pub fn from_durations_us(data: &[i64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_duration_us(data, ds()))
+    }
+
+    /// Creates a DURATION_NANOSECONDS column from host data.
+    pub fn from_durations_ns(data: &[i64]) -> Self {
+        Self(cudf_sys::ffi::make_column_from_host_duration_ns(data, ds()))
     }
 
     /// Creates a string column from a slice of strings.
@@ -933,6 +1028,72 @@ impl ColumnView<'_> {
             stream.as_raw(),
         )?;
         Ok(crate::scalar::scalar_from_ffi(&s))
+    }
+
+    /// Generic reduce with an initial value (supports SUM, PRODUCT, MIN, MAX, ANY, ALL).
+    pub fn reduce_with_init(
+        &self,
+        agg: crate::groupby::AggregationKind,
+        output_type: TypeId,
+        ddof: i32,
+        init: &Scalar,
+    ) -> Result<Scalar> {
+        self.reduce_with_init_on(agg, output_type, ddof, init, Stream::default_stream())
+    }
+
+    /// Reduce with initial value on a custom CUDA stream.
+    pub fn reduce_with_init_on(
+        &self,
+        agg: crate::groupby::AggregationKind,
+        output_type: TypeId,
+        ddof: i32,
+        init: &Scalar,
+        stream: Stream,
+    ) -> Result<Scalar> {
+        let s = cudf_sys::ffi::reduce_with_init(
+            self.0,
+            agg.repr,
+            ddof,
+            output_type.repr,
+            &crate::scalar::scalar_to_ffi(init),
+            stream.as_raw(),
+        )?;
+        Ok(crate::scalar::scalar_from_ffi(&s))
+    }
+
+    /// Segmented reduce: reduces each segment defined by offsets.
+    pub fn segmented_reduce(
+        &self,
+        offsets: &ColumnView<'_>,
+        agg: crate::groupby::AggregationKind,
+        output_type: TypeId,
+        ddof: i32,
+        exclude_nulls: bool,
+    ) -> Result<Column> {
+        self.segmented_reduce_on(offsets, agg, output_type, ddof, exclude_nulls, Stream::default_stream())
+    }
+
+    /// Segmented reduce on a custom CUDA stream.
+    pub fn segmented_reduce_on(
+        &self,
+        offsets: &ColumnView<'_>,
+        agg: crate::groupby::AggregationKind,
+        output_type: TypeId,
+        ddof: i32,
+        exclude_nulls: bool,
+        stream: Stream,
+    ) -> Result<Column> {
+        let null_handling = if exclude_nulls { 0 } else { 1 };
+        let c = cudf_sys::ffi::segmented_reduce(
+            self.0,
+            offsets.0,
+            agg.repr,
+            ddof,
+            output_type.repr,
+            null_handling,
+            stream.as_raw(),
+        )?;
+        Ok(Column(c))
     }
 
     // -- Scan --

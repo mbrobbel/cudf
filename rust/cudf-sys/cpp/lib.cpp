@@ -1003,6 +1003,229 @@ std::unique_ptr<Column> make_column_from_host_timestamp_s(rust::Slice<int64_t co
   return std::make_unique<Column>(std::move(col));
 }
 
+std::unique_ptr<Column> make_column_from_host_i8(rust::Slice<int8_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int8_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::INT8}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_i16(rust::Slice<int16_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int16_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::INT16}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_f32(rust::Slice<float const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(float), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::FLOAT32}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_u8(rust::Slice<uint8_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(uint8_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::UINT8}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_u16(rust::Slice<uint16_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(uint16_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::UINT16}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_u32(rust::Slice<uint32_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(uint32_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::UINT32}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_u64(rust::Slice<uint64_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(uint64_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::UINT64}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+// -- Timestamp/Duration column factories from host data --
+
+std::unique_ptr<Column> make_column_from_host_timestamp_ms(rust::Slice<int64_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::TIMESTAMP_MILLISECONDS}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_timestamp_us(rust::Slice<int64_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::TIMESTAMP_MICROSECONDS}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_timestamp_ns(rust::Slice<int64_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::TIMESTAMP_NANOSECONDS}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_duration_s(rust::Slice<int64_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::DURATION_SECONDS}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_duration_ms(rust::Slice<int64_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::DURATION_MILLISECONDS}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_duration_us(rust::Slice<int64_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::DURATION_MICROSECONDS}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+std::unique_ptr<Column> make_column_from_host_duration_ns(rust::Slice<int64_t const> data, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
+  s.synchronize();
+  auto col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::DURATION_NANOSECONDS}, size, std::move(buf),
+      rmm::device_buffer{}, 0);
+  return std::make_unique<Column>(std::move(col));
+}
+
+// -- Column to host extras --
+
+rust::Vec<int8_t> column_to_host_i8(Column const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto const& view = col.cached_view();
+  auto size = view.size();
+  std::vector<int8_t> host(size);
+  cudaMemcpyAsync(host.data(), view.data<int8_t>(), size * sizeof(int8_t), cudaMemcpyDeviceToHost, s.value());
+  s.synchronize();
+  rust::Vec<int8_t> out;
+  out.reserve(size);
+  for (auto v : host) out.push_back(v);
+  return out;
+}
+
+rust::Vec<uint8_t> column_to_host_u8(Column const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto const& view = col.cached_view();
+  auto size = view.size();
+  std::vector<uint8_t> host(size);
+  cudaMemcpyAsync(host.data(), view.data<uint8_t>(), size * sizeof(uint8_t), cudaMemcpyDeviceToHost, s.value());
+  s.synchronize();
+  rust::Vec<uint8_t> out;
+  out.reserve(size);
+  for (auto v : host) out.push_back(v);
+  return out;
+}
+
+rust::Vec<uint16_t> column_to_host_u16(Column const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto const& view = col.cached_view();
+  auto size = view.size();
+  std::vector<uint16_t> host(size);
+  cudaMemcpyAsync(host.data(), view.data<uint16_t>(), size * sizeof(uint16_t), cudaMemcpyDeviceToHost, s.value());
+  s.synchronize();
+  rust::Vec<uint16_t> out;
+  out.reserve(size);
+  for (auto v : host) out.push_back(v);
+  return out;
+}
+
+rust::Vec<uint32_t> column_to_host_u32(Column const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto const& view = col.cached_view();
+  auto size = view.size();
+  std::vector<uint32_t> host(size);
+  cudaMemcpyAsync(host.data(), view.data<uint32_t>(), size * sizeof(uint32_t), cudaMemcpyDeviceToHost, s.value());
+  s.synchronize();
+  rust::Vec<uint32_t> out;
+  out.reserve(size);
+  for (auto v : host) out.push_back(v);
+  return out;
+}
+
+rust::Vec<uint64_t> column_to_host_u64(Column const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto const& view = col.cached_view();
+  auto size = view.size();
+  std::vector<uint64_t> host(size);
+  cudaMemcpyAsync(host.data(), view.data<uint64_t>(), size * sizeof(uint64_t), cudaMemcpyDeviceToHost, s.value());
+  s.synchronize();
+  rust::Vec<uint64_t> out;
+  out.reserve(size);
+  for (auto v : host) out.push_back(v);
+  return out;
+}
+
 // -- Join operations --
 
 // Helper: build a table_view selecting only key columns from a full table view.
@@ -2144,6 +2367,43 @@ std::unique_ptr<Scalar> reduce_generic(cudf::column_view const& col, int32_t agg
   auto result = cudf::reduce(col, *make_reduce_agg(agg_kind, ddof),
       cudf::data_type{static_cast<cudf::type_id>(output_type_id)}, s);
   return std::make_unique<Scalar>(std::move(result));
+}
+
+std::unique_ptr<Scalar> reduce_with_init(cudf::column_view const& col, int32_t agg_kind, int32_t ddof, int32_t output_type_id, Scalar const& init, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::reduce(col, *make_reduce_agg(agg_kind, ddof),
+      cudf::data_type{static_cast<cudf::type_id>(output_type_id)},
+      std::optional<std::reference_wrapper<cudf::scalar const>>{init.inner()}, s);
+  return std::make_unique<Scalar>(std::move(result));
+}
+
+static std::unique_ptr<cudf::segmented_reduce_aggregation> make_segmented_reduce_agg(int32_t kind, int32_t ddof) {
+  switch (kind) {
+    case 0: return cudf::make_sum_aggregation<cudf::segmented_reduce_aggregation>();
+    case 1: return cudf::make_min_aggregation<cudf::segmented_reduce_aggregation>();
+    case 2: return cudf::make_max_aggregation<cudf::segmented_reduce_aggregation>();
+    case 3: return cudf::make_mean_aggregation<cudf::segmented_reduce_aggregation>();
+    case 4: return cudf::make_count_aggregation<cudf::segmented_reduce_aggregation>();
+    case 5: return cudf::make_nunique_aggregation<cudf::segmented_reduce_aggregation>();
+    case 6: return cudf::make_median_aggregation<cudf::segmented_reduce_aggregation>();
+    case 7: return cudf::make_std_aggregation<cudf::segmented_reduce_aggregation>(ddof);
+    case 8: return cudf::make_variance_aggregation<cudf::segmented_reduce_aggregation>(ddof);
+    case 9: return cudf::make_product_aggregation<cudf::segmented_reduce_aggregation>();
+    case 10: return cudf::make_any_aggregation<cudf::segmented_reduce_aggregation>();
+    case 11: return cudf::make_all_aggregation<cudf::segmented_reduce_aggregation>();
+    case 17: return cudf::make_sum_of_squares_aggregation<cudf::segmented_reduce_aggregation>();
+    default: throw std::invalid_argument("unsupported segmented_reduce aggregation kind");
+  }
+}
+
+std::unique_ptr<Column> segmented_reduce(cudf::column_view const& col, cudf::column_view const& offsets, int32_t agg_kind, int32_t ddof, int32_t output_type_id, int32_t null_handling, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto const* offsets_data = offsets.data<cudf::size_type>();
+  auto offsets_span = cudf::device_span<cudf::size_type const>(offsets_data, offsets.size());
+  auto result = cudf::segmented_reduce(col, offsets_span, *make_segmented_reduce_agg(agg_kind, ddof),
+      cudf::data_type{static_cast<cudf::type_id>(output_type_id)},
+      static_cast<cudf::null_policy>(null_handling), s);
+  return std::make_unique<Column>(std::move(result));
 }
 
 static std::unique_ptr<cudf::rolling_aggregation> make_rolling_agg(int32_t kind) {

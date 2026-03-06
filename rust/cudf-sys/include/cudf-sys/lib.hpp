@@ -167,6 +167,11 @@ rust::Vec<int64_t> column_to_host_i64(Column const& col, std::size_t stream);
 rust::Vec<float> column_to_host_f32(Column const& col, std::size_t stream);
 rust::Vec<double> column_to_host_f64(Column const& col, std::size_t stream);
 rust::Vec<int16_t> column_to_host_i16(Column const& col, std::size_t stream);
+rust::Vec<int8_t> column_to_host_i8(Column const& col, std::size_t stream);
+rust::Vec<uint8_t> column_to_host_u8(Column const& col, std::size_t stream);
+rust::Vec<uint16_t> column_to_host_u16(Column const& col, std::size_t stream);
+rust::Vec<uint32_t> column_to_host_u32(Column const& col, std::size_t stream);
+rust::Vec<uint64_t> column_to_host_u64(Column const& col, std::size_t stream);
 rust::Vec<bool> column_to_host_bool(Column const& col, std::size_t stream);
 rust::Vec<bool> column_null_mask_to_host(Column const& col, std::size_t stream);
 
@@ -303,7 +308,21 @@ std::unique_ptr<Column> make_column_from_host_i32(rust::Slice<int32_t const> dat
 std::unique_ptr<Column> make_column_from_host_i64(rust::Slice<int64_t const> data, std::size_t stream);
 std::unique_ptr<Column> make_column_from_host_f64(rust::Slice<double const> data, std::size_t stream);
 std::unique_ptr<Column> make_column_from_host_bool(rust::Slice<bool const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_i8(rust::Slice<int8_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_i16(rust::Slice<int16_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_f32(rust::Slice<float const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_u8(rust::Slice<uint8_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_u16(rust::Slice<uint16_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_u32(rust::Slice<uint32_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_u64(rust::Slice<uint64_t const> data, std::size_t stream);
 std::unique_ptr<Column> make_column_from_host_timestamp_s(rust::Slice<int64_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_timestamp_ms(rust::Slice<int64_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_timestamp_us(rust::Slice<int64_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_timestamp_ns(rust::Slice<int64_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_duration_s(rust::Slice<int64_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_duration_ms(rust::Slice<int64_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_duration_us(rust::Slice<int64_t const> data, std::size_t stream);
+std::unique_ptr<Column> make_column_from_host_duration_ns(rust::Slice<int64_t const> data, std::size_t stream);
 
 // -- CXX shared enum (generated from Rust bridge) --
 enum class Interpolation : ::std::int32_t;
@@ -1139,6 +1158,8 @@ std::unique_ptr<Column> hash_murmurhash3_x86_32(Table const& tbl, uint32_t seed,
 // -- Generic reduce --
 
 std::unique_ptr<Scalar> reduce_generic(cudf::column_view const& col, int32_t agg_kind, int32_t ddof, int32_t output_type_id, std::size_t stream);
+std::unique_ptr<Scalar> reduce_with_init(cudf::column_view const& col, int32_t agg_kind, int32_t ddof, int32_t output_type_id, Scalar const& init, std::size_t stream);
+std::unique_ptr<Column> segmented_reduce(cudf::column_view const& col, cudf::column_view const& offsets, int32_t agg_kind, int32_t ddof, int32_t output_type_id, int32_t null_handling, std::size_t stream);
 
 // -- Rolling window with defaults --
 

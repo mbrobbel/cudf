@@ -454,6 +454,21 @@ pub mod ffi {
         /// Copies FLOAT64 column data to a host vector.
         fn column_to_host_f64(col: &Column, stream: usize) -> Vec<f64>;
 
+        /// Copies INT8 column data to a host vector.
+        fn column_to_host_i8(col: &Column, stream: usize) -> Vec<i8>;
+
+        /// Copies UINT8 column data to a host vector.
+        fn column_to_host_u8(col: &Column, stream: usize) -> Vec<u8>;
+
+        /// Copies UINT16 column data to a host vector.
+        fn column_to_host_u16(col: &Column, stream: usize) -> Vec<u16>;
+
+        /// Copies UINT32 column data to a host vector.
+        fn column_to_host_u32(col: &Column, stream: usize) -> Vec<u32>;
+
+        /// Copies UINT64 column data to a host vector.
+        fn column_to_host_u64(col: &Column, stream: usize) -> Vec<u64>;
+
         /// Copies BOOL8 column data to a host vector of bools.
         fn column_to_host_bool(col: &Column, stream: usize) -> Vec<bool>;
 
@@ -634,8 +649,50 @@ pub mod ffi {
         /// Creates a BOOL8 column from host data.
         fn make_column_from_host_bool(data: &[bool], stream: usize) -> UniquePtr<Column>;
 
+        /// Creates an INT8 column from host data.
+        fn make_column_from_host_i8(data: &[i8], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates an INT16 column from host data.
+        fn make_column_from_host_i16(data: &[i16], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a FLOAT32 column from host data.
+        fn make_column_from_host_f32(data: &[f32], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a UINT8 column from host data.
+        fn make_column_from_host_u8(data: &[u8], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a UINT16 column from host data.
+        fn make_column_from_host_u16(data: &[u16], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a UINT32 column from host data.
+        fn make_column_from_host_u32(data: &[u32], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a UINT64 column from host data.
+        fn make_column_from_host_u64(data: &[u64], stream: usize) -> UniquePtr<Column>;
+
         /// Creates a TIMESTAMP_SECONDS column from host epoch-second data.
         fn make_column_from_host_timestamp_s(data: &[i64], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a TIMESTAMP_MILLISECONDS column from host data.
+        fn make_column_from_host_timestamp_ms(data: &[i64], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a TIMESTAMP_MICROSECONDS column from host data.
+        fn make_column_from_host_timestamp_us(data: &[i64], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a TIMESTAMP_NANOSECONDS column from host data.
+        fn make_column_from_host_timestamp_ns(data: &[i64], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a DURATION_SECONDS column from host data.
+        fn make_column_from_host_duration_s(data: &[i64], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a DURATION_MILLISECONDS column from host data.
+        fn make_column_from_host_duration_ms(data: &[i64], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a DURATION_MICROSECONDS column from host data.
+        fn make_column_from_host_duration_us(data: &[i64], stream: usize) -> UniquePtr<Column>;
+
+        /// Creates a DURATION_NANOSECONDS column from host data.
+        fn make_column_from_host_duration_ns(data: &[i64], stream: usize) -> UniquePtr<Column>;
 
         // -- Replace operations --
 
@@ -1865,6 +1922,12 @@ pub mod ffi {
 
         /// Reduce a column with any aggregation kind (ddof used for STD/VAR).
         fn reduce_generic(col: &column_view, agg_kind: i32, ddof: i32, output_type_id: i32, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        /// Reduces a column with an initial value (supports SUM, PRODUCT, MIN, MAX, ANY, ALL).
+        fn reduce_with_init(col: &column_view, agg_kind: i32, ddof: i32, output_type_id: i32, init: &Scalar, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        /// Segmented reduce: reduces each segment of a column defined by offsets.
+        fn segmented_reduce(col: &column_view, offsets: &column_view, agg_kind: i32, ddof: i32, output_type_id: i32, null_handling: i32, stream: usize) -> Result<UniquePtr<Column>>;
 
         // -- Rolling window with defaults --
 
