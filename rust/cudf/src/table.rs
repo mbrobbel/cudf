@@ -340,7 +340,7 @@ impl Table {
 
     /// `MurmurHash3` on a custom CUDA stream.
     pub fn murmur3_on(&self, seed: u32, stream: Stream) -> Column {
-        Column(cudf_sys::ffi::hash_murmur3(&self.0, seed, stream.as_raw()))
+        Column(cudf_sys::hashing::ffi::hash_murmur3(&self.0, seed, stream.as_raw()))
     }
 
     /// Computes `XXHash64` hash of each row.
@@ -350,7 +350,7 @@ impl Table {
 
     /// `XXHash64` on a custom CUDA stream.
     pub fn xxhash64_on(&self, seed: u64, stream: Stream) -> Column {
-        Column(cudf_sys::ffi::hash_xxhash64(&self.0, seed, stream.as_raw()))
+        Column(cudf_sys::hashing::ffi::hash_xxhash64(&self.0, seed, stream.as_raw()))
     }
 
     /// Computes MD5 hash of each row.
@@ -360,7 +360,7 @@ impl Table {
 
     /// MD5 on a custom CUDA stream.
     pub fn md5_on(&self, stream: Stream) -> Column {
-        Column(cudf_sys::ffi::hash_md5(&self.0, stream.as_raw()))
+        Column(cudf_sys::hashing::ffi::hash_md5(&self.0, stream.as_raw()))
     }
 
     /// Computes SHA-256 hash of each row.
@@ -370,18 +370,18 @@ impl Table {
 
     /// SHA-256 on a custom CUDA stream.
     pub fn sha256_on(&self, stream: Stream) -> Column {
-        Column(cudf_sys::ffi::hash_sha256(&self.0, stream.as_raw()))
+        Column(cudf_sys::hashing::ffi::hash_sha256(&self.0, stream.as_raw()))
     }
 
     /// SHA-1 hash of each row (returns STRING column with 40-char hex).
     pub fn sha1(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::hash_sha1(&self.0, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::hashing::ffi::hash_sha1(&self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 
     /// `MurmurHash3` 128-bit hash (returns Table of two UINT64 columns).
     pub fn murmurhash3_x64_128(&self, seed: u64) -> Result<Table> {
-        let t = cudf_sys::ffi::hash_murmurhash3_x64_128(
+        let t = cudf_sys::hashing::ffi::hash_murmurhash3_x64_128(
             &self.0,
             seed,
             Stream::default_stream().as_raw(),
@@ -391,25 +391,25 @@ impl Table {
 
     /// `XXHash` 32-bit hash of each row.
     pub fn xxhash_32(&self, seed: u32) -> Result<Column> {
-        let c = cudf_sys::ffi::hash_xxhash_32(&self.0, seed, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::hashing::ffi::hash_xxhash_32(&self.0, seed, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 
     /// SHA-224 hash of each row (returns STRING column).
     pub fn sha224(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::hash_sha224(&self.0, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::hashing::ffi::hash_sha224(&self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 
     /// SHA-384 hash of each row (returns STRING column).
     pub fn sha384(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::hash_sha384(&self.0, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::hashing::ffi::hash_sha384(&self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 
     /// SHA-512 hash of each row (returns STRING column).
     pub fn sha512(&self) -> Result<Column> {
-        let c = cudf_sys::ffi::hash_sha512(&self.0, Stream::default_stream().as_raw())?;
+        let c = cudf_sys::hashing::ffi::hash_sha512(&self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 

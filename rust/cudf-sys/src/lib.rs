@@ -11,6 +11,8 @@
 // CXX bridge functions may need many parameters to match C++ signatures.
 #![allow(clippy::too_many_arguments)]
 
+pub mod hashing;
+
 #[cxx::bridge(namespace = "cudf_sys")]
 pub mod ffi {
     /// Identifies a column's logical element type.
@@ -1103,20 +1105,6 @@ pub mod ffi {
         /// Returns the quarter (1-4) for each timestamp (returns INT16).
         fn datetime_extract_quarter(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
 
-        // -- Hashing --
-
-        /// Computes MurmurHash3 32-bit hash of each row.
-        fn hash_murmur3(tbl: &Table, seed: u32, stream: usize) -> UniquePtr<Column>;
-
-        /// Computes XXHash64 hash of each row.
-        fn hash_xxhash64(tbl: &Table, seed: u64, stream: usize) -> UniquePtr<Column>;
-
-        /// Computes MD5 hash of each row (returns string column).
-        fn hash_md5(tbl: &Table, stream: usize) -> UniquePtr<Column>;
-
-        /// Computes SHA-256 hash of each row (returns string column).
-        fn hash_sha256(tbl: &Table, stream: usize) -> UniquePtr<Column>;
-
         // -- Reshape --
 
         /// Interleaves columns of a table into a single column.
@@ -1762,19 +1750,6 @@ pub mod ffi {
             months: &column_view,
             stream: usize,
         ) -> Result<UniquePtr<Column>>;
-
-        // -- Hashing (new) --
-
-        /// MurmurHash3 128-bit hash (returns table of two UINT64 columns).
-        fn hash_murmurhash3_x64_128(
-            tbl: &Table,
-            seed: u64,
-            stream: usize,
-        ) -> Result<UniquePtr<Table>>;
-        /// SHA-1 hash.
-        fn hash_sha1(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
-        /// XXHash 32-bit.
-        fn hash_xxhash_32(tbl: &Table, seed: u32, stream: usize) -> Result<UniquePtr<Column>>;
 
         // -- Transform (new) --
 
@@ -2451,15 +2426,6 @@ pub mod ffi {
             stream: usize,
         ) -> Result<UniquePtr<Column>>;
 
-        // -- Hashing: sha224 / sha384 / sha512 --
-
-        /// Compute SHA-224 hash of each row (returns STRING column).
-        fn hash_sha224(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
-        /// Compute SHA-384 hash of each row (returns STRING column).
-        fn hash_sha384(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
-        /// Compute SHA-512 hash of each row (returns STRING column).
-        fn hash_sha512(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
-
         // -- Column factories --
 
         /// Create an uninitialized fixed-width column. mask_state: 0=UNALLOCATED, 1=UNINITIALIZED, 2=ALL_VALID, 3=ALL_NULL.
@@ -2643,15 +2609,6 @@ pub mod ffi {
         ) -> i32;
         /// Count consecutive unique rows in a table.
         fn unique_count_table(tbl: &Table, null_equality: i32, stream: usize) -> i32;
-
-        // -- Additional hashing --
-
-        /// Compute MurmurHash3 x86 32-bit hash of each row (returns UINT32 column).
-        fn hash_murmurhash3_x86_32(
-            tbl: &Table,
-            seed: u32,
-            stream: usize,
-        ) -> Result<UniquePtr<Column>>;
 
         // -- Drop NaNs with threshold --
 

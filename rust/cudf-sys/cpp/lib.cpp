@@ -27,7 +27,6 @@
 #include <cudf/datetime.hpp>
 #include <cudf/groupby.hpp>
 #include <cudf/unary.hpp>
-#include <cudf/hashing.hpp>
 #include <cudf/reshape.hpp>
 #include <cudf/transform.hpp>
 #include <cudf/merge.hpp>
@@ -1989,32 +1988,6 @@ std::unique_ptr<Table> groupby_replace_nulls(
       std::make_unique<cudf::table>(std::move(all_cols)));
 }
 
-// -- Hashing --
-
-std::unique_ptr<Column> hash_murmur3(Table const& tbl, uint32_t seed, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::murmurhash3_x86_32(tbl.cached_view(), seed, s);
-  return std::make_unique<Column>(std::move(result));
-}
-
-std::unique_ptr<Column> hash_xxhash64(Table const& tbl, uint64_t seed, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::xxhash_64(tbl.cached_view(), seed, s);
-  return std::make_unique<Column>(std::move(result));
-}
-
-std::unique_ptr<Column> hash_md5(Table const& tbl, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::md5(tbl.cached_view(), s);
-  return std::make_unique<Column>(std::move(result));
-}
-
-std::unique_ptr<Column> hash_sha256(Table const& tbl, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::sha256(tbl.cached_view(), s);
-  return std::make_unique<Column>(std::move(result));
-}
-
 // -- Reshape --
 
 std::unique_ptr<Column> interleave_columns(Table const& tbl, std::size_t stream) {
@@ -3079,24 +3052,6 @@ std::unique_ptr<Column> datetime_add_months(cudf::column_view const& timestamps,
 
 // -- Hashing --
 
-std::unique_ptr<Table> hash_murmurhash3_x64_128(Table const& tbl, uint64_t seed, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::murmurhash3_x64_128(tbl.cached_view(), seed, s);
-  return std::make_unique<Table>(std::move(result));
-}
-
-std::unique_ptr<Column> hash_sha1(Table const& tbl, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::sha1(tbl.cached_view(), s);
-  return std::make_unique<Column>(std::move(result));
-}
-
-std::unique_ptr<Column> hash_xxhash_32(Table const& tbl, uint32_t seed, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::xxhash_32(tbl.cached_view(), seed, s);
-  return std::make_unique<Column>(std::move(result));
-}
-
 // -- Transform (new) --
 
 std::unique_ptr<Column> row_bit_count(Table const& tbl, std::size_t stream) {
@@ -3970,26 +3925,6 @@ std::unique_ptr<Column> strings_zfill_by_widths(
   return std::make_unique<Column>(std::move(result));
 }
 
-// -- Hashing: sha224 / sha384 / sha512 --
-
-std::unique_ptr<Column> hash_sha224(Table const& tbl, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::sha224(tbl.cached_view(), s);
-  return std::make_unique<Column>(std::move(result));
-}
-
-std::unique_ptr<Column> hash_sha384(Table const& tbl, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::sha384(tbl.cached_view(), s);
-  return std::make_unique<Column>(std::move(result));
-}
-
-std::unique_ptr<Column> hash_sha512(Table const& tbl, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::sha512(tbl.cached_view(), s);
-  return std::make_unique<Column>(std::move(result));
-}
-
 // -- Column factories --
 
 std::unique_ptr<Column> make_fixed_width_column(
@@ -4280,14 +4215,6 @@ int32_t unique_count_table(Table const& tbl, int32_t null_equality, std::size_t 
   rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
   auto ne = static_cast<cudf::null_equality>(null_equality);
   return cudf::unique_count(tbl.cached_view(), ne, s);
-}
-
-// -- Additional hashing --
-
-std::unique_ptr<Column> hash_murmurhash3_x86_32(Table const& tbl, uint32_t seed, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::hashing::murmurhash3_x86_32(tbl.cached_view(), seed, s);
-  return std::make_unique<Column>(std::move(result));
 }
 
 // -- Drop NaNs with threshold --

@@ -147,13 +147,14 @@ fn main() {
         include_paths = sys_includes;
     }
 
-    let mut build = cxx_build::bridge("src/lib.rs");
+    let mut build = cxx_build::bridges(["src/lib.rs", "src/hashing.rs"]);
     build.include("include");
     for p in &include_paths {
         build.include(p);
     }
     build
         .file("cpp/lib.cpp")
+        .file("cpp/hashing.cpp")
         .flag("-std=c++20")
         .flag("-DLIBCUDACXX_ENABLE_EXPERIMENTAL_MEMORY_RESOURCE")
         .compile("cudf-sys");
