@@ -202,6 +202,20 @@ pub trait StringExt {
     /// Types are bitmasks: DECIMAL=1, NUMERIC=2, DIGIT=4, ALPHA=8, SPACE=16, UPPER=32, LOWER=64.
     /// `verify_types` restricts which types are checked (default ALL_TYPES=127).
     fn all_characters_of_type(&self, types: u32, verify_types: u32) -> Result<Column>;
+    /// Filter characters by type, replacing removed chars with replacement string.
+    fn filter_characters_of_type(&self, types_to_remove: u32, replacement: &str, types_to_keep: u32) -> Result<Column>;
+    /// Check if all chars in each string are valid integers.
+    fn str_is_integer(&self) -> Result<Column>;
+    /// Check if all chars are valid integers within the given type range.
+    fn str_is_integer_with_type(&self, int_type: TypeId) -> Result<Column>;
+    /// Check if all chars in each string are valid floats.
+    fn str_is_float(&self) -> Result<Column>;
+    /// Convert hex strings to integers of given type.
+    fn str_hex_to_integers(&self, output_type: TypeId) -> Result<Column>;
+    /// Check if strings are valid hex format.
+    fn str_is_hex(&self) -> Result<Column>;
+    /// Convert integers to hex strings.
+    fn str_integers_to_hex(&self) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -561,6 +575,34 @@ impl StringExt for ColumnView<'_> {
     }
     fn all_characters_of_type(&self, types: u32, verify_types: u32) -> Result<Column> {
         let c = cudf_sys::ffi::strings_all_characters_of_type(self.0, types, verify_types, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn filter_characters_of_type(&self, types_to_remove: u32, replacement: &str, types_to_keep: u32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_filter_characters_of_type(self.0, types_to_remove, replacement, types_to_keep, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_is_integer(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_is_integer(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_is_integer_with_type(&self, int_type: TypeId) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_is_integer_with_type(self.0, int_type.repr, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_is_float(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_is_float(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_hex_to_integers(&self, output_type: TypeId) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_hex_to_integers(self.0, output_type.repr, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_is_hex(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_is_hex(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_integers_to_hex(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_integers_to_hex(self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

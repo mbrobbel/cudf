@@ -5,6 +5,7 @@
 
 use crate::column::{Column, ColumnView};
 use crate::error::Result;
+use crate::scalar::Scalar;
 use crate::stream::Stream;
 
 /// Extension trait for list column operations.
@@ -23,6 +24,18 @@ pub trait ListExt {
     fn list_distinct(&self) -> Result<Column>;
     /// Concatenate nested list elements within each row (flatten one level).
     fn list_concatenate_elements(&self) -> Result<Column>;
+    /// Check if each list row contains a scalar value (returns BOOL8 column).
+    fn list_contains_scalar(&self, search_key: &Scalar) -> Result<Column>;
+    /// Check if each list row contains the corresponding search_keys value.
+    fn list_contains_column(&self, search_keys: &ColumnView<'_>) -> Result<Column>;
+    /// Find position of scalar in each list row (-1 if not found).
+    fn list_index_of_scalar(&self, search_key: &Scalar, find_first: bool) -> Result<Column>;
+    /// Find position of each search_keys value in corresponding list row.
+    fn list_index_of_column(&self, search_keys: &ColumnView<'_>, find_first: bool) -> Result<Column>;
+    /// Gather elements from each list row using a gather map list column.
+    fn list_segmented_gather(&self, gather_map: &ColumnView<'_>, nullify_oob: bool) -> Result<Column>;
+    /// Format a list-of-strings column into formatted strings.
+    fn list_format(&self, na_rep: &str) -> Result<Column>;
 }
 
 /// Generate sequences as list column from starts and sizes columns.
@@ -58,6 +71,32 @@ impl ListExt for ColumnView<'_> {
     }
     fn list_concatenate_elements(&self) -> Result<Column> {
         let c = cudf_sys::ffi::lists_concatenate_elements(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_contains_scalar(&self, search_key: &Scalar) -> Result<Column> {
+        let ffi = crate::scalar::scalar_to_ffi(search_key);
+        let c = cudf_sys::ffi::lists_contains_scalar(self.0, &ffi, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_contains_column(&self, search_keys: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::lists_contains_column(self.0, search_keys.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_index_of_scalar(&self, search_key: &Scalar, find_first: bool) -> Result<Column> {
+        let ffi = crate::scalar::scalar_to_ffi(search_key);
+        let c = cudf_sys::ffi::lists_index_of_scalar(self.0, &ffi, find_first, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_index_of_column(&self, search_keys: &ColumnView<'_>, find_first: bool) -> Result<Column> {
+        let c = cudf_sys::ffi::lists_index_of_column(self.0, search_keys.0, find_first, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_segmented_gather(&self, gather_map: &ColumnView<'_>, nullify_oob: bool) -> Result<Column> {
+        let c = cudf_sys::ffi::lists_segmented_gather(self.0, gather_map.0, nullify_oob, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn list_format(&self, na_rep: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_format_list_column(self.0, na_rep, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

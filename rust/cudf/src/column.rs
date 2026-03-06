@@ -1005,6 +1005,7 @@ impl ColumnView<'_> {
         )?;
         Ok(Column(c))
     }
+
 }
 
 #[cfg(test)]

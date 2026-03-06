@@ -1489,5 +1489,55 @@ pub mod ffi {
         fn bitmask_allocation_size_bytes(number_of_bits: i32) -> usize;
         /// Compute number of bitmask words needed.
         fn num_bitmask_words(number_of_bits: i32) -> i32;
+
+        // -- Dictionary operations --
+
+        /// Dictionary-encode a column (returns DICTIONARY32 column).
+        fn dictionary_encode(col: &column_view, indices_type_id: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Decode a dictionary column back to its value type.
+        fn dictionary_decode(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Add new keys to a dictionary column.
+        fn dictionary_add_keys(col: &column_view, new_keys: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Remove keys from a dictionary column.
+        fn dictionary_remove_keys(col: &column_view, keys_to_remove: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Replace the keyset of a dictionary column.
+        fn dictionary_set_keys(col: &column_view, keys: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Remove keys not referenced by any indices.
+        fn dictionary_remove_unused_keys(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Look up a scalar key in a dictionary, returning its index.
+        fn dictionary_get_index(col: &column_view, key: &Scalar, stream: usize) -> Result<UniquePtr<Scalar>>;
+
+        // -- Lists contains / index_of / segmented_gather --
+
+        /// Check if each list row contains a scalar value (returns BOOL8).
+        fn lists_contains_scalar(col: &column_view, search_key: &Scalar, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if each list row contains the corresponding search_keys value.
+        fn lists_contains_column(col: &column_view, search_keys: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Find position of scalar in each list row. find_first=true for FIND_FIRST.
+        fn lists_index_of_scalar(col: &column_view, search_key: &Scalar, find_first: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Find position of each search_keys value in corresponding list row.
+        fn lists_index_of_column(col: &column_view, search_keys: &column_view, find_first: bool, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Gather elements from each list row using a gather map list column.
+        fn lists_segmented_gather(col: &column_view, gather_map: &column_view, nullify_oob: bool, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- String validation / conversion extras --
+
+        /// Filter characters by type, replacing removed chars with replacement string.
+        fn strings_filter_characters_of_type(col: &column_view, types_to_remove: u32, replacement: &str, types_to_keep: u32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if all chars in each string are valid integers.
+        fn strings_is_integer(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if all chars are valid integers within given int type range.
+        fn strings_is_integer_with_type(col: &column_view, int_type_id: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if all chars in each string are valid floats.
+        fn strings_is_float(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Convert hex strings to integers.
+        fn strings_hex_to_integers(col: &column_view, output_type_id: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Check if strings are valid hex format.
+        fn strings_is_hex(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Convert integers to hex strings.
+        fn strings_integers_to_hex(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Format a list-of-strings column into a single formatted strings column.
+        fn strings_format_list_column(col: &column_view, na_rep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
     }
 }

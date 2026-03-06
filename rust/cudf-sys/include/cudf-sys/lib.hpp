@@ -848,4 +848,33 @@ std::unique_ptr<Table> quantiles_table(
 std::size_t bitmask_allocation_size_bytes(int32_t number_of_bits);
 int32_t num_bitmask_words(int32_t number_of_bits);
 
+// -- Dictionary operations --
+
+std::unique_ptr<Column> dictionary_encode(cudf::column_view const& col, int32_t indices_type_id, std::size_t stream);
+std::unique_ptr<Column> dictionary_decode(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> dictionary_add_keys(cudf::column_view const& col, cudf::column_view const& new_keys, std::size_t stream);
+std::unique_ptr<Column> dictionary_remove_keys(cudf::column_view const& col, cudf::column_view const& keys_to_remove, std::size_t stream);
+std::unique_ptr<Column> dictionary_set_keys(cudf::column_view const& col, cudf::column_view const& keys, std::size_t stream);
+std::unique_ptr<Column> dictionary_remove_unused_keys(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Scalar> dictionary_get_index(cudf::column_view const& col, Scalar const& key, std::size_t stream);
+
+// -- Lists contains / index_of / segmented_gather --
+
+std::unique_ptr<Column> lists_contains_scalar(cudf::column_view const& col, Scalar const& search_key, std::size_t stream);
+std::unique_ptr<Column> lists_contains_column(cudf::column_view const& col, cudf::column_view const& search_keys, std::size_t stream);
+std::unique_ptr<Column> lists_index_of_scalar(cudf::column_view const& col, Scalar const& search_key, bool find_first, std::size_t stream);
+std::unique_ptr<Column> lists_index_of_column(cudf::column_view const& col, cudf::column_view const& search_keys, bool find_first, std::size_t stream);
+std::unique_ptr<Column> lists_segmented_gather(cudf::column_view const& col, cudf::column_view const& gather_map, bool nullify_oob, std::size_t stream);
+
+// -- String validation / conversion extras --
+
+std::unique_ptr<Column> strings_filter_characters_of_type(cudf::column_view const& col, uint32_t types_to_remove, rust::Str replacement, uint32_t types_to_keep, std::size_t stream);
+std::unique_ptr<Column> strings_is_integer(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_is_integer_with_type(cudf::column_view const& col, int32_t int_type_id, std::size_t stream);
+std::unique_ptr<Column> strings_is_float(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_hex_to_integers(cudf::column_view const& col, int32_t output_type_id, std::size_t stream);
+std::unique_ptr<Column> strings_is_hex(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_integers_to_hex(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_format_list_column(cudf::column_view const& col, rust::Str na_rep, std::size_t stream);
+
 }  // namespace cudf_sys
