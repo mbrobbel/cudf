@@ -61,3 +61,27 @@ impl ListExt for ColumnView<'_> {
         Ok(Column(c))
     }
 }
+
+/// Check if two list columns have overlapping elements per row.
+pub fn lists_have_overlap(lhs: &ColumnView<'_>, rhs: &ColumnView<'_>) -> Result<Column> {
+    let c = cudf_sys::ffi::lists_have_overlap(lhs.0, rhs.0, Stream::default_stream().as_raw())?;
+    Ok(Column(c))
+}
+
+/// Intersect distinct elements of two list columns per row.
+pub fn lists_intersect_distinct(lhs: &ColumnView<'_>, rhs: &ColumnView<'_>) -> Result<Column> {
+    let c = cudf_sys::ffi::lists_intersect_distinct(lhs.0, rhs.0, Stream::default_stream().as_raw())?;
+    Ok(Column(c))
+}
+
+/// Union distinct elements of two list columns per row.
+pub fn lists_union_distinct(lhs: &ColumnView<'_>, rhs: &ColumnView<'_>) -> Result<Column> {
+    let c = cudf_sys::ffi::lists_union_distinct(lhs.0, rhs.0, Stream::default_stream().as_raw())?;
+    Ok(Column(c))
+}
+
+/// Difference distinct elements of two list columns per row.
+pub fn lists_difference_distinct(lhs: &ColumnView<'_>, rhs: &ColumnView<'_>) -> Result<Column> {
+    let c = cudf_sys::ffi::lists_difference_distinct(lhs.0, rhs.0, Stream::default_stream().as_raw())?;
+    Ok(Column(c))
+}

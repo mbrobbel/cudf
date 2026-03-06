@@ -692,4 +692,50 @@ std::unique_ptr<Table> explode_outer_table(Table const& tbl, int32_t column_idx,
 std::unique_ptr<Column> rolling_window(cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
 std::unique_ptr<Column> grouped_rolling_window(Table const& group_keys, cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
 
+// -- String conversions --
+
+std::unique_ptr<Column> strings_to_timestamps(cudf::column_view const& col, int32_t timestamp_type_id, rust::Str format, std::size_t stream);
+std::unique_ptr<Column> strings_from_timestamps(cudf::column_view const& col, rust::Str format, std::size_t stream);
+std::unique_ptr<Column> strings_is_timestamp(cudf::column_view const& col, rust::Str format, std::size_t stream);
+std::unique_ptr<Column> strings_to_booleans(cudf::column_view const& col, rust::Str true_string, std::size_t stream);
+std::unique_ptr<Column> strings_from_booleans(cudf::column_view const& col, rust::Str true_string, rust::Str false_string, std::size_t stream);
+std::unique_ptr<Column> strings_to_durations(cudf::column_view const& col, int32_t duration_type_id, rust::Str format, std::size_t stream);
+std::unique_ptr<Column> strings_from_durations(cudf::column_view const& col, rust::Str format, std::size_t stream);
+std::unique_ptr<Column> strings_to_fixed_point(cudf::column_view const& col, int32_t type_id, int32_t scale, std::size_t stream);
+std::unique_ptr<Column> strings_from_fixed_point(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_is_fixed_point(cudf::column_view const& col, int32_t type_id, int32_t scale, std::size_t stream);
+std::unique_ptr<Column> strings_url_encode(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_url_decode(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_ipv4_to_integers(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_integers_to_ipv4(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> strings_is_ipv4(cudf::column_view const& col, std::size_t stream);
+
+// -- Datetime operations (new) --
+
+std::unique_ptr<Column> datetime_ceil(cudf::column_view const& col, int32_t freq, std::size_t stream);
+std::unique_ptr<Column> datetime_floor(cudf::column_view const& col, int32_t freq, std::size_t stream);
+std::unique_ptr<Column> datetime_round(cudf::column_view const& col, int32_t freq, std::size_t stream);
+std::unique_ptr<Column> datetime_add_months(cudf::column_view const& timestamps, cudf::column_view const& months, std::size_t stream);
+
+// -- Hashing (new) --
+
+std::unique_ptr<Table> hash_murmurhash3_x64_128(Table const& tbl, uint64_t seed, std::size_t stream);
+std::unique_ptr<Column> hash_sha1(Table const& tbl, std::size_t stream);
+std::unique_ptr<Column> hash_xxhash_32(Table const& tbl, uint32_t seed, std::size_t stream);
+
+// -- Transform (new) --
+
+std::unique_ptr<Column> row_bit_count(Table const& tbl, std::size_t stream);
+
+// -- Reshape (new) --
+
+std::unique_ptr<Column> byte_cast_column(cudf::column_view const& col, bool flip_endian, std::size_t stream);
+
+// -- List set operations --
+
+std::unique_ptr<Column> lists_have_overlap(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream);
+std::unique_ptr<Column> lists_intersect_distinct(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream);
+std::unique_ptr<Column> lists_union_distinct(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream);
+std::unique_ptr<Column> lists_difference_distinct(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream);
+
 }  // namespace cudf_sys

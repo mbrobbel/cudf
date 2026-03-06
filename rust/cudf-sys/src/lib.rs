@@ -1271,6 +1271,80 @@ pub mod ffi {
         /// Wraps strings onto multiple lines shorter than `width`.
         fn strings_wrap(col: &column_view, width: i32, stream: usize) -> Result<UniquePtr<Column>>;
 
+        // -- String conversions --
+
+        /// Converts strings to timestamps using format pattern.
+        fn strings_to_timestamps(col: &column_view, timestamp_type_id: i32, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Converts timestamp column to strings using format pattern.
+        fn strings_from_timestamps(col: &column_view, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Verifies strings can be parsed as timestamps with given format.
+        fn strings_is_timestamp(col: &column_view, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Converts strings to booleans using true_string match.
+        fn strings_to_booleans(col: &column_view, true_string: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Converts boolean column to strings.
+        fn strings_from_booleans(col: &column_view, true_string: &str, false_string: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Converts strings to durations using format pattern.
+        fn strings_to_durations(col: &column_view, duration_type_id: i32, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Converts duration column to strings using format pattern.
+        fn strings_from_durations(col: &column_view, format: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Converts strings to fixed-point decimal.
+        fn strings_to_fixed_point(col: &column_view, type_id: i32, scale: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Converts fixed-point column to strings.
+        fn strings_from_fixed_point(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Verifies strings can be parsed as fixed-point.
+        fn strings_is_fixed_point(col: &column_view, type_id: i32, scale: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// URL-encodes each string.
+        fn strings_url_encode(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// URL-decodes each string.
+        fn strings_url_decode(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Converts IPv4 strings to integers.
+        fn strings_ipv4_to_integers(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Converts integers to IPv4 strings.
+        fn strings_integers_to_ipv4(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Verifies strings are valid IPv4 format.
+        fn strings_is_ipv4(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Datetime operations (new) --
+
+        /// Ceil datetimes to frequency (DAY=0, HOUR=1, MINUTE=2, SECOND=3, MS=4, US=5, NS=6).
+        fn datetime_ceil(col: &column_view, freq: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Floor datetimes to frequency.
+        fn datetime_floor(col: &column_view, freq: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Round datetimes to frequency.
+        fn datetime_round(col: &column_view, freq: i32, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Add months column to timestamp column.
+        fn datetime_add_months(timestamps: &column_view, months: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Hashing (new) --
+
+        /// MurmurHash3 128-bit hash (returns table of two UINT64 columns).
+        fn hash_murmurhash3_x64_128(tbl: &Table, seed: u64, stream: usize) -> Result<UniquePtr<Table>>;
+        /// SHA-1 hash.
+        fn hash_sha1(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
+        /// XXHash 32-bit.
+        fn hash_xxhash_32(tbl: &Table, seed: u32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Transform (new) --
+
+        /// Approximate per-row bit count.
+        fn row_bit_count(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Reshape (new) --
+
+        /// Convert column elements to lists of bytes.
+        fn byte_cast_column(col: &column_view, flip_endian: bool, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- List set operations --
+
+        /// Check if two list columns have overlapping elements per row.
+        fn lists_have_overlap(lhs: &column_view, rhs: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Intersect distinct elements of two list columns per row.
+        fn lists_intersect_distinct(lhs: &column_view, rhs: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Union distinct elements of two list columns per row.
+        fn lists_union_distinct(lhs: &column_view, rhs: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Difference distinct elements of two list columns per row.
+        fn lists_difference_distinct(lhs: &column_view, rhs: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
         // -- Lists operations --
 
         /// Count elements in each list row.

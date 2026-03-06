@@ -56,7 +56,7 @@ pub(crate) unsafe fn enum_slice_as_i32<T>(slice: &[T]) -> &[i32] {
 
 pub use column::{Column, ColumnView};
 pub use data_type::{DataType, TypeId};
-pub use datetime::DatetimeExt;
+pub use datetime::{DatetimeExt, RoundingFrequency};
 pub use error::{Error, Result};
 pub use groupby::AggregationKind;
 pub use ops::{BinaryOp, BinaryOperator, UnaryOperator};

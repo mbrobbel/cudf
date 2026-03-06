@@ -55,6 +55,12 @@
 #include <cudf/strings/capitalize.hpp>
 #include <cudf/strings/wrap.hpp>
 #include <cudf/strings/strings_column_view.hpp>
+#include <cudf/strings/convert/convert_datetime.hpp>
+#include <cudf/strings/convert/convert_booleans.hpp>
+#include <cudf/strings/convert/convert_durations.hpp>
+#include <cudf/strings/convert/convert_fixed_point.hpp>
+#include <cudf/strings/convert/convert_urls.hpp>
+#include <cudf/strings/convert/convert_ipv4.hpp>
 
 #include <cudf/lists/count_elements.hpp>
 #include <cudf/lists/extract.hpp>
@@ -65,6 +71,7 @@
 #include <cudf/lists/filling.hpp>
 #include <cudf/lists/stream_compaction.hpp>
 #include <cudf/lists/explode.hpp>
+#include <cudf/lists/set_operations.hpp>
 
 #include <cudf/rolling.hpp>
 
@@ -2266,6 +2273,216 @@ std::unique_ptr<Column> grouped_rolling_window(Table const& group_keys, cudf::co
   rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
   auto agg = make_rolling_agg(agg_kind);
   auto result = cudf::grouped_rolling_window(group_keys.cached_view(), col, preceding, following, min_periods, *agg, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- String conversions --
+
+std::unique_ptr<Column> strings_to_timestamps(cudf::column_view const& col, int32_t timestamp_type_id, rust::Str format, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto fmt = std::string(format.data(), format.size());
+  auto result = cudf::strings::to_timestamps(scv, cudf::data_type{static_cast<cudf::type_id>(timestamp_type_id)}, fmt, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_from_timestamps(cudf::column_view const& col, rust::Str format, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto fmt = std::string(format.data(), format.size());
+  auto result = cudf::strings::from_timestamps(col, fmt, cudf::strings_column_view(cudf::column_view{cudf::data_type{cudf::type_id::STRING}, 0, nullptr, nullptr, 0}), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_is_timestamp(cudf::column_view const& col, rust::Str format, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto fmt = std::string(format.data(), format.size());
+  auto result = cudf::strings::is_timestamp(scv, fmt, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_to_booleans(cudf::column_view const& col, rust::Str true_string, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto ts = std::string(true_string.data(), true_string.size());
+  cudf::string_scalar true_scalar(ts, true, s);
+  auto result = cudf::strings::to_booleans(scv, true_scalar, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_from_booleans(cudf::column_view const& col, rust::Str true_string, rust::Str false_string, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto ts = std::string(true_string.data(), true_string.size());
+  auto fs = std::string(false_string.data(), false_string.size());
+  cudf::string_scalar true_scalar(ts, true, s);
+  cudf::string_scalar false_scalar(fs, true, s);
+  auto result = cudf::strings::from_booleans(col, true_scalar, false_scalar, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_to_durations(cudf::column_view const& col, int32_t duration_type_id, rust::Str format, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto fmt = std::string(format.data(), format.size());
+  auto result = cudf::strings::to_durations(scv, cudf::data_type{static_cast<cudf::type_id>(duration_type_id)}, fmt, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_from_durations(cudf::column_view const& col, rust::Str format, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto fmt = std::string(format.data(), format.size());
+  auto result = cudf::strings::from_durations(col, fmt, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_to_fixed_point(cudf::column_view const& col, int32_t type_id, int32_t scale, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::to_fixed_point(scv, cudf::data_type{static_cast<cudf::type_id>(type_id), scale}, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_from_fixed_point(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::strings::from_fixed_point(col, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_is_fixed_point(cudf::column_view const& col, int32_t type_id, int32_t scale, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::is_fixed_point(scv, cudf::data_type{static_cast<cudf::type_id>(type_id), scale}, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_url_encode(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::url_encode(scv, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_url_decode(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::url_decode(scv, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_ipv4_to_integers(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::ipv4_to_integers(scv, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_integers_to_ipv4(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::strings::integers_to_ipv4(col, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> strings_is_ipv4(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::is_ipv4(scv, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Datetime operations (new) --
+
+std::unique_ptr<Column> datetime_ceil(cudf::column_view const& col, int32_t freq, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::datetime::ceil_datetimes(col, static_cast<cudf::datetime::rounding_frequency>(freq), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_floor(cudf::column_view const& col, int32_t freq, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::datetime::floor_datetimes(col, static_cast<cudf::datetime::rounding_frequency>(freq), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_round(cudf::column_view const& col, int32_t freq, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::datetime::round_datetimes(col, static_cast<cudf::datetime::rounding_frequency>(freq), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_add_months(cudf::column_view const& timestamps, cudf::column_view const& months, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::datetime::add_calendrical_months(timestamps, months, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Hashing --
+
+std::unique_ptr<Table> hash_murmurhash3_x64_128(Table const& tbl, uint64_t seed, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::hashing::murmurhash3_x64_128(tbl.cached_view(), seed, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+std::unique_ptr<Column> hash_sha1(Table const& tbl, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::hashing::sha1(tbl.cached_view(), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> hash_xxhash_32(Table const& tbl, uint32_t seed, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::hashing::xxhash_32(tbl.cached_view(), seed, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Transform (new) --
+
+std::unique_ptr<Column> row_bit_count(Table const& tbl, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::row_bit_count(tbl.cached_view(), s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Reshape (new) --
+
+std::unique_ptr<Column> byte_cast_column(cudf::column_view const& col, bool flip_endian, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto endian = flip_endian ? cudf::flip_endianness::YES : cudf::flip_endianness::NO;
+  auto result = cudf::byte_cast(col, endian, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- List set operations --
+
+std::unique_ptr<Column> lists_have_overlap(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view llhs(lhs);
+  cudf::lists_column_view lrhs(rhs);
+  auto result = cudf::lists::have_overlap(llhs, lrhs, cudf::null_equality::EQUAL, cudf::nan_equality::ALL_EQUAL, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> lists_intersect_distinct(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view llhs(lhs);
+  cudf::lists_column_view lrhs(rhs);
+  auto result = cudf::lists::intersect_distinct(llhs, lrhs, cudf::null_equality::EQUAL, cudf::nan_equality::ALL_EQUAL, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> lists_union_distinct(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view llhs(lhs);
+  cudf::lists_column_view lrhs(rhs);
+  auto result = cudf::lists::union_distinct(llhs, lrhs, cudf::null_equality::EQUAL, cudf::nan_equality::ALL_EQUAL, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> lists_difference_distinct(cudf::column_view const& lhs, cudf::column_view const& rhs, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view llhs(lhs);
+  cudf::lists_column_view lrhs(rhs);
+  auto result = cudf::lists::difference_distinct(llhs, lrhs, cudf::null_equality::EQUAL, cudf::nan_equality::ALL_EQUAL, s);
   return std::make_unique<Column>(std::move(result));
 }
 

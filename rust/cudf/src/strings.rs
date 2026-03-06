@@ -141,6 +141,39 @@ pub trait StringExt {
     fn is_title(&self) -> Result<Column>;
     /// Wraps strings onto multiple lines shorter than `width`.
     fn wrap(&self, width: i32) -> Result<Column>;
+
+    // -- String conversions --
+
+    /// Convert strings to timestamps using format (e.g. "%Y-%m-%d").
+    fn str_to_timestamps(&self, timestamp_type: TypeId, format: &str) -> Result<Column>;
+    /// Convert timestamps to strings using format.
+    fn str_from_timestamps(&self, format: &str) -> Result<Column>;
+    /// Check if strings are valid timestamps with given format.
+    fn str_is_timestamp(&self, format: &str) -> Result<Column>;
+    /// Convert strings to booleans (matching `true_string` → true, else false).
+    fn str_to_booleans(&self, true_string: &str) -> Result<Column>;
+    /// Convert booleans to strings.
+    fn str_from_booleans(&self, true_string: &str, false_string: &str) -> Result<Column>;
+    /// Convert strings to durations using format.
+    fn str_to_durations(&self, duration_type: TypeId, format: &str) -> Result<Column>;
+    /// Convert durations to strings.
+    fn str_from_durations(&self, format: &str) -> Result<Column>;
+    /// Convert strings to fixed-point decimals.
+    fn str_to_fixed_point(&self, type_id: TypeId, scale: i32) -> Result<Column>;
+    /// Convert fixed-point decimals to strings.
+    fn str_from_fixed_point(&self) -> Result<Column>;
+    /// Check if strings are valid fixed-point.
+    fn str_is_fixed_point(&self, type_id: TypeId, scale: i32) -> Result<Column>;
+    /// URL-encode each string.
+    fn url_encode(&self) -> Result<Column>;
+    /// URL-decode each string.
+    fn url_decode(&self) -> Result<Column>;
+    /// Convert IPv4 strings to UINT32.
+    fn ipv4_to_integers(&self) -> Result<Column>;
+    /// Convert UINT32 to IPv4 strings.
+    fn integers_to_ipv4(&self) -> Result<Column>;
+    /// Check if strings are valid IPv4.
+    fn is_ipv4(&self) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -396,6 +429,66 @@ impl StringExt for ColumnView<'_> {
     }
     fn wrap(&self, width: i32) -> Result<Column> {
         let c = cudf_sys::ffi::strings_wrap(self.0, width, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_to_timestamps(&self, timestamp_type: TypeId, format: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_to_timestamps(self.0, timestamp_type.repr, format, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_from_timestamps(&self, format: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_from_timestamps(self.0, format, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_is_timestamp(&self, format: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_is_timestamp(self.0, format, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_to_booleans(&self, true_string: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_to_booleans(self.0, true_string, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_from_booleans(&self, true_string: &str, false_string: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_from_booleans(self.0, true_string, false_string, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_to_durations(&self, duration_type: TypeId, format: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_to_durations(self.0, duration_type.repr, format, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_from_durations(&self, format: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_from_durations(self.0, format, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_to_fixed_point(&self, type_id: TypeId, scale: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_to_fixed_point(self.0, type_id.repr, scale, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_from_fixed_point(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_from_fixed_point(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn str_is_fixed_point(&self, type_id: TypeId, scale: i32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_is_fixed_point(self.0, type_id.repr, scale, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn url_encode(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_url_encode(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn url_decode(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_url_decode(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn ipv4_to_integers(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_ipv4_to_integers(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn integers_to_ipv4(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_integers_to_ipv4(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn is_ipv4(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_is_ipv4(self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

@@ -57,6 +57,27 @@ pub trait DatetimeExt {
     fn extract_quarter(&self) -> Result<Column>;
     /// extract_quarter on a custom CUDA stream.
     fn extract_quarter_on(&self, stream: Stream) -> Result<Column>;
+    /// Ceil datetimes to given frequency.
+    fn dt_ceil(&self, freq: RoundingFrequency) -> Result<Column>;
+    /// Floor datetimes to given frequency.
+    fn dt_floor(&self, freq: RoundingFrequency) -> Result<Column>;
+    /// Round datetimes to given frequency.
+    fn dt_round(&self, freq: RoundingFrequency) -> Result<Column>;
+    /// Add months (from another column) to timestamps.
+    fn dt_add_months(&self, months: &ColumnView<'_>) -> Result<Column>;
+}
+
+/// Datetime rounding frequency.
+#[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoundingFrequency {
+    Day = 0,
+    Hour = 1,
+    Minute = 2,
+    Second = 3,
+    Millisecond = 4,
+    Microsecond = 5,
+    Nanosecond = 6,
 }
 
 impl DatetimeExt for ColumnView<'_> {
@@ -142,6 +163,22 @@ impl DatetimeExt for ColumnView<'_> {
     }
     fn extract_quarter_on(&self, stream: Stream) -> Result<Column> {
         let c = cudf_sys::ffi::datetime_extract_quarter(self.0, stream.as_raw())?;
+        Ok(Column(c))
+    }
+    fn dt_ceil(&self, freq: RoundingFrequency) -> Result<Column> {
+        let c = cudf_sys::ffi::datetime_ceil(self.0, freq as i32, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn dt_floor(&self, freq: RoundingFrequency) -> Result<Column> {
+        let c = cudf_sys::ffi::datetime_floor(self.0, freq as i32, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn dt_round(&self, freq: RoundingFrequency) -> Result<Column> {
+        let c = cudf_sys::ffi::datetime_round(self.0, freq as i32, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn dt_add_months(&self, months: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::datetime_add_months(self.0, months.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

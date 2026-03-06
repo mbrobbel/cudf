@@ -402,6 +402,36 @@ impl Table {
         Column(cudf_sys::ffi::hash_sha256(&self.0, stream.as_raw()))
     }
 
+    /// SHA-1 hash of each row (returns STRING column with 40-char hex).
+    pub fn sha1(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::hash_sha1(&self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// MurmurHash3 128-bit hash (returns Table of two UINT64 columns).
+    pub fn murmurhash3_x64_128(&self, seed: u64) -> Result<Table> {
+        let t = cudf_sys::ffi::hash_murmurhash3_x64_128(&self.0, seed, Stream::default_stream().as_raw())?;
+        Ok(Table(t))
+    }
+
+    /// XXHash 32-bit hash of each row.
+    pub fn xxhash_32(&self, seed: u32) -> Result<Column> {
+        let c = cudf_sys::ffi::hash_xxhash_32(&self.0, seed, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Approximate per-row bit count.
+    pub fn row_bit_count(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::row_bit_count(&self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
+    /// Convert column elements to lists of bytes.
+    pub fn byte_cast(col: &ColumnView<'_>, flip_endian: bool) -> Result<Column> {
+        let c = cudf_sys::ffi::byte_cast_column(col.0, flip_endian, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
     // -- Merge --
 
     /// Merges two sorted tables maintaining sort order.
