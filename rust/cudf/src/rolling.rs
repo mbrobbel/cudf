@@ -122,4 +122,27 @@ impl ColumnView<'_> {
         )?;
         Ok(Column(c))
     }
+
+    /// Grouped rolling window with default output values (for LEAD/LAG).
+    pub fn grouped_rolling_window_with_defaults(
+        &self,
+        group_keys: &Table,
+        default_outputs: &ColumnView<'_>,
+        preceding: i32,
+        following: i32,
+        min_periods: i32,
+        agg_kind: AggregationKind,
+    ) -> Result<Column> {
+        let c = cudf_sys::ffi::grouped_rolling_window_with_defaults(
+            &group_keys.0,
+            self.0,
+            default_outputs.0,
+            preceding,
+            following,
+            min_periods,
+            agg_kind.repr,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
 }

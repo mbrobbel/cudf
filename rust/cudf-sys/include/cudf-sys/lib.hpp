@@ -1185,6 +1185,14 @@ std::size_t approx_distinct_count(Table const& tbl, int32_t precision, std::size
 std::unique_ptr<Column> column_view_child_copy(cudf::column_view const& col, int32_t index, std::size_t stream);
 int32_t column_view_num_children(cudf::column_view const& col);
 
+// -- Grouped rolling window with defaults --
+
+std::unique_ptr<Column> grouped_rolling_window_with_defaults(Table const& group_keys, cudf::column_view const& col, cudf::column_view const& default_outputs, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
+
+// -- Percentile approx --
+
+std::unique_ptr<Column> percentile_approx(cudf::column_view const& tdigest_col, cudf::column_view const& percentiles, std::size_t stream);
+
 // -- Datetime: add months with scalar --
 
 std::unique_ptr<Column> datetime_add_months_scalar(cudf::column_view const& timestamps, Scalar const& months, std::size_t stream);

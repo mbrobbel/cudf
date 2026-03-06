@@ -646,6 +646,12 @@ impl ColumnView<'_> {
         ) as usize
     }
 
+    /// Computes approximate percentiles from a t-digest column.
+    pub fn percentile_approx(&self, percentiles: &ColumnView<'_>) -> Result<Column> {
+        let c = cudf_sys::ffi::percentile_approx(self.0, percentiles.0, ds())?;
+        Ok(Column(c))
+    }
+
     // -- Binary ops (convenience) --
 
     /// Element-wise addition with another column.

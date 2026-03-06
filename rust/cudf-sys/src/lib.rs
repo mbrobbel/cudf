@@ -1946,6 +1946,25 @@ pub mod ffi {
         /// Returns the number of child columns.
         fn column_view_num_children(col: &column_view) -> i32;
 
+        // -- Grouped rolling window with defaults --
+
+        /// Grouped rolling window with default output values (for LEAD/LAG).
+        fn grouped_rolling_window_with_defaults(
+            group_keys: &Table,
+            col: &column_view,
+            default_outputs: &column_view,
+            preceding: i32,
+            following: i32,
+            min_periods: i32,
+            agg_kind: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
+        // -- Percentile approx --
+
+        /// Computes approximate percentiles from a t-digest column.
+        fn percentile_approx(tdigest_col: &column_view, percentiles: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
         // -- Datetime: add months with scalar --
 
         /// Adds months (scalar) to a timestamp column.

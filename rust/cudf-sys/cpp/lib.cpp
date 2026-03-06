@@ -9,6 +9,7 @@
 #include <cudf/io/parquet.hpp>
 #include <cudf/binaryop.hpp>
 #include <cudf/quantiles.hpp>
+#include <cudf/tdigest/tdigest_column_view.hpp>
 #include <cudf/replace.hpp>
 #include <cudf/search.hpp>
 #include <cudf/column/column_factories.hpp>
@@ -4347,6 +4348,24 @@ std::unique_ptr<Scalar> repeat_string_scalar(Scalar const& input, int32_t repeat
   auto const& str_scalar = static_cast<cudf::string_scalar const&>(input.inner());
   auto result = cudf::strings::repeat_string(str_scalar, repeat_times, s);
   return std::make_unique<Scalar>(std::move(result));
+}
+
+// -- Grouped rolling window with defaults --
+
+std::unique_ptr<Column> grouped_rolling_window_with_defaults(Table const& group_keys, cudf::column_view const& col, cudf::column_view const& default_outputs, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto agg = make_rolling_agg(agg_kind);
+  auto result = cudf::grouped_rolling_window(group_keys.cached_view(), col, default_outputs, preceding, following, min_periods, *agg, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Percentile approx --
+
+std::unique_ptr<Column> percentile_approx(cudf::column_view const& tdigest_col, cudf::column_view const& percentiles, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::tdigest::tdigest_column_view tdv(tdigest_col);
+  auto result = cudf::percentile_approx(tdv, percentiles, s);
+  return std::make_unique<Column>(std::move(result));
 }
 
 // -- Datetime: add months with scalar --
