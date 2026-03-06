@@ -1271,6 +1271,11 @@ pub mod ffi {
         /// Wraps strings onto multiple lines shorter than `width`.
         fn strings_wrap(col: &column_view, width: i32, stream: usize) -> Result<UniquePtr<Column>>;
 
+        // -- String character types --
+
+        /// Check if all characters in each string match the given type bitmask.
+        fn strings_all_characters_of_type(col: &column_view, types: u32, verify_types: u32, stream: usize) -> Result<UniquePtr<Column>>;
+
         // -- String operations (new batch) --
 
         /// Regex split to table of columns.

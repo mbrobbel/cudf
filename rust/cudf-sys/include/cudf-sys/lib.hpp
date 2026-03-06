@@ -692,6 +692,10 @@ std::unique_ptr<Table> explode_outer_table(Table const& tbl, int32_t column_idx,
 std::unique_ptr<Column> rolling_window(cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
 std::unique_ptr<Column> grouped_rolling_window(Table const& group_keys, cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
 
+// -- String character types --
+
+std::unique_ptr<Column> strings_all_characters_of_type(cudf::column_view const& col, uint32_t types, uint32_t verify_types, std::size_t stream);
+
 // -- String operations (new batch) --
 
 std::unique_ptr<Table> strings_split_re(cudf::column_view const& col, rust::Str pattern, int32_t maxsplit, std::size_t stream);

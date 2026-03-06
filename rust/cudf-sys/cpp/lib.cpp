@@ -51,6 +51,7 @@
 #include <cudf/strings/split/split_re.hpp>
 #include <cudf/strings/split/partition.hpp>
 #include <cudf/strings/find_multiple.hpp>
+#include <cudf/strings/char_types/char_types.hpp>
 #include <cudf/strings/strip.hpp>
 #include <cudf/strings/reverse.hpp>
 #include <cudf/strings/extract.hpp>
@@ -2276,6 +2277,15 @@ std::unique_ptr<Column> grouped_rolling_window(Table const& group_keys, cudf::co
   rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
   auto agg = make_rolling_agg(agg_kind);
   auto result = cudf::grouped_rolling_window(group_keys.cached_view(), col, preceding, following, min_periods, *agg, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- String character types --
+
+std::unique_ptr<Column> strings_all_characters_of_type(cudf::column_view const& col, uint32_t types, uint32_t verify_types, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view scv(col);
+  auto result = cudf::strings::all_characters_of_type(scv, static_cast<cudf::strings::string_character_types>(types), static_cast<cudf::strings::string_character_types>(verify_types), s);
   return std::make_unique<Column>(std::move(result));
 }
 

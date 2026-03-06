@@ -197,6 +197,11 @@ pub trait StringExt {
     fn str_contains_multiple(&self, targets: &ColumnView<'_>) -> Result<Table>;
     /// Find positions of multiple targets in each string (lists column).
     fn str_find_multiple(&self, targets: &ColumnView<'_>) -> Result<Column>;
+    /// Check if all characters match the given type bitmask.
+    ///
+    /// Types are bitmasks: DECIMAL=1, NUMERIC=2, DIGIT=4, ALPHA=8, SPACE=16, UPPER=32, LOWER=64.
+    /// `verify_types` restricts which types are checked (default ALL_TYPES=127).
+    fn all_characters_of_type(&self, types: u32, verify_types: u32) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -554,6 +559,24 @@ impl StringExt for ColumnView<'_> {
         let c = cudf_sys::ffi::strings_find_multiple(self.0, targets.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
+    fn all_characters_of_type(&self, types: u32, verify_types: u32) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_all_characters_of_type(self.0, types, verify_types, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+}
+
+/// String character type bitmask constants.
+pub mod char_types {
+    pub const DECIMAL: u32 = 1;
+    pub const NUMERIC: u32 = 2;
+    pub const DIGIT: u32 = 4;
+    pub const ALPHA: u32 = 8;
+    pub const SPACE: u32 = 16;
+    pub const UPPER: u32 = 32;
+    pub const LOWER: u32 = 64;
+    pub const ALPHANUM: u32 = DECIMAL | NUMERIC | DIGIT | ALPHA;
+    pub const CASE_TYPES: u32 = UPPER | LOWER;
+    pub const ALL_TYPES: u32 = ALPHANUM | CASE_TYPES | SPACE;
 }
 
 #[cfg(test)]
