@@ -954,4 +954,23 @@ std::unique_ptr<Column> strings_extract_single(cudf::column_view const& col, rus
 std::unique_ptr<Table> gather_table_checked(Table const& tbl, cudf::column_view const& gather_map, bool nullify_oob, std::size_t stream);
 bool may_have_nonempty_nulls(cudf::column_view const& col);
 
+// -- Datetime: fractional seconds --
+
+std::unique_ptr<Column> datetime_extract_millisecond(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_extract_microsecond(cudf::column_view const& col, std::size_t stream);
+std::unique_ptr<Column> datetime_extract_nanosecond(cudf::column_view const& col, std::size_t stream);
+
+// -- Join: cross_join --
+
+std::unique_ptr<Table> cross_join(Table const& left, Table const& right, std::size_t stream);
+
+// -- Lists: sequences with step --
+
+std::unique_ptr<Column> lists_sequences_with_step(cudf::column_view const& starts, cudf::column_view const& steps, cudf::column_view const& sizes, std::size_t stream);
+
+// -- Strings: concatenate with per-row separator / join_list_elements with per-row separator --
+
+std::unique_ptr<Column> strings_concatenate_columns_sep_col(Table const& tbl, cudf::column_view const& separators, rust::Str separator_narep, rust::Str col_narep, std::size_t stream);
+std::unique_ptr<Column> strings_join_list_elements_column(cudf::column_view const& col, cudf::column_view const& separators, rust::Str separator_narep, rust::Str string_narep, std::size_t stream);
+
 }  // namespace cudf_sys

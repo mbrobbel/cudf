@@ -50,6 +50,12 @@ pub fn list_sequences(starts: &ColumnView<'_>, sizes: &ColumnView<'_>) -> Result
     Ok(Column(c))
 }
 
+/// Generate sequences with custom step from starts, steps, and sizes columns.
+pub fn list_sequences_with_step(starts: &ColumnView<'_>, steps: &ColumnView<'_>, sizes: &ColumnView<'_>) -> Result<Column> {
+    let c = cudf_sys::ffi::lists_sequences_with_step(starts.0, steps.0, sizes.0, Stream::default_stream().as_raw())?;
+    Ok(Column(c))
+}
+
 impl ListExt for ColumnView<'_> {
     fn list_count_elements(&self) -> Result<Column> {
         let c = cudf_sys::ffi::lists_count_elements(self.0, Stream::default_stream().as_raw())?;

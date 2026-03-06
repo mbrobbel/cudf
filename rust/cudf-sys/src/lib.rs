@@ -1629,5 +1629,31 @@ pub mod ffi {
         /// Check if a column may have non-empty data in null rows (no stream needed).
         fn may_have_nonempty_nulls(col: &column_view) -> bool;
 
+        // -- Datetime: fractional seconds --
+
+        /// Extract millisecond fraction from timestamp.
+        fn datetime_extract_millisecond(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Extract microsecond fraction from timestamp.
+        fn datetime_extract_microsecond(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Extract nanosecond fraction from timestamp.
+        fn datetime_extract_nanosecond(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Join: cross_join --
+
+        /// Compute the cross join (Cartesian product) of two tables.
+        fn cross_join(left: &Table, right: &Table, stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Lists: sequences with step --
+
+        /// Generate sequences with custom step from starts, steps, and sizes columns.
+        fn lists_sequences_with_step(starts: &column_view, steps: &column_view, sizes: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Strings: per-row separator variants --
+
+        /// Row-wise concatenation of string columns with per-row separator column.
+        fn strings_concatenate_columns_sep_col(tbl: &Table, separators: &column_view, separator_narep: &str, col_narep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Join lists of strings with per-row separator column.
+        fn strings_join_list_elements_column(col: &column_view, separators: &column_view, separator_narep: &str, string_narep: &str, stream: usize) -> Result<UniquePtr<Column>>;
+
     }
 }

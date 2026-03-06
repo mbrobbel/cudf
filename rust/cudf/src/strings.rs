@@ -263,6 +263,8 @@ pub trait StringExt {
     fn str_slice_column(&self, starts: &ColumnView<'_>, stops: &ColumnView<'_>) -> Result<Column>;
     /// Extract a single regex capture group from each string.
     fn str_extract_single(&self, pattern: &str, group_index: i32) -> Result<Column>;
+    /// Join lists of strings with per-row separator column.
+    fn str_join_list_elements_column(&self, separators: &ColumnView<'_>, separator_narep: &str, string_narep: &str) -> Result<Column>;
 }
 
 impl StringExt for ColumnView<'_> {
@@ -702,6 +704,21 @@ impl StringExt for ColumnView<'_> {
         let c = cudf_sys::ffi::strings_extract_single(self.0, pattern, group_index, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
+    fn str_join_list_elements_column(&self, separators: &ColumnView<'_>, separator_narep: &str, string_narep: &str) -> Result<Column> {
+        let c = cudf_sys::ffi::strings_join_list_elements_column(self.0, separators.0, separator_narep, string_narep, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+}
+
+/// Concatenate string columns row-wise with per-row separator column.
+pub fn concatenate_strings_with_separator(
+    tbl: &crate::table::Table,
+    separators: &ColumnView<'_>,
+    separator_narep: &str,
+    col_narep: &str,
+) -> Result<Column> {
+    let c = cudf_sys::ffi::strings_concatenate_columns_sep_col(&tbl.0, separators.0, separator_narep, col_narep, Stream::default_stream().as_raw())?;
+    Ok(Column(c))
 }
 
 /// String character type bitmask constants.

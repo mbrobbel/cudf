@@ -3291,4 +3291,84 @@ bool may_have_nonempty_nulls(cudf::column_view const& col) {
   return cudf::may_have_nonempty_nulls(col);
 }
 
+// -- Datetime: fractional seconds --
+
+std::unique_ptr<Column> datetime_extract_millisecond(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::MILLISECOND, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_extract_microsecond(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::MICROSECOND, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> datetime_extract_nanosecond(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::datetime::extract_datetime_component(col, cudf::datetime::datetime_component::NANOSECOND, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Join: cross_join --
+
+std::unique_ptr<Table> cross_join(Table const& left, Table const& right, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::cross_join(left.cached_view(), right.cached_view(), s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+// -- Lists: sequences with step --
+
+std::unique_ptr<Column> lists_sequences_with_step(
+    cudf::column_view const& starts,
+    cudf::column_view const& steps,
+    cudf::column_view const& sizes,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::lists::sequences(starts, steps, sizes, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Strings: concatenate with per-row separator column --
+
+std::unique_ptr<Column> strings_concatenate_columns_sep_col(
+    Table const& tbl,
+    cudf::column_view const& separators,
+    rust::Str separator_narep,
+    rust::Str col_narep,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::strings_column_view sep_col(separators);
+  auto sep_na_str = std::string(separator_narep.data(), separator_narep.size());
+  auto col_na_str = std::string(col_narep.data(), col_narep.size());
+  cudf::string_scalar sep_na(sep_na_str, !sep_na_str.empty(), s);
+  cudf::string_scalar col_na(col_na_str, !col_na_str.empty(), s);
+  auto result = cudf::strings::concatenate(tbl.cached_view(), sep_col, sep_na, col_na,
+      cudf::strings::separator_on_nulls::YES, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Strings: join_list_elements with per-row separator column --
+
+std::unique_ptr<Column> strings_join_list_elements_column(
+    cudf::column_view const& col,
+    cudf::column_view const& separators,
+    rust::Str separator_narep,
+    rust::Str string_narep,
+    std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  cudf::lists_column_view lcv(col);
+  cudf::strings_column_view sep_col(separators);
+  auto sep_na_str = std::string(separator_narep.data(), separator_narep.size());
+  auto str_na_str = std::string(string_narep.data(), string_narep.size());
+  cudf::string_scalar sep_na(sep_na_str, !sep_na_str.empty(), s);
+  cudf::string_scalar str_na(str_na_str, !str_na_str.empty(), s);
+  auto result = cudf::strings::join_list_elements(lcv, sep_col, sep_na, str_na,
+      cudf::strings::separator_on_nulls::YES,
+      cudf::strings::output_if_empty_list::EMPTY_STRING, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
 }  // namespace cudf_sys

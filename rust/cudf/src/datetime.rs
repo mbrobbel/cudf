@@ -65,6 +65,12 @@ pub trait DatetimeExt {
     fn dt_round(&self, freq: RoundingFrequency) -> Result<Column>;
     /// Add months (from another column) to timestamps.
     fn dt_add_months(&self, months: &ColumnView<'_>) -> Result<Column>;
+    /// Extracts the millisecond fraction component (returns INT16).
+    fn extract_millisecond(&self) -> Result<Column>;
+    /// Extracts the microsecond fraction component (returns INT16).
+    fn extract_microsecond(&self) -> Result<Column>;
+    /// Extracts the nanosecond fraction component (returns INT16).
+    fn extract_nanosecond(&self) -> Result<Column>;
 }
 
 /// Datetime rounding frequency.
@@ -179,6 +185,18 @@ impl DatetimeExt for ColumnView<'_> {
     }
     fn dt_add_months(&self, months: &ColumnView<'_>) -> Result<Column> {
         let c = cudf_sys::ffi::datetime_add_months(self.0, months.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn extract_millisecond(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::datetime_extract_millisecond(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn extract_microsecond(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::datetime_extract_microsecond(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+    fn extract_nanosecond(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::datetime_extract_nanosecond(self.0, Stream::default_stream().as_raw())?;
         Ok(Column(c))
     }
 }

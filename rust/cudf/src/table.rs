@@ -999,6 +999,17 @@ impl Table {
         let t = cudf_sys::ffi::gather_table_checked(&self.0, indices.0, nullify_oob, stream.as_raw())?;
         Ok(Table(t))
     }
+
+    /// Compute the cross join (Cartesian product) with another table.
+    pub fn cross_join(&self, right: &Table) -> Result<Table> {
+        self.cross_join_on(right, Stream::default_stream())
+    }
+
+    /// Cross join on a custom CUDA stream.
+    pub fn cross_join_on(&self, right: &Table, stream: Stream) -> Result<Table> {
+        let t = cudf_sys::ffi::cross_join(&self.0, &right.0, stream.as_raw())?;
+        Ok(Table(t))
+    }
 }
 
 /// An iterator over the columns of a [`Table`].
