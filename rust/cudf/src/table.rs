@@ -1077,6 +1077,28 @@ impl Table {
         self.partition_by_map_offsets_on(partition_map, num_partitions, Stream::default_stream())
     }
 
+    // -- Bitmask combining --
+
+    /// Bitwise AND of all column null masks. Returns a BOOL8 column where
+    /// `true` means the row is valid in ALL columns.
+    pub fn bitmask_and_to_bools(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::bitmask_and_to_bools(
+            &self.0,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
+    /// Bitwise OR of all column null masks. Returns a BOOL8 column where
+    /// `true` means the row is valid in ANY column.
+    pub fn bitmask_or_to_bools(&self) -> Result<Column> {
+        let c = cudf_sys::ffi::bitmask_or_to_bools(
+            &self.0,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+
     /// partition_by_map_offsets on a custom CUDA stream.
     pub fn partition_by_map_offsets_on(
         &self,

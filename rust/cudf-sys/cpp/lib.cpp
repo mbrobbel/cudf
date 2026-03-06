@@ -33,6 +33,7 @@
 #include <cudf/round.hpp>
 #include <cudf/transpose.hpp>
 #include <cudf/labeling/label_bins.hpp>
+#include <cudf/io/orc.hpp>
 
 #include <cudf/strings/attributes.hpp>
 #include <cudf/strings/case.hpp>
@@ -3524,6 +3525,122 @@ bool is_supported_cast(int32_t from_type_id, int32_t from_scale, int32_t to_type
   auto from = cudf::data_type{static_cast<cudf::type_id>(from_type_id), from_scale};
   auto to = cudf::data_type{static_cast<cudf::type_id>(to_type_id), to_scale};
   return cudf::is_supported_cast(from, to);
+}
+
+// -- In-place operations --
+
+void fill_in_place(Column& col, int32_t begin, int32_t end, Scalar const& value, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto mcv = col.mutable_inner().mutable_view();
+  cudf::fill_in_place(mcv, begin, end, value.inner(), s);
+}
+
+void copy_range_in_place(Column& dest, cudf::column_view const& source, int32_t source_begin, int32_t source_end, int32_t dest_begin, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto mcv = dest.mutable_inner().mutable_view();
+  cudf::copy_range_in_place(source, mcv, source_begin, source_end, dest_begin, s);
+}
+
+// -- One-hot encoding --
+
+std::unique_ptr<Table> one_hot_encode(cudf::column_view const& input, cudf::column_view const& categories, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto [result_col, result_view] = cudf::one_hot_encode(input, categories, s);
+  // Materialize table from the view while owning column is still alive
+  auto result = std::make_unique<cudf::table>(result_view, s);
+  return std::make_unique<Table>(std::move(result));
+}
+
+// -- Null mask conversions --
+
+std::unique_ptr<Column> null_mask_to_bools(cudf::column_view const& col, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto mask = col.null_mask();
+  if (!mask) {
+    // No null mask means all valid — return all-true column
+    cudf::numeric_scalar<bool> val(true, true, s);
+    auto result = cudf::make_column_from_scalar(val, col.size(), s);
+    return std::make_unique<Column>(std::move(result));
+  }
+  auto begin = col.offset();
+  auto end = col.offset() + col.size();
+  auto result = cudf::mask_to_bools(mask, begin, end, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+void set_null_mask_from_bools(Column& col, cudf::column_view const& bools, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto [mask_buf, null_count] = cudf::bools_to_mask(bools, s);
+  col.mutable_inner().set_null_mask(std::move(*mask_buf), null_count);
+}
+
+// -- Bitmask combining --
+
+std::unique_ptr<Column> bitmask_and_to_bools(Table const& tbl, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto [mask, null_count] = cudf::bitmask_and(tbl.cached_view(), s);
+  auto num_rows = tbl.cached_view().num_rows();
+  auto bitmask_ptr = static_cast<cudf::bitmask_type const*>(mask.data());
+  auto result = cudf::mask_to_bools(bitmask_ptr, 0, num_rows, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<Column> bitmask_or_to_bools(Table const& tbl, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto [mask, null_count] = cudf::bitmask_or(tbl.cached_view(), s);
+  auto num_rows = tbl.cached_view().num_rows();
+  auto bitmask_ptr = static_cast<cudf::bitmask_type const*>(mask.data());
+  auto result = cudf::mask_to_bools(bitmask_ptr, 0, num_rows, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+// -- Column factories: lists and structs --
+
+std::unique_ptr<Column> make_lists_column(int32_t num_rows, std::unique_ptr<Column> offsets, std::unique_ptr<Column> child, std::size_t stream) {
+  auto result = cudf::make_lists_column(
+      num_rows, offsets->release(), child->release(), 0, rmm::device_buffer{});
+  return std::make_unique<Column>(std::move(result));
+}
+
+// StructColumnBuilder
+
+void StructColumnBuilder::add_child(std::unique_ptr<Column> col) {
+  children_.push_back(col->release());
+}
+
+std::unique_ptr<Column> StructColumnBuilder::build(int32_t num_rows, std::size_t stream) {
+  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto result = cudf::make_structs_column(
+      num_rows, std::move(children_), 0, rmm::device_buffer{}, s);
+  return std::make_unique<Column>(std::move(result));
+}
+
+std::unique_ptr<StructColumnBuilder> new_struct_column_builder() {
+  return std::make_unique<StructColumnBuilder>();
+}
+
+void struct_column_builder_add(StructColumnBuilder& builder, std::unique_ptr<Column> col) {
+  builder.add_child(std::move(col));
+}
+
+std::unique_ptr<Column> struct_column_builder_build(StructColumnBuilder& builder, int32_t num_rows, std::size_t stream) {
+  return builder.build(num_rows, stream);
+}
+
+// -- ORC I/O --
+
+std::unique_ptr<Table> read_orc(rust::Str filepath) {
+  std::string path(filepath.data(), filepath.size());
+  auto opts = cudf::io::orc_reader_options::builder(cudf::io::source_info{path}).build();
+  auto result = cudf::io::read_orc(opts);
+  return std::make_unique<Table>(std::move(result.tbl));
+}
+
+void write_orc(Table const& tbl, rust::Str filepath) {
+  std::string path(filepath.data(), filepath.size());
+  auto opts = cudf::io::orc_writer_options::builder(
+      cudf::io::sink_info{path}, tbl.cached_view()).build();
+  cudf::io::write_orc(opts);
 }
 
 }  // namespace cudf_sys

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
-//! CSV and Parquet I/O operations.
+//! CSV, Parquet, and ORC I/O operations.
 
 use std::path::Path;
 
@@ -117,6 +117,25 @@ pub mod parquet {
     pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
         let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
         cudf_sys::ffi::write_parquet(&table.0, path_str)?;
+        Ok(())
+    }
+}
+
+/// ORC read and write operations.
+pub mod orc {
+    use super::*;
+
+    /// Reads an ORC file into a [`Table`].
+    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        let tbl = cudf_sys::ffi::read_orc(path_str)?;
+        Ok(Table(tbl))
+    }
+
+    /// Writes a [`Table`] to an ORC file.
+    pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
+        let path_str = path.as_ref().to_str().ok_or(crate::error::Error::InvalidPath)?;
+        cudf_sys::ffi::write_orc(&table.0, path_str)?;
         Ok(())
     }
 }

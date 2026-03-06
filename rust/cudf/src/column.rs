@@ -88,6 +88,34 @@ impl Column {
         Ok(Self(c))
     }
 
+    /// Creates a LIST column from offsets and child columns (no null mask).
+    ///
+    /// `offsets` must be an INT32 column of length `num_rows + 1`.
+    /// `child` contains the flattened list elements.
+    pub fn from_lists(num_rows: usize, offsets: Column, child: Column) -> Result<Self> {
+        let c = cudf_sys::ffi::make_lists_column(
+            num_rows as i32,
+            offsets.0,
+            child.0,
+            ds(),
+        )?;
+        Ok(Self(c))
+    }
+
+    /// Creates a STRUCT column from child columns (no null mask).
+    pub fn from_structs(num_rows: usize, children: Vec<Column>) -> Result<Self> {
+        let mut builder = cudf_sys::ffi::new_struct_column_builder();
+        for child in children {
+            cudf_sys::ffi::struct_column_builder_add(builder.pin_mut(), child.0);
+        }
+        let c = cudf_sys::ffi::struct_column_builder_build(
+            builder.pin_mut(),
+            num_rows as i32,
+            ds(),
+        )?;
+        Ok(Self(c))
+    }
+
     /// Returns the number of elements.
     pub fn len(&self) -> usize {
         cudf_sys::ffi::column_size(&self.0) as usize
@@ -189,6 +217,56 @@ impl Column {
     pub fn from_strings(values: &[&str]) -> Self {
         let strings: Vec<String> = values.iter().map(|s| s.to_string()).collect();
         Self(cudf_sys::ffi::make_string_column(strings, ds()))
+    }
+
+    // -- In-place mutations --
+
+    /// Fills the range `[begin, end)` with a scalar value in-place.
+    pub fn fill_in_place(&mut self, begin: usize, end: usize, value: &Scalar) -> Result<()> {
+        let ffi = crate::scalar::scalar_to_ffi(value);
+        cudf_sys::ffi::fill_in_place(
+            self.0.pin_mut(),
+            begin as i32,
+            end as i32,
+            &ffi,
+            ds(),
+        )?;
+        Ok(())
+    }
+
+    /// Copies elements from `source[source_begin..source_end]` into `self`
+    /// starting at `dest_begin`, in-place.
+    pub fn copy_range_in_place(
+        &mut self,
+        source: &ColumnView<'_>,
+        source_begin: usize,
+        source_end: usize,
+        dest_begin: usize,
+    ) -> Result<()> {
+        cudf_sys::ffi::copy_range_in_place(
+            self.0.pin_mut(),
+            source.0,
+            source_begin as i32,
+            source_end as i32,
+            dest_begin as i32,
+            ds(),
+        )?;
+        Ok(())
+    }
+
+    /// Converts this column's null mask to a BOOL8 column
+    /// (true = valid, false = null). If no mask is present, returns all-true.
+    pub fn null_mask_to_bools(&self) -> Result<Column> {
+        let v = self.view();
+        let c = cudf_sys::ffi::null_mask_to_bools(v.0, ds())?;
+        Ok(Column(c))
+    }
+
+    /// Sets this column's null mask from a BOOL8 column
+    /// (true = valid, false = null).
+    pub fn set_null_mask_from_bools(&mut self, bools: &ColumnView<'_>) -> Result<()> {
+        cudf_sys::ffi::set_null_mask_from_bools(self.0.pin_mut(), bools.0, ds())?;
+        Ok(())
     }
 }
 

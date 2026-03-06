@@ -70,6 +70,7 @@ pub use dictionary::DictionaryExt;
 pub use lists::ListExt;
 pub use strings::StringExt;
 pub use table::{Table, TableBuilder};
+pub use reshape::one_hot_encode;
 
 // -- Null mask utilities --
 

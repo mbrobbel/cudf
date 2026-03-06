@@ -5,6 +5,30 @@
 //!
 //! Available as methods on [`Table`](crate::Table):
 //! `table.interleave_columns()`, `table.tile(...)`.
+//!
+//! Free functions:
+//! - [`one_hot_encode`] — one-hot encode input against categories.
+
+use crate::column::ColumnView;
+use crate::error::Result;
+use crate::stream::Stream;
+use crate::table::Table;
+
+/// One-hot encode `input` against `categories`, returning a table of BOOL8 columns
+/// (one column per category).
+pub fn one_hot_encode(input: &ColumnView<'_>, categories: &ColumnView<'_>) -> Result<Table> {
+    one_hot_encode_on(input, categories, Stream::default_stream())
+}
+
+/// One-hot encode on a custom CUDA stream.
+pub fn one_hot_encode_on(
+    input: &ColumnView<'_>,
+    categories: &ColumnView<'_>,
+    stream: Stream,
+) -> Result<Table> {
+    let t = cudf_sys::ffi::one_hot_encode(input.0, categories.0, stream.as_raw())?;
+    Ok(Table(t))
+}
 
 #[cfg(test)]
 mod tests {

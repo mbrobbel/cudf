@@ -1711,5 +1711,48 @@ pub mod ffi {
         /// Check if a cast from one data type to another is supported.
         fn is_supported_cast(from_type_id: i32, from_scale: i32, to_type_id: i32, to_scale: i32) -> bool;
 
+        // -- In-place operations --
+
+        /// Fill a range [begin, end) of a column with a scalar value in-place.
+        fn fill_in_place(col: Pin<&mut Column>, begin: i32, end: i32, value: &Scalar, stream: usize) -> Result<()>;
+        /// Copy a range from source into dest in-place.
+        fn copy_range_in_place(dest: Pin<&mut Column>, source: &column_view, source_begin: i32, source_end: i32, dest_begin: i32, stream: usize) -> Result<()>;
+
+        // -- One-hot encoding --
+
+        /// One-hot encode input against categories, returning a table of BOOL8 columns.
+        fn one_hot_encode(input: &column_view, categories: &column_view, stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- Null mask conversions --
+
+        /// Convert a column's null mask to a BOOL8 column (true = valid, false = null).
+        fn null_mask_to_bools(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Set a column's null mask from a BOOL8 column (true = valid, false = null).
+        fn set_null_mask_from_bools(col: Pin<&mut Column>, bools: &column_view, stream: usize) -> Result<()>;
+
+        // -- Bitmask combining --
+
+        /// Bitwise AND of all column null masks in a table, returned as BOOL8 column.
+        fn bitmask_and_to_bools(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
+        /// Bitwise OR of all column null masks in a table, returned as BOOL8 column.
+        fn bitmask_or_to_bools(tbl: &Table, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- Column factories: lists and structs --
+
+        /// Create a LIST column from offsets and child (no null mask).
+        fn make_lists_column(num_rows: i32, offsets: UniquePtr<Column>, child: UniquePtr<Column>, stream: usize) -> Result<UniquePtr<Column>>;
+
+        type StructColumnBuilder;
+        fn new_struct_column_builder() -> UniquePtr<StructColumnBuilder>;
+        fn struct_column_builder_add(builder: Pin<&mut StructColumnBuilder>, col: UniquePtr<Column>);
+        fn struct_column_builder_build(builder: Pin<&mut StructColumnBuilder>, num_rows: i32, stream: usize) -> Result<UniquePtr<Column>>;
+
+        // -- ORC I/O --
+
+        /// Read an ORC file into a table.
+        fn read_orc(filepath: &str) -> Result<UniquePtr<Table>>;
+        /// Write a table to an ORC file.
+        fn write_orc(tbl: &Table, filepath: &str) -> Result<()>;
+
     }
 }

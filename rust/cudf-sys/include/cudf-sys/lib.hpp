@@ -53,6 +53,7 @@ class Column {
   explicit Column(std::unique_ptr<cudf::column> col);
 
   cudf::column const& inner() const { return *column_; }
+  cudf::column& mutable_inner() { return *column_; }
   cudf::column_view const& cached_view() const;
 
   /// Releases ownership of the inner column. The Column is left empty.
@@ -1012,5 +1013,46 @@ bool column_types_equivalent(cudf::column_view const& lhs, cudf::column_view con
 bool columns_have_same_types(cudf::column_view const& lhs, cudf::column_view const& rhs);
 bool tables_have_same_types(Table const& lhs, Table const& rhs);
 bool is_supported_cast(int32_t from_type_id, int32_t from_scale, int32_t to_type_id, int32_t to_scale);
+
+// -- In-place operations --
+
+void fill_in_place(Column& col, int32_t begin, int32_t end, Scalar const& value, std::size_t stream);
+void copy_range_in_place(Column& dest, cudf::column_view const& source, int32_t source_begin, int32_t source_end, int32_t dest_begin, std::size_t stream);
+
+// -- One-hot encoding --
+
+std::unique_ptr<Table> one_hot_encode(cudf::column_view const& input, cudf::column_view const& categories, std::size_t stream);
+
+// -- Null mask conversions --
+
+std::unique_ptr<Column> null_mask_to_bools(cudf::column_view const& col, std::size_t stream);
+void set_null_mask_from_bools(Column& col, cudf::column_view const& bools, std::size_t stream);
+
+// -- Bitmask combining --
+
+std::unique_ptr<Column> bitmask_and_to_bools(Table const& tbl, std::size_t stream);
+std::unique_ptr<Column> bitmask_or_to_bools(Table const& tbl, std::size_t stream);
+
+// -- Column factories: lists and structs --
+
+std::unique_ptr<Column> make_lists_column(int32_t num_rows, std::unique_ptr<Column> offsets, std::unique_ptr<Column> child, std::size_t stream);
+
+class StructColumnBuilder {
+ public:
+  void add_child(std::unique_ptr<Column> col);
+  std::unique_ptr<Column> build(int32_t num_rows, std::size_t stream);
+
+ private:
+  std::vector<std::unique_ptr<cudf::column>> children_;
+};
+
+std::unique_ptr<StructColumnBuilder> new_struct_column_builder();
+void struct_column_builder_add(StructColumnBuilder& builder, std::unique_ptr<Column> col);
+std::unique_ptr<Column> struct_column_builder_build(StructColumnBuilder& builder, int32_t num_rows, std::size_t stream);
+
+// -- ORC I/O --
+
+std::unique_ptr<Table> read_orc(rust::Str filepath);
+void write_orc(Table const& tbl, rust::Str filepath);
 
 }  // namespace cudf_sys
