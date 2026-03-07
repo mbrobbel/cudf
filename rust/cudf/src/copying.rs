@@ -20,7 +20,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let result = table.gather(&indices.view()).unwrap();
+        let result = table.gather(&indices.view()).call().unwrap();
         assert_eq!(result.len(), 2);
     }
 

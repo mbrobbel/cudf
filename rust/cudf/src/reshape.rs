@@ -14,20 +14,42 @@ use crate::error::Result;
 use crate::stream::Stream;
 use crate::table::Table;
 
-/// One-hot encode `input` against `categories`, returning a table of BOOL8 columns
-/// (one column per category).
-pub fn one_hot_encode(input: &ColumnView<'_>, categories: &ColumnView<'_>) -> Result<Table> {
-    one_hot_encode_on(input, categories, Stream::default_stream())
+/// Builder for [`one_hot_encode`].
+pub struct OneHotEncode<'a> {
+    input: &'a ColumnView<'a>,
+    categories: &'a ColumnView<'a>,
+    stream: Stream,
 }
 
-/// One-hot encode on a custom CUDA stream.
-pub fn one_hot_encode_on(
-    input: &ColumnView<'_>,
-    categories: &ColumnView<'_>,
-    stream: Stream,
-) -> Result<Table> {
-    let t = cudf_sys::ffi::one_hot_encode(input.0, categories.0, stream.as_raw())?;
-    Ok(Table(t))
+/// One-hot encode `input` against `categories`, returning a table of BOOL8 columns
+/// (one column per category).
+pub fn one_hot_encode<'a>(
+    input: &'a ColumnView<'a>,
+    categories: &'a ColumnView<'a>,
+) -> OneHotEncode<'a> {
+    OneHotEncode {
+        input,
+        categories,
+        stream: Stream::default_stream(),
+    }
+}
+
+impl OneHotEncode<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the operation.
+    pub fn call(self) -> Result<Table> {
+        let t = cudf_sys::transform::ffi::one_hot_encode(
+            self.input.0,
+            self.categories.0,
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
 }
 
 #[cfg(test)]
@@ -43,7 +65,7 @@ mod tests {
         builder.push_column(c1);
         builder.push_column(c2);
         let table = builder.build().unwrap();
-        let result = table.interleave_columns().unwrap();
+        let result = table.interleave_columns().call().unwrap();
         assert_eq!(result.len(), 6);
         assert_eq!(result.to_vec_i32(), vec![1, 4, 2, 5, 3, 6]);
     }
@@ -54,7 +76,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
-        let result = table.tile(2).unwrap();
+        let result = table.tile(2).call().unwrap();
         assert_eq!(result.len(), 6);
         assert_eq!(result.columns_len(), 1);
     }

@@ -3,9 +3,13 @@
 
 //! Stream compaction operations: unique, distinct, `drop_nans`, `drop_nulls`.
 
+#[doc(alias = "duplicate_keep_option")]
 pub use cudf_sys::ffi::DuplicateKeepOption;
+#[doc(alias = "nan_equality")]
 pub use cudf_sys::ffi::NanEquality;
+#[doc(alias = "null_equality")]
 pub use cudf_sys::ffi::NullEquality;
+#[doc(alias = "null_policy")]
 pub use cudf_sys::ffi::NullPolicy;
 
 #[cfg(test)]
@@ -20,7 +24,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let result = table.drop_nans(&[0]).unwrap();
+        let result = table.drop_nans(&[0]).call().unwrap();
         assert_eq!(result.len(), 3);
     }
 
@@ -30,7 +34,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let result = table.unique(&[0]).unwrap();
+        let result = table.unique(&[0]).call().unwrap();
         assert_eq!(result.len(), 3);
     }
 
@@ -40,7 +44,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let result = table.distinct(&[0]).unwrap();
+        let result = table.distinct(&[0]).call().unwrap();
         assert_eq!(result.len(), 3);
     }
 
@@ -51,7 +55,7 @@ mod tests {
         builder.push_column(col);
         let table = builder.build().unwrap();
         // threshold 1 means at least 1 non-null required
-        let result = table.drop_nulls_with_threshold(&[0], 1).unwrap();
+        let result = table.drop_nulls_with_threshold(&[0], 1).call().unwrap();
         assert_eq!(result.len(), 0);
     }
 }

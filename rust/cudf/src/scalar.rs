@@ -7,6 +7,7 @@ use cxx::UniquePtr;
 
 use crate::data_type::TypeId;
 
+#[doc(alias = "scalar")]
 /// A scalar value that can be sent to the GPU.
 ///
 /// This is a pure Rust enum; the FFI scalar is created on demand via
@@ -258,7 +259,7 @@ impl Scalar {
     /// Repeats a string scalar N times, returning a new string scalar.
     pub fn repeat_string(&self, times: i32) -> crate::error::Result<Self> {
         let ffi = scalar_to_ffi(self);
-        let result = cudf_sys::ffi::repeat_string_scalar(
+        let result = cudf_sys::strings::ffi::repeat_string_scalar(
             &ffi,
             times,
             crate::stream::Stream::default_stream().as_raw(),
@@ -295,10 +296,15 @@ pub(crate) fn scalar_to_ffi(s: &Scalar) -> UniquePtr<cudf_sys::ffi::Scalar> {
 }
 
 /// Converts an FFI scalar back into a Rust `Scalar` enum.
+#[allow(
+    clippy::as_conversions,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)] // Intentional narrowing casts at the FFI boundary.
 pub(crate) fn scalar_from_ffi(ffi: &UniquePtr<cudf_sys::ffi::Scalar>) -> Scalar {
     let type_id_raw = cudf_sys::ffi::scalar_type_id(ffi);
-    let tid: TypeId =
-        cudf_sys::type_id_from_i32(type_id_raw).expect("C++ returned invalid type_id");
+    // C++ scalars always have a valid type_id.
+    let tid: TypeId = cudf_sys::type_id_from_i32(type_id_raw).unwrap_or(TypeId::EMPTY);
     let valid = cudf_sys::ffi::scalar_is_valid(ffi);
 
     if !valid {

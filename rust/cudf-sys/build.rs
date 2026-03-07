@@ -147,14 +147,65 @@ fn main() {
         include_paths = sys_includes;
     }
 
-    let mut build = cxx_build::bridges(["src/lib.rs", "src/hashing.rs"]);
+    let mut build = cxx_build::bridges([
+        "src/lib.rs",
+        "src/binaryop.rs",
+        "src/compaction.rs",
+        "src/concatenate.rs",
+        "src/copying.rs",
+        "src/datetime.rs",
+        "src/dictionary.rs",
+        "src/filling.rs",
+        "src/groupby.rs",
+        "src/hashing.rs",
+        "src/io.rs",
+        "src/join.rs",
+        "src/labeling.rs",
+        "src/lists.rs",
+        "src/merge.rs",
+        "src/partitioning.rs",
+        "src/quantile.rs",
+        "src/reduction.rs",
+        "src/replace.rs",
+        "src/reshape.rs",
+        "src/rolling.rs",
+        "src/search.rs",
+        "src/sorting.rs",
+        "src/strings.rs",
+        "src/transform.rs",
+        "src/unary.rs",
+    ]);
     build.include("include");
     for p in &include_paths {
         build.include(p);
     }
     build
         .file("cpp/lib.cpp")
+        .file("cpp/binaryop.cpp")
+        .file("cpp/compaction.cpp")
+        .file("cpp/concatenate.cpp")
+        .file("cpp/copying.cpp")
+        .file("cpp/datetime.cpp")
+        .file("cpp/dictionary.cpp")
+        .file("cpp/filling.cpp")
+        .file("cpp/groupby.cpp")
         .file("cpp/hashing.cpp")
+        .file("cpp/io.cpp")
+        .file("cpp/join.cpp")
+        .file("cpp/labeling.cpp")
+        .file("cpp/lists.cpp")
+        .file("cpp/merge.cpp")
+        .file("cpp/partitioning.cpp")
+        .file("cpp/quantile.cpp")
+        .file("cpp/reduction.cpp")
+        .file("cpp/replace.cpp")
+        .file("cpp/reshape.cpp")
+        .file("cpp/rolling.cpp")
+        .file("cpp/search.cpp")
+        .file("cpp/sorting.cpp")
+        .file("cpp/strings.cpp")
+        .file("cpp/transform.cpp")
+        .file("cpp/unary.cpp")
         .flag("-std=c++20")
         .flag("-DLIBCUDACXX_ENABLE_EXPERIMENTAL_MEMORY_RESOURCE")
         .compile("cudf-sys");

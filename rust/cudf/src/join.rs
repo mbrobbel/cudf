@@ -25,7 +25,7 @@ mod tests {
     fn inner_join_basic() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[2, 3, 4], &[200, 300, 400]);
-        let result = left.inner_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.inner_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 4);
         assert_eq!(result.len(), 2);
     }
@@ -34,7 +34,7 @@ mod tests {
     fn left_join_basic() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[2, 3, 4], &[200, 300, 400]);
-        let result = left.left_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.left_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 4);
         assert_eq!(result.len(), 3);
     }
@@ -43,7 +43,7 @@ mod tests {
     fn full_join_basic() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[2, 3, 4], &[200, 300, 400]);
-        let result = left.full_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.full_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 4);
         assert_eq!(result.len(), 4);
     }
@@ -52,7 +52,10 @@ mod tests {
     fn left_semi_join_basic() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[2, 3, 4], &[200, 300, 400]);
-        let result = left.left_semi_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left
+            .left_semi_join(&right, &[0i32], &[0i32])
+            .call()
+            .unwrap();
         assert_eq!(result.columns_len(), 2);
         assert_eq!(result.len(), 2);
     }
@@ -61,7 +64,10 @@ mod tests {
     fn left_anti_join_basic() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[2, 3, 4], &[200, 300, 400]);
-        let result = left.left_anti_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left
+            .left_anti_join(&right, &[0i32], &[0i32])
+            .call()
+            .unwrap();
         assert_eq!(result.columns_len(), 2);
         assert_eq!(result.len(), 1);
     }
@@ -70,7 +76,7 @@ mod tests {
     fn inner_join_empty_result() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[4, 5, 6], &[400, 500, 600]);
-        let result = left.inner_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.inner_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 4);
         assert_eq!(result.len(), 0);
     }
@@ -79,7 +85,7 @@ mod tests {
     fn inner_join_all_match() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[1, 2, 3], &[100, 200, 300]);
-        let result = left.inner_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.inner_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 4);
         assert_eq!(result.len(), 3);
     }
@@ -88,7 +94,7 @@ mod tests {
     fn inner_join_duplicate_keys() {
         let left = make_two_col_table(&[1, 1, 2], &[10, 11, 20]);
         let right = make_two_col_table(&[1, 1, 3], &[100, 101, 300]);
-        let result = left.inner_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.inner_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 4);
         assert_eq!(result.len(), 4);
     }
@@ -97,7 +103,7 @@ mod tests {
     fn left_join_no_matches() {
         let left = make_two_col_table(&[1, 2], &[10, 20]);
         let right = make_two_col_table(&[3, 4], &[300, 400]);
-        let result = left.left_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.left_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 4);
         assert_eq!(result.len(), 2);
     }
@@ -106,7 +112,7 @@ mod tests {
     fn full_join_no_overlap() {
         let left = make_two_col_table(&[1, 2], &[10, 20]);
         let right = make_two_col_table(&[3, 4], &[300, 400]);
-        let result = left.full_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.full_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 4);
         assert_eq!(result.len(), 4);
     }
@@ -115,7 +121,10 @@ mod tests {
     fn semi_join_all_match() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[1, 2, 3], &[100, 200, 300]);
-        let result = left.left_semi_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left
+            .left_semi_join(&right, &[0i32], &[0i32])
+            .call()
+            .unwrap();
         assert_eq!(result.columns_len(), 2);
         assert_eq!(result.len(), 3);
     }
@@ -124,7 +133,10 @@ mod tests {
     fn anti_join_no_matches() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[4, 5, 6], &[400, 500, 600]);
-        let result = left.left_anti_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left
+            .left_anti_join(&right, &[0i32], &[0i32])
+            .call()
+            .unwrap();
         assert_eq!(result.columns_len(), 2);
         assert_eq!(result.len(), 3);
     }
@@ -133,7 +145,10 @@ mod tests {
     fn anti_join_all_match() {
         let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
         let right = make_two_col_table(&[1, 2, 3], &[100, 200, 300]);
-        let result = left.left_anti_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left
+            .left_anti_join(&right, &[0i32], &[0i32])
+            .call()
+            .unwrap();
         assert_eq!(result.columns_len(), 2);
         assert_eq!(result.len(), 0);
     }
@@ -155,7 +170,7 @@ mod tests {
         rb.push_column(val_right);
         let right = rb.build().unwrap();
 
-        let result = left.inner_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.inner_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 4);
         assert_eq!(result.len(), 2);
     }
@@ -164,7 +179,7 @@ mod tests {
     fn join_single_row_tables() {
         let left = make_two_col_table(&[1], &[10]);
         let right = make_two_col_table(&[1], &[100]);
-        let result = left.inner_join(&right, &[0i32], &[0i32]).unwrap();
+        let result = left.inner_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result.columns_len(), 4);
     }

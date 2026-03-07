@@ -10,43 +10,30 @@
 mod tests {
     use crate::column::Column;
     use crate::scalar::Scalar;
-    use crate::stream::Stream;
-
-    fn ds() -> usize {
-        Stream::default_stream().as_raw()
-    }
 
     #[test]
     fn contains_found() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(
-            &[10, 20, 30, 40, 50],
-            ds(),
-        ));
+        let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
         let needle = Scalar::from_i32(20);
-        assert!(col.view().contains_scalar(&needle).unwrap());
+        assert!(col.view().contains_scalar(&needle).call().unwrap());
     }
 
     #[test]
     fn contains_not_found() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(
-            &[10, 20, 30, 40, 50],
-            ds(),
-        ));
+        let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
         let needle = Scalar::from_i32(25);
-        assert!(!col.view().contains_scalar(&needle).unwrap());
+        assert!(!col.view().contains_scalar(&needle).call().unwrap());
     }
 
     #[test]
     fn contains_column_test() {
-        let haystack = Column(cudf_sys::ffi::make_column_from_host_i32(
-            &[10, 20, 30, 40, 50],
-            ds(),
-        ));
-        let needles = Column(cudf_sys::ffi::make_column_from_host_i32(
-            &[20, 40, 60, 80],
-            ds(),
-        ));
-        let result = haystack.view().contains_column(&needles.view()).unwrap();
+        let haystack = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+        let needles = Column::from_slice_i32(&[20, 40, 60, 80]);
+        let result = haystack
+            .view()
+            .contains_column(&needles.view())
+            .call()
+            .unwrap();
         assert_eq!(result.to_vec_bool(), vec![true, true, false, false]);
     }
 
@@ -56,25 +43,20 @@ mod tests {
         use crate::table::TableBuilder;
 
         // Sorted haystack: [10, 20, 30, 40, 50]
-        let hay_col = Column(cudf_sys::ffi::make_column_from_host_i32(
-            &[10, 20, 30, 40, 50],
-            ds(),
-        ));
+        let hay_col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
         let mut hb = TableBuilder::new();
         hb.push_column(hay_col);
         let haystack = hb.build().unwrap();
 
         // Needles: [15, 30, 55]
-        let needle_col = Column(cudf_sys::ffi::make_column_from_host_i32(
-            &[15, 30, 55],
-            ds(),
-        ));
+        let needle_col = Column::from_slice_i32(&[15, 30, 55]);
         let mut nb = TableBuilder::new();
         nb.push_column(needle_col);
         let needles = nb.build().unwrap();
 
         let result = haystack
             .lower_bound(&needles, &[Order::ASCENDING], &[NullOrder::BEFORE])
+            .call()
             .unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result.to_vec_i32(), vec![1, 2, 5]);
@@ -85,24 +67,19 @@ mod tests {
         use crate::sorting::{NullOrder, Order};
         use crate::table::TableBuilder;
 
-        let hay_col = Column(cudf_sys::ffi::make_column_from_host_i32(
-            &[10, 20, 30, 40, 50],
-            ds(),
-        ));
+        let hay_col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
         let mut hb = TableBuilder::new();
         hb.push_column(hay_col);
         let haystack = hb.build().unwrap();
 
-        let needle_col = Column(cudf_sys::ffi::make_column_from_host_i32(
-            &[15, 30, 55],
-            ds(),
-        ));
+        let needle_col = Column::from_slice_i32(&[15, 30, 55]);
         let mut nb = TableBuilder::new();
         nb.push_column(needle_col);
         let needles = nb.build().unwrap();
 
         let result = haystack
             .upper_bound(&needles, &[Order::ASCENDING], &[NullOrder::BEFORE])
+            .call()
             .unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result.to_vec_i32(), vec![1, 3, 5]);

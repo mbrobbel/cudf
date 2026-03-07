@@ -3,6 +3,7 @@
 
 //! Label bins operations.
 
+#[doc(alias = "inclusive")]
 pub use cudf_sys::ffi::Inclusive;
 
 #[cfg(test)]
@@ -22,6 +23,7 @@ mod tests {
                 &right_edges.view(),
                 super::Inclusive::NO,
             )
+            .call()
             .unwrap();
         assert_eq!(result.len(), 5);
     }

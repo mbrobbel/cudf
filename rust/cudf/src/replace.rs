@@ -8,109 +8,274 @@ use crate::error::Result;
 use crate::scalar::Scalar;
 use crate::stream::Stream;
 
-/// Extension trait for replacing null values with a replacement.
-pub trait ReplaceNullsWith<R> {
-    /// Replaces null values with the replacement.
-    fn replace_nulls(&self, replacement: &R) -> Result<Column>;
-    /// `replace_nulls` on a custom CUDA stream.
-    fn replace_nulls_on(&self, replacement: &R, stream: Stream) -> Result<Column>;
+/// Builder for replacing null values with a column.
+///
+/// Created by [`ColumnView::replace_nulls_with_column`].
+/// Call [`.call()`](ReplaceNullsColumn::call) to execute.
+pub struct ReplaceNullsColumn<'a> {
+    view: &'a ColumnView<'a>,
+    replacement: &'a ColumnView<'a>,
+    stream: Stream,
 }
 
-impl ReplaceNullsWith<ColumnView<'_>> for ColumnView<'_> {
-    fn replace_nulls(&self, replacement: &ColumnView<'_>) -> Result<Column> {
-        self.replace_nulls_on(replacement, Stream::default_stream())
+impl ReplaceNullsColumn<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
     }
-    fn replace_nulls_on(&self, replacement: &ColumnView<'_>, stream: Stream) -> Result<Column> {
-        let c = cudf_sys::ffi::replace_nulls_column(self.0, replacement.0, stream.as_raw())?;
+
+    /// Executes the replace-nulls operation.
+    pub fn call(self) -> Result<Column> {
+        let c = cudf_sys::replace::ffi::replace_nulls_column(
+            self.view.0,
+            self.replacement.0,
+            self.stream.as_raw(),
+        )?;
         Ok(Column(c))
     }
 }
 
-impl ReplaceNullsWith<Scalar> for ColumnView<'_> {
-    fn replace_nulls(&self, replacement: &Scalar) -> Result<Column> {
-        self.replace_nulls_on(replacement, Stream::default_stream())
+/// Builder for replacing null values with a scalar.
+///
+/// Created by [`ColumnView::replace_nulls_with_scalar`].
+/// Call [`.call()`](ReplaceNullsScalar::call) to execute.
+pub struct ReplaceNullsScalar<'a> {
+    view: &'a ColumnView<'a>,
+    replacement: &'a Scalar,
+    stream: Stream,
+}
+
+impl ReplaceNullsScalar<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
     }
-    fn replace_nulls_on(&self, replacement: &Scalar, stream: Stream) -> Result<Column> {
-        let ffi = crate::scalar::scalar_to_ffi(replacement);
-        let c = cudf_sys::ffi::replace_nulls_scalar(self.0, &ffi, stream.as_raw())?;
+
+    /// Executes the replace-nulls operation.
+    pub fn call(self) -> Result<Column> {
+        let ffi = crate::scalar::scalar_to_ffi(self.replacement);
+        let c =
+            cudf_sys::replace::ffi::replace_nulls_scalar(self.view.0, &ffi, self.stream.as_raw())?;
         Ok(Column(c))
     }
 }
 
-impl ColumnView<'_> {
+/// Builder for replacing NaN values with a column.
+///
+/// Created by [`ColumnView::replace_nans`].
+/// Call [`.call()`](ReplaceNansColumn::call) to execute.
+pub struct ReplaceNansColumn<'a> {
+    view: &'a ColumnView<'a>,
+    replacement: &'a ColumnView<'a>,
+    stream: Stream,
+}
+
+impl ReplaceNansColumn<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the replace-NaNs operation.
+    pub fn call(self) -> Result<Column> {
+        let c = cudf_sys::replace::ffi::replace_nans_column(
+            self.view.0,
+            self.replacement.0,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for replacing NaN values with a scalar.
+///
+/// Created by [`ColumnView::replace_nans_scalar`].
+/// Call [`.call()`](ReplaceNansScalar::call) to execute.
+pub struct ReplaceNansScalar<'a> {
+    view: &'a ColumnView<'a>,
+    replacement: &'a Scalar,
+    stream: Stream,
+}
+
+impl ReplaceNansScalar<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the replace-NaNs operation.
+    pub fn call(self) -> Result<Column> {
+        let ffi = crate::scalar::scalar_to_ffi(self.replacement);
+        let c =
+            cudf_sys::replace::ffi::replace_nans_scalar(self.view.0, &ffi, self.stream.as_raw())?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for clamping column values to a range.
+///
+/// Created by [`ColumnView::clamp`].
+/// Call [`.call()`](Clamp::call) to execute.
+pub struct Clamp<'a> {
+    view: &'a ColumnView<'a>,
+    lo: &'a Scalar,
+    hi: &'a Scalar,
+    stream: Stream,
+}
+
+impl Clamp<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the clamp operation.
+    pub fn call(self) -> Result<Column> {
+        let lo_ffi = crate::scalar::scalar_to_ffi(self.lo);
+        let hi_ffi = crate::scalar::scalar_to_ffi(self.hi);
+        let c = cudf_sys::replace::ffi::clamp_column(
+            self.view.0,
+            &lo_ffi,
+            &hi_ffi,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for finding and replacing all matching values.
+///
+/// Created by [`ColumnView::find_and_replace_all`].
+/// Call [`.call()`](FindAndReplaceAll::call) to execute.
+pub struct FindAndReplaceAll<'a> {
+    view: &'a ColumnView<'a>,
+    old: &'a ColumnView<'a>,
+    new: &'a ColumnView<'a>,
+    stream: Stream,
+}
+
+impl FindAndReplaceAll<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the find-and-replace operation.
+    pub fn call(self) -> Result<Column> {
+        let c = cudf_sys::replace::ffi::find_and_replace_all(
+            self.view.0,
+            self.old.0,
+            self.new.0,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+impl<'a> ColumnView<'a> {
+    /// Replaces null values with corresponding values from a replacement column.
+    ///
+    /// Returns a [`ReplaceNullsColumn`] builder. Use `.stream()` to set a
+    /// custom CUDA stream, then `.call()` to execute.
+    pub fn replace_nulls_with_column(
+        &'a self,
+        replacement: &'a ColumnView<'a>,
+    ) -> ReplaceNullsColumn<'a> {
+        ReplaceNullsColumn {
+            view: self,
+            replacement,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Replaces null values with a scalar.
+    ///
+    /// Returns a [`ReplaceNullsScalar`] builder. Use `.stream()` to set a
+    /// custom CUDA stream, then `.call()` to execute.
+    pub fn replace_nulls_with_scalar(&'a self, replacement: &'a Scalar) -> ReplaceNullsScalar<'a> {
+        ReplaceNullsScalar {
+            view: self,
+            replacement,
+            stream: Stream::default_stream(),
+        }
+    }
+
     /// Replaces NaN values with corresponding values from a replacement column.
-    pub fn replace_nans(&self, replacement: &ColumnView<'_>) -> Result<Column> {
-        self.replace_nans_on(replacement, Stream::default_stream())
-    }
-
-    /// `replace_nans` on a custom CUDA stream.
-    pub fn replace_nans_on(&self, replacement: &ColumnView<'_>, stream: Stream) -> Result<Column> {
-        let c = cudf_sys::ffi::replace_nans_column(self.0, replacement.0, stream.as_raw())?;
-        Ok(Column(c))
+    ///
+    /// Returns a [`ReplaceNansColumn`] builder. Use `.stream()` to set a
+    /// custom CUDA stream, then `.call()` to execute.
+    pub fn replace_nans(&'a self, replacement: &'a ColumnView<'a>) -> ReplaceNansColumn<'a> {
+        ReplaceNansColumn {
+            view: self,
+            replacement,
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Replaces NaN values with a scalar.
-    pub fn replace_nans_scalar(&self, replacement: &Scalar) -> Result<Column> {
-        self.replace_nans_scalar_on(replacement, Stream::default_stream())
+    ///
+    /// Returns a [`ReplaceNansScalar`] builder. Use `.stream()` to set a
+    /// custom CUDA stream, then `.call()` to execute.
+    pub fn replace_nans_scalar(&'a self, replacement: &'a Scalar) -> ReplaceNansScalar<'a> {
+        ReplaceNansScalar {
+            view: self,
+            replacement,
+            stream: Stream::default_stream(),
+        }
     }
 
-    /// `replace_nans_scalar` on a custom CUDA stream.
-    pub fn replace_nans_scalar_on(&self, replacement: &Scalar, stream: Stream) -> Result<Column> {
-        let ffi = crate::scalar::scalar_to_ffi(replacement);
-        let c = cudf_sys::ffi::replace_nans_scalar(self.0, &ffi, stream.as_raw())?;
-        Ok(Column(c))
-    }
-
-    /// Clamps column values to the range [lo, hi].
-    pub fn clamp(&self, lo: &Scalar, hi: &Scalar) -> Result<Column> {
-        self.clamp_on(lo, hi, Stream::default_stream())
-    }
-
-    /// clamp on a custom CUDA stream.
-    pub fn clamp_on(&self, lo: &Scalar, hi: &Scalar, stream: Stream) -> Result<Column> {
-        let lo_ffi = crate::scalar::scalar_to_ffi(lo);
-        let hi_ffi = crate::scalar::scalar_to_ffi(hi);
-        let c = cudf_sys::ffi::clamp_column(self.0, &lo_ffi, &hi_ffi, stream.as_raw())?;
-        Ok(Column(c))
+    /// Clamps column values to the range \[lo, hi\].
+    ///
+    /// Returns a [`Clamp`] builder. Use `.stream()` to set a custom CUDA
+    /// stream, then `.call()` to execute.
+    pub fn clamp(&'a self, lo: &'a Scalar, hi: &'a Scalar) -> Clamp<'a> {
+        Clamp {
+            view: self,
+            lo,
+            hi,
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Finds and replaces all matching values.
+    ///
+    /// Returns a [`FindAndReplaceAll`] builder. Use `.stream()` to set a
+    /// custom CUDA stream, then `.call()` to execute.
     pub fn find_and_replace_all(
-        &self,
-        old: &ColumnView<'_>,
-        new: &ColumnView<'_>,
-    ) -> Result<Column> {
-        self.find_and_replace_all_on(old, new, Stream::default_stream())
-    }
-
-    /// `find_and_replace_all` on a custom CUDA stream.
-    pub fn find_and_replace_all_on(
-        &self,
-        old: &ColumnView<'_>,
-        new: &ColumnView<'_>,
-        stream: Stream,
-    ) -> Result<Column> {
-        let c = cudf_sys::ffi::find_and_replace_all(self.0, old.0, new.0, stream.as_raw())?;
-        Ok(Column(c))
+        &'a self,
+        old: &'a ColumnView<'a>,
+        new: &'a ColumnView<'a>,
+    ) -> FindAndReplaceAll<'a> {
+        FindAndReplaceAll {
+            view: self,
+            old,
+            new,
+            stream: Stream::default_stream(),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::column::Column;
     use crate::scalar::Scalar;
-
-    fn ds() -> usize {
-        Stream::default_stream().as_raw()
-    }
 
     #[test]
     fn replace_nulls_with_scalar() {
         let null_s = Scalar::null_i32();
         let null_col = Column::from_scalar(&null_s, 3);
         let replacement = Scalar::from_i32(0);
-        let result = null_col.view().replace_nulls(&replacement).unwrap();
+        let result = null_col
+            .view()
+            .replace_nulls_with_scalar(&replacement)
+            .call()
+            .unwrap();
         assert_eq!(result.len(), 3);
         assert!(!result.has_nulls());
         assert_eq!(result.to_vec_i32(), vec![0, 0, 0]);
@@ -118,12 +283,13 @@ mod tests {
 
     #[test]
     fn replace_nans_with_scalar() {
-        let nan_col = Column(cudf_sys::ffi::make_column_from_host_f64(
-            &[1.0, f64::NAN, 3.0],
-            ds(),
-        ));
+        let nan_col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0]);
         let replacement = Scalar::from_f64(0.0);
-        let result = nan_col.view().replace_nans_scalar(&replacement).unwrap();
+        let result = nan_col
+            .view()
+            .replace_nans_scalar(&replacement)
+            .call()
+            .unwrap();
         let data = result.to_vec_f64();
         assert_eq!(data.len(), 3);
         assert!((data[0] - 1.0).abs() < 1e-9);
@@ -133,24 +299,22 @@ mod tests {
 
     #[test]
     fn clamp_values() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(&[1, 5, 10], ds()));
+        let col = Column::from_slice_i32(&[1, 5, 10]);
         let lo = Scalar::from_i32(3);
         let hi = Scalar::from_i32(7);
-        let result = col.view().clamp(&lo, &hi).unwrap();
+        let result = col.view().clamp(&lo, &hi).call().unwrap();
         assert_eq!(result.to_vec_i32(), vec![3, 5, 7]);
     }
 
     #[test]
     fn find_and_replace() {
-        let col = Column(cudf_sys::ffi::make_column_from_host_i32(
-            &[1, 2, 3, 2, 1],
-            ds(),
-        ));
-        let old_vals = Column(cudf_sys::ffi::make_column_from_host_i32(&[2], ds()));
-        let new_vals = Column(cudf_sys::ffi::make_column_from_host_i32(&[99], ds()));
+        let col = Column::from_slice_i32(&[1, 2, 3, 2, 1]);
+        let old_vals = Column::from_slice_i32(&[2]);
+        let new_vals = Column::from_slice_i32(&[99]);
         let result = col
             .view()
             .find_and_replace_all(&old_vals.view(), &new_vals.view())
+            .call()
             .unwrap();
         assert_eq!(result.to_vec_i32(), vec![1, 99, 3, 99, 1]);
     }
@@ -160,7 +324,11 @@ mod tests {
         let null_s = Scalar::null_i32();
         let null_col = Column::from_scalar(&null_s, 3);
         let replacement = Column::from_scalar(&Scalar::from_i32(42), 3);
-        let result = null_col.view().replace_nulls(&replacement.view()).unwrap();
+        let result = null_col
+            .view()
+            .replace_nulls_with_column(&replacement.view())
+            .call()
+            .unwrap();
         assert_eq!(result.len(), 3);
         assert!(!result.has_nulls());
         assert_eq!(result.to_vec_i32(), vec![42, 42, 42]);
@@ -168,15 +336,13 @@ mod tests {
 
     #[test]
     fn replace_nans_with_column() {
-        let nan_col = Column(cudf_sys::ffi::make_column_from_host_f64(
-            &[1.0, f64::NAN, 3.0],
-            ds(),
-        ));
-        let replacement = Column(cudf_sys::ffi::make_column_from_host_f64(
-            &[10.0, 20.0, 30.0],
-            ds(),
-        ));
-        let result = nan_col.view().replace_nans(&replacement.view()).unwrap();
+        let nan_col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0]);
+        let replacement = Column::from_slice_f64(&[10.0, 20.0, 30.0]);
+        let result = nan_col
+            .view()
+            .replace_nans(&replacement.view())
+            .call()
+            .unwrap();
         let data = result.to_vec_f64();
         assert!((data[0] - 1.0).abs() < 1e-9);
         assert!((data[1] - 20.0).abs() < 1e-9);

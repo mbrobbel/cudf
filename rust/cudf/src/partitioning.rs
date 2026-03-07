@@ -17,7 +17,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
-        let result = table.hash_partition(&[0i32], 2).unwrap();
+        let result = table.hash_partition(&[0i32], 2).call().unwrap();
         assert_eq!(result.len(), 6);
         assert_eq!(result.columns_len(), 1);
     }
@@ -28,8 +28,8 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
-        let offsets = table.hash_partition_offsets(&[0i32], 2).unwrap();
-        assert_eq!(offsets.len(), 2);
+        let offsets = table.hash_partition_offsets(&[0i32], 2).call().unwrap();
+        assert_eq!(offsets.len(), 3); // num_partitions + 1
     }
 
     #[test]
@@ -38,7 +38,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
-        let result = table.round_robin(3, 0).unwrap();
+        let result = table.round_robin(3, 0).call().unwrap();
         assert_eq!(result.len(), 6);
         assert_eq!(result.columns_len(), 1);
     }
@@ -49,7 +49,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
-        let offsets = table.round_robin_offsets(3, 0).unwrap();
-        assert_eq!(offsets.len(), 3);
+        let offsets = table.round_robin_offsets(3, 0).call().unwrap();
+        assert_eq!(offsets.len(), 4); // num_partitions + 1
     }
 }

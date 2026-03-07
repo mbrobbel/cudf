@@ -19,7 +19,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let result = table.filter(&mask.view()).unwrap();
+        let result = table.filter(&mask.view()).call().unwrap();
         assert_eq!(result.len(), 4);
     }
 
@@ -29,7 +29,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let result = table.drop_nulls().unwrap();
+        let result = table.drop_nulls().call().unwrap();
         assert_eq!(result.len(), 3);
     }
 }

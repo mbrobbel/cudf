@@ -9,156 +9,250 @@ use crate::stream::Stream;
 use crate::table::Table;
 use cudf_sys::ffi::AggregationKind;
 
-impl ColumnView<'_> {
+/// Builder for a fixed-size rolling window aggregation.
+///
+/// Created by [`ColumnView::rolling_window`].
+/// Call [`.call()`](RollingWindow::call) to execute.
+pub struct RollingWindow<'a> {
+    view: &'a ColumnView<'a>,
+    preceding: i32,
+    following: i32,
+    min_periods: i32,
+    agg_kind: AggregationKind,
+    stream: Stream,
+}
+
+impl RollingWindow<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the rolling window aggregation.
+    pub fn call(self) -> Result<Column> {
+        let c = cudf_sys::rolling::ffi::rolling_window(
+            self.view.0,
+            self.preceding,
+            self.following,
+            self.min_periods,
+            self.agg_kind.repr,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for a grouped fixed-size rolling window aggregation.
+///
+/// Created by [`ColumnView::grouped_rolling_window`].
+/// Call [`.call()`](GroupedRollingWindow::call) to execute.
+pub struct GroupedRollingWindow<'a> {
+    view: &'a ColumnView<'a>,
+    group_keys: &'a Table,
+    preceding: i32,
+    following: i32,
+    min_periods: i32,
+    agg_kind: AggregationKind,
+    stream: Stream,
+}
+
+impl GroupedRollingWindow<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the grouped rolling window aggregation.
+    pub fn call(self) -> Result<Column> {
+        let c = cudf_sys::rolling::ffi::grouped_rolling_window(
+            &self.group_keys.0,
+            self.view.0,
+            self.preceding,
+            self.following,
+            self.min_periods,
+            self.agg_kind.repr,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for a rolling window with default output values.
+///
+/// Created by [`ColumnView::rolling_window_with_defaults`].
+/// Call [`.call()`](RollingWindowWithDefaults::call) to execute.
+pub struct RollingWindowWithDefaults<'a> {
+    view: &'a ColumnView<'a>,
+    default_outputs: &'a ColumnView<'a>,
+    preceding: i32,
+    following: i32,
+    min_periods: i32,
+    agg_kind: AggregationKind,
+    stream: Stream,
+}
+
+impl RollingWindowWithDefaults<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the rolling window aggregation with defaults.
+    pub fn call(self) -> Result<Column> {
+        let c = cudf_sys::rolling::ffi::rolling_window_with_defaults(
+            self.view.0,
+            self.default_outputs.0,
+            self.preceding,
+            self.following,
+            self.min_periods,
+            self.agg_kind.repr,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for a grouped rolling window with default output values.
+///
+/// Created by [`ColumnView::grouped_rolling_window_with_defaults`].
+/// Call [`.call()`](GroupedRollingWindowWithDefaults::call) to execute.
+pub struct GroupedRollingWindowWithDefaults<'a> {
+    view: &'a ColumnView<'a>,
+    group_keys: &'a Table,
+    default_outputs: &'a ColumnView<'a>,
+    preceding: i32,
+    following: i32,
+    min_periods: i32,
+    agg_kind: AggregationKind,
+    stream: Stream,
+}
+
+impl GroupedRollingWindowWithDefaults<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the grouped rolling window aggregation with defaults.
+    pub fn call(self) -> Result<Column> {
+        let c = cudf_sys::rolling::ffi::grouped_rolling_window_with_defaults(
+            &self.group_keys.0,
+            self.view.0,
+            self.default_outputs.0,
+            self.preceding,
+            self.following,
+            self.min_periods,
+            self.agg_kind.repr,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+impl<'a> ColumnView<'a> {
     /// Applies a fixed-size rolling window aggregation.
     ///
     /// `preceding` and `following` define the window around each element.
     /// Total window size = preceding + following.
     /// Element `i` uses elements `[i - preceding + 1, i + following]`.
+    ///
+    /// Returns a [`RollingWindow`] builder. Use `.stream()` to set a custom
+    /// CUDA stream, then `.call()` to execute.
     pub fn rolling_window(
-        &self,
+        &'a self,
         preceding: i32,
         following: i32,
         min_periods: i32,
         agg_kind: AggregationKind,
-    ) -> Result<Column> {
-        self.rolling_window_on(
+    ) -> RollingWindow<'a> {
+        RollingWindow {
+            view: self,
             preceding,
             following,
             min_periods,
             agg_kind,
-            Stream::default_stream(),
-        )
-    }
-
-    /// `rolling_window` on a custom CUDA stream.
-    pub fn rolling_window_on(
-        &self,
-        preceding: i32,
-        following: i32,
-        min_periods: i32,
-        agg_kind: AggregationKind,
-        stream: Stream,
-    ) -> Result<Column> {
-        let c = cudf_sys::ffi::rolling_window(
-            self.0,
-            preceding,
-            following,
-            min_periods,
-            agg_kind.repr,
-            stream.as_raw(),
-        )?;
-        Ok(Column(c))
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Applies a grouped fixed-size rolling window aggregation.
     ///
     /// Elements are grouped by `group_keys` (must be pre-sorted).
     /// The window does not cross group boundaries.
+    ///
+    /// Returns a [`GroupedRollingWindow`] builder. Use `.stream()` to set a
+    /// custom CUDA stream, then `.call()` to execute.
     pub fn grouped_rolling_window(
-        &self,
-        group_keys: &Table,
+        &'a self,
+        group_keys: &'a Table,
         preceding: i32,
         following: i32,
         min_periods: i32,
         agg_kind: AggregationKind,
-    ) -> Result<Column> {
-        self.grouped_rolling_window_on(
+    ) -> GroupedRollingWindow<'a> {
+        GroupedRollingWindow {
+            view: self,
             group_keys,
             preceding,
             following,
             min_periods,
             agg_kind,
-            Stream::default_stream(),
-        )
-    }
-
-    /// `grouped_rolling_window` on a custom CUDA stream.
-    pub fn grouped_rolling_window_on(
-        &self,
-        group_keys: &Table,
-        preceding: i32,
-        following: i32,
-        min_periods: i32,
-        agg_kind: AggregationKind,
-        stream: Stream,
-    ) -> Result<Column> {
-        let c = cudf_sys::ffi::grouped_rolling_window(
-            &group_keys.0,
-            self.0,
-            preceding,
-            following,
-            min_periods,
-            agg_kind.repr,
-            stream.as_raw(),
-        )?;
-        Ok(Column(c))
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Rolling window with default output values (for LEAD/LAG aggregations).
     ///
     /// When the window extends beyond column boundaries, values from
     /// `default_outputs` are used instead of null.
+    ///
+    /// Returns a [`RollingWindowWithDefaults`] builder. Use `.stream()` to set
+    /// a custom CUDA stream, then `.call()` to execute.
     pub fn rolling_window_with_defaults(
-        &self,
-        default_outputs: &ColumnView<'_>,
+        &'a self,
+        default_outputs: &'a ColumnView<'a>,
         preceding: i32,
         following: i32,
         min_periods: i32,
         agg_kind: AggregationKind,
-    ) -> Result<Column> {
-        self.rolling_window_with_defaults_on(
+    ) -> RollingWindowWithDefaults<'a> {
+        RollingWindowWithDefaults {
+            view: self,
             default_outputs,
             preceding,
             following,
             min_periods,
             agg_kind,
-            Stream::default_stream(),
-        )
-    }
-
-    /// `rolling_window_with_defaults` on a custom CUDA stream.
-    pub fn rolling_window_with_defaults_on(
-        &self,
-        default_outputs: &ColumnView<'_>,
-        preceding: i32,
-        following: i32,
-        min_periods: i32,
-        agg_kind: AggregationKind,
-        stream: Stream,
-    ) -> Result<Column> {
-        let c = cudf_sys::ffi::rolling_window_with_defaults(
-            self.0,
-            default_outputs.0,
-            preceding,
-            following,
-            min_periods,
-            agg_kind.repr,
-            stream.as_raw(),
-        )?;
-        Ok(Column(c))
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Grouped rolling window with default output values (for LEAD/LAG).
+    ///
+    /// Returns a [`GroupedRollingWindowWithDefaults`] builder. Use `.stream()`
+    /// to set a custom CUDA stream, then `.call()` to execute.
     pub fn grouped_rolling_window_with_defaults(
-        &self,
-        group_keys: &Table,
-        default_outputs: &ColumnView<'_>,
+        &'a self,
+        group_keys: &'a Table,
+        default_outputs: &'a ColumnView<'a>,
         preceding: i32,
         following: i32,
         min_periods: i32,
         agg_kind: AggregationKind,
-    ) -> Result<Column> {
-        let c = cudf_sys::ffi::grouped_rolling_window_with_defaults(
-            &group_keys.0,
-            self.0,
-            default_outputs.0,
+    ) -> GroupedRollingWindowWithDefaults<'a> {
+        GroupedRollingWindowWithDefaults {
+            view: self,
+            group_keys,
+            default_outputs,
             preceding,
             following,
             min_periods,
-            agg_kind.repr,
-            Stream::default_stream().as_raw(),
-        )?;
-        Ok(Column(c))
+            agg_kind,
+            stream: Stream::default_stream(),
+        }
     }
 }

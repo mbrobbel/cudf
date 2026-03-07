@@ -7,12 +7,8 @@
 #![deny(clippy::shadow_reuse)]
 #![deny(clippy::shadow_same)]
 #![deny(clippy::shadow_unrelated)]
-// TODO: Enforce as_conversions once i32↔usize casts at the FFI boundary are
-// wrapped in explicit conversion helpers. Tracked separately.
-#![allow(clippy::as_conversions)]
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_possible_wrap)]
-#![allow(clippy::cast_sign_loss)]
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::as_conversions)]
 // Allow common pedantic false positives in this codebase.
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::must_use_candidate)]
@@ -76,21 +72,43 @@ use error::Result;
 use scalar::Scalar;
 use stream::Stream;
 
+// -- FFI conversion helpers --
+
+/// Converts a non-negative `i32` from C++ to `usize`.
+///
+/// C++ sizes and counts are always non-negative; returns 0 for the
+/// theoretically-impossible negative case.
+pub(crate) fn i32_to_usize(v: i32) -> usize {
+    usize::try_from(v).unwrap_or(0)
+}
+
+/// Converts a `usize` to `i32` for C++ FFI calls.
+///
+/// Saturates at `i32::MAX` for values that exceed the 32-bit range.
+pub(crate) fn usize_to_i32(v: usize) -> i32 {
+    i32::try_from(v).unwrap_or(i32::MAX)
+}
+
 // -- Null mask utilities --
 
 /// Compute the bytes required for a bitmask of the given number of bits.
 pub fn bitmask_allocation_size_bytes(number_of_bits: usize) -> usize {
-    cudf_sys::ffi::bitmask_allocation_size_bytes(number_of_bits as i32)
+    cudf_sys::ffi::bitmask_allocation_size_bytes(usize_to_i32(number_of_bits))
 }
 
 /// Compute the number of bitmask words needed for the given number of bits.
 pub fn num_bitmask_words(number_of_bits: usize) -> usize {
-    cudf_sys::ffi::num_bitmask_words(number_of_bits as i32) as usize
+    i32_to_usize(cudf_sys::ffi::num_bitmask_words(usize_to_i32(
+        number_of_bits,
+    )))
 }
 
 /// Returns the null count implied by a mask state for a given number of rows.
 pub fn state_null_count(mask_state: MaskState, num_rows: usize) -> usize {
-    cudf_sys::ffi::state_null_count(mask_state as i32, num_rows as i32) as usize
+    i32_to_usize(cudf_sys::ffi::state_null_count(
+        i32::from(mask_state),
+        usize_to_i32(num_rows),
+    ))
 }
 
 // -- Type checking utilities --
@@ -117,27 +135,87 @@ pub fn is_supported_cast(from: DataType, to: DataType) -> bool {
 
 // -- Fill utilities --
 
+/// Builder for [`calendrical_month_sequence`].
+pub struct CalendricalMonthSequence<'a> {
+    count: usize,
+    init: &'a Scalar,
+    months: i32,
+    stream: Stream,
+}
+
 /// Generate a calendrical month sequence starting from `init`, adding `months` each step.
-pub fn calendrical_month_sequence(count: usize, init: &Scalar, months: i32) -> Result<Column> {
-    let ffi = scalar::scalar_to_ffi(init);
-    let c = cudf_sys::ffi::calendrical_month_sequence(
-        count as i32,
-        &ffi,
+pub fn calendrical_month_sequence<'a>(
+    count: usize,
+    init: &'a Scalar,
+    months: i32,
+) -> CalendricalMonthSequence<'a> {
+    CalendricalMonthSequence {
+        count,
+        init,
         months,
-        Stream::default_stream().as_raw(),
-    )?;
-    Ok(Column(c))
+        stream: Stream::default_stream(),
+    }
+}
+
+impl CalendricalMonthSequence<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the operation.
+    pub fn call(self) -> Result<Column> {
+        let ffi = scalar::scalar_to_ffi(self.init);
+        let c = cudf_sys::filling::ffi::calendrical_month_sequence(
+            usize_to_i32(self.count),
+            &ffi,
+            self.months,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`copy_if_else_scalars`].
+pub struct CopyIfElseScalars<'a> {
+    lhs: &'a Scalar,
+    rhs: &'a Scalar,
+    mask: &'a ColumnView<'a>,
+    stream: Stream,
 }
 
 /// Select from two scalars based on boolean mask.
-pub fn copy_if_else_scalars(lhs: &Scalar, rhs: &Scalar, mask: &ColumnView<'_>) -> Result<Column> {
-    let lhs_ffi = scalar::scalar_to_ffi(lhs);
-    let rhs_ffi = scalar::scalar_to_ffi(rhs);
-    let c = cudf_sys::ffi::copy_if_else_scalars(
-        &lhs_ffi,
-        &rhs_ffi,
-        mask.0,
-        Stream::default_stream().as_raw(),
-    )?;
-    Ok(Column(c))
+pub fn copy_if_else_scalars<'a>(
+    lhs: &'a Scalar,
+    rhs: &'a Scalar,
+    mask: &'a ColumnView<'a>,
+) -> CopyIfElseScalars<'a> {
+    CopyIfElseScalars {
+        lhs,
+        rhs,
+        mask,
+        stream: Stream::default_stream(),
+    }
+}
+
+impl CopyIfElseScalars<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the operation.
+    pub fn call(self) -> Result<Column> {
+        let lhs_ffi = scalar::scalar_to_ffi(self.lhs);
+        let rhs_ffi = scalar::scalar_to_ffi(self.rhs);
+        let c = cudf_sys::copying::ffi::copy_if_else_scalars(
+            &lhs_ffi,
+            &rhs_ffi,
+            self.mask.0,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
 }

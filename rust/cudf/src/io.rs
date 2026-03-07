@@ -17,7 +17,7 @@ pub mod csv {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::ffi::read_csv(path_str)?;
+        let tbl = cudf_sys::io::ffi::read_csv(path_str)?;
         Ok(Table(tbl))
     }
 
@@ -50,7 +50,7 @@ pub mod csv {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::ffi::read_csv_with_options(
+        let tbl = cudf_sys::io::ffi::read_csv_with_options(
             path_str,
             opts.delimiter,
             opts.header,
@@ -66,7 +66,7 @@ pub mod csv {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        cudf_sys::ffi::write_csv(&table.0, path_str)?;
+        cudf_sys::io::ffi::write_csv(&table.0, path_str)?;
         Ok(())
     }
 
@@ -100,7 +100,7 @@ pub mod csv {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        cudf_sys::ffi::write_csv_with_options(
+        cudf_sys::io::ffi::write_csv_with_options(
             &table.0,
             path_str,
             opts.delimiter,
@@ -121,7 +121,7 @@ pub mod parquet {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::ffi::read_parquet(path_str)?;
+        let tbl = cudf_sys::io::ffi::read_parquet(path_str)?;
         Ok(Table(tbl))
     }
 
@@ -131,7 +131,7 @@ pub mod parquet {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        cudf_sys::ffi::write_parquet(&table.0, path_str)?;
+        cudf_sys::io::ffi::write_parquet(&table.0, path_str)?;
         Ok(())
     }
 }
@@ -148,7 +148,7 @@ pub mod json {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::ffi::read_json(path_str, json_lines)?;
+        let tbl = cudf_sys::io::ffi::read_json(path_str, json_lines)?;
         Ok(Table(tbl))
     }
 
@@ -160,7 +160,7 @@ pub mod json {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        cudf_sys::ffi::write_json(&table.0, path_str, json_lines)?;
+        cudf_sys::io::ffi::write_json(&table.0, path_str, json_lines)?;
         Ok(())
     }
 }
@@ -175,7 +175,7 @@ pub mod avro {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::ffi::read_avro(path_str)?;
+        let tbl = cudf_sys::io::ffi::read_avro(path_str)?;
         Ok(Table(tbl))
     }
 }
@@ -190,7 +190,7 @@ pub mod orc {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::ffi::read_orc(path_str)?;
+        let tbl = cudf_sys::io::ffi::read_orc(path_str)?;
         Ok(Table(tbl))
     }
 
@@ -200,7 +200,7 @@ pub mod orc {
             .as_ref()
             .to_str()
             .ok_or(crate::error::Error::InvalidPath)?;
-        cudf_sys::ffi::write_orc(&table.0, path_str)?;
+        cudf_sys::io::ffi::write_orc(&table.0, path_str)?;
         Ok(())
     }
 }

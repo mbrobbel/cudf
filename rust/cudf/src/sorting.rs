@@ -6,8 +6,12 @@
 //! Sorting is available as methods on [`Table`](crate::Table):
 //! `table.sort(...)`, `table.sorted_order(...)`, `table.is_sorted(...)`.
 
-pub use cudf_sys::ffi::{NullOrder, Order};
+#[doc(alias = "null_order")]
+pub use cudf_sys::ffi::NullOrder;
+#[doc(alias = "order")]
+pub use cudf_sys::ffi::Order;
 
+#[doc(alias = "rank_method")]
 /// Method for resolving ties in rank.
 ///
 /// Mirrors `cudf::rank_method`.
@@ -26,6 +30,13 @@ pub enum RankMethod {
     Dense = 4,
 }
 
+#[allow(clippy::as_conversions)]
+impl From<RankMethod> for i32 {
+    fn from(m: RankMethod) -> Self {
+        m as Self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::column::Column as Col;
@@ -40,7 +51,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let sorted = table.sort_ascending().unwrap();
+        let sorted = table.sort_ascending().call().unwrap();
         assert_eq!(sorted.len(), 4);
         assert_eq!(sorted.columns_len(), 1);
     }
@@ -53,6 +64,7 @@ mod tests {
         let table = builder.build().unwrap();
         let sorted = table
             .sort(&[Order::DESCENDING], &[NullOrder::AFTER])
+            .call()
             .unwrap();
         assert_eq!(sorted.len(), 3);
     }
@@ -63,7 +75,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
-        let indices = table.sorted_order(&[], &[]).unwrap();
+        let indices = table.sorted_order(&[], &[]).call().unwrap();
         assert_eq!(indices.len(), 3);
         assert_eq!(indices.type_id(), TypeId::INT32);
     }
@@ -76,6 +88,7 @@ mod tests {
         let table = builder.build().unwrap();
         let result = table
             .is_sorted(&[Order::ASCENDING], &[NullOrder::BEFORE])
+            .call()
             .unwrap();
         assert!(result);
     }
@@ -88,6 +101,7 @@ mod tests {
         let table = builder.build().unwrap();
         let result = table
             .is_sorted(&[Order::DESCENDING], &[NullOrder::AFTER])
+            .call()
             .unwrap();
         assert!(result);
     }

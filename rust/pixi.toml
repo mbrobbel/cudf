@@ -3,7 +3,7 @@
 
 [workspace]
 name = "cudf-rust"
-channels = ["rapidsai", "nvidia", "conda-forge"]
+channels = ["rapidsai-nightly", "nvidia", "conda-forge"]
 platforms = ["linux-64"]
 
 [system-requirements]
@@ -15,7 +15,7 @@ cuda-cccl = "*"
 cuda-crt = "*"
 cuda-cudart-dev = "*"
 cxx-compiler = "*"
-libcudf = "26.02.*"
+libcudf = "26.04.*"
 libcurl = "*"
 cmake = "*"
 ninja = "*"

@@ -7,6 +7,7 @@ use std::fmt;
 
 /// Error type for cudf operations.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// An error from the underlying C++ library.
     Cudf(cxx::Exception),

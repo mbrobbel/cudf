@@ -3,8 +3,10 @@
 
 //! Logical element type descriptors ([`DataType`] and [`TypeId`]).
 
+#[doc(alias = "type_id")]
 pub use cudf_sys::ffi::TypeId;
 
+#[doc(alias = "data_type")]
 /// A logical data type descriptor.
 ///
 /// Wraps a [`TypeId`] and an optional scale for fixed-point types.

@@ -3,6 +3,7 @@
 
 //! CUDA stream handle for GPU operations.
 
+#[doc(alias = "cuda_stream_view")]
 /// A CUDA stream handle.
 ///
 /// `Stream` is a lightweight `Copy` type wrapping a `cudaStream_t`.

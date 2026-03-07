@@ -25,6 +25,7 @@ mod tests {
 
         let result = left
             .merge(&right, &[0i32], &[Order::ASCENDING], &[NullOrder::BEFORE])
+            .call()
             .unwrap();
         assert_eq!(result.len(), 6);
         assert_eq!(result.columns_len(), 1);

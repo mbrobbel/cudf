@@ -15,7 +15,7 @@ mod tests {
     fn nans_to_nulls_basic() {
         let data = [1.0_f64, f64::NAN, 3.0, f64::NAN, 5.0];
         let col = Col::from_slice_f64(&data);
-        let result = col.view().nans_to_nulls().unwrap();
+        let result = col.view().nans_to_nulls().call().unwrap();
         assert_eq!(result.len(), 5);
         assert!(result.has_nulls());
         assert_eq!(result.null_count(), 2);
@@ -27,7 +27,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
-        let indices = table.encode().unwrap();
+        let indices = table.encode().call().unwrap();
         assert_eq!(indices.len(), 5);
         let vals = indices.to_vec_i32();
         assert_eq!(vals, vec![2, 0, 1, 0, 2]);
@@ -39,7 +39,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
-        let keys = table.encode_keys().unwrap();
+        let keys = table.encode_keys().call().unwrap();
         assert_eq!(keys.len(), 3);
         assert_eq!(keys.columns_len(), 1);
     }
