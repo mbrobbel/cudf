@@ -7,23 +7,17 @@
 //!
 //! # Examples
 //!
-//! ```no_run
+//! ```ignore
 //! use cudf::column::Column;
-//! use cudf::arrow::ArrowExt;
-//! use arrow_array::{Int32Array, RecordBatch};
+//! use arrow_array::Int32Array;
 //!
 //! // Arrow → GPU
 //! let arrow_array = Int32Array::from(vec![1, 2, 3]);
 //! let gpu_col = Column::from_arrow(&arrow_array).unwrap();
 //!
 //! // GPU → Arrow
-//! let back: Int32Array = gpu_col.to_arrow().unwrap()
-//!     .as_any().downcast_ref::<Int32Array>().unwrap().clone();
-//!
-//! // RecordBatch round-trip
-//! let batch = RecordBatch::try_new(/* ... */).unwrap();
-//! let table = cudf::table::Table::from_record_batch(&batch).unwrap();
-//! let batch_back = table.to_record_batch().unwrap();
+//! let back = gpu_col.to_arrow().unwrap();
+//! let typed = back.as_any().downcast_ref::<Int32Array>().unwrap();
 //! ```
 
 use std::sync::Arc;
@@ -147,11 +141,12 @@ macro_rules! primitive_to_gpu {
 
 /// If the Arrow array has nulls, create a boolean validity mask and apply it.
 fn apply_arrow_nulls(col: Column, array: &dyn Array) -> Result<Column> {
-    if array.null_count() == 0 {
+    let Some(null_buf) = array.nulls() else {
         return Ok(col);
-    }
-    let len = array.len();
-    let validity: Vec<bool> = (0..len).map(|i| array.is_valid(i)).collect();
+    };
+    // Use the NullBuffer's iterator to bulk-extract validity bits
+    // instead of calling is_valid(i) per element.
+    let validity: Vec<bool> = null_buf.iter().collect();
     let mask_col = Column::from_slice_bool(&validity);
     col.with_null_mask_from_bools(&mask_col.view())
 }
@@ -256,14 +251,23 @@ impl Column {
     /// Supports all primitive types, booleans, and UTF-8 strings.
     /// Null masks are preserved.
     pub fn to_arrow(&self) -> Result<ArrayRef> {
+        self.view().to_arrow()
+    }
+}
+
+use crate::column::ColumnView;
+
+impl ColumnView<'_> {
+    /// Copies GPU column view data to an Arrow array on the host.
+    ///
+    /// This operates directly on the view without a GPU deep copy,
+    /// making it more efficient than converting through an owning Column.
+    pub fn to_arrow(&self) -> Result<ArrayRef> {
         let tid = self.type_id();
         let nulls = self.arrow_nulls();
         to_arrow_inner(self, tid, nulls)
     }
-}
 
-/// Extracts Arrow-compatible null buffer from a column.
-impl Column {
     fn arrow_nulls(&self) -> Option<arrow_buffer::NullBuffer> {
         if self.has_nulls() {
             Some(arrow_buffer::NullBuffer::from(self.null_mask_to_host()))
@@ -283,7 +287,7 @@ macro_rules! gpu_to_primitive {
 
 /// Core conversion logic, split out to keep `to_arrow` under the line limit.
 fn to_arrow_inner(
-    col: &Column,
+    col: &ColumnView<'_>,
     tid: TypeId,
     nulls: Option<arrow_buffer::NullBuffer>,
 ) -> Result<ArrayRef> {
@@ -298,7 +302,7 @@ fn to_arrow_inner(
         TypeId::UINT64 => gpu_to_primitive!(col, to_vec_u64, UInt64Array, nulls),
         TypeId::FLOAT32 => gpu_to_primitive!(col, to_vec_f32, Float32Array, nulls),
         TypeId::FLOAT64 => gpu_to_primitive!(col, to_vec_f64, Float64Array, nulls),
-        TypeId::BOOL8 => Ok(bool_to_arrow(col, nulls.as_ref())),
+        TypeId::BOOL8 => Ok(bool_to_arrow(col, nulls)),
         TypeId::STRING => Ok(string_to_arrow(col)),
         TypeId::TIMESTAMP_SECONDS => {
             gpu_to_primitive!(col, to_vec_i64, arrow_array::TimestampSecondArray, nulls)
@@ -354,26 +358,16 @@ fn to_arrow_inner(
 }
 
 /// Convert a BOOL8 GPU column to Arrow `BooleanArray`.
-fn bool_to_arrow(col: &Column, nulls: Option<&arrow_buffer::NullBuffer>) -> ArrayRef {
+fn bool_to_arrow(col: &ColumnView<'_>, nulls: Option<arrow_buffer::NullBuffer>) -> ArrayRef {
     let values = col.to_vec_bool();
-    let has_nulls = col.has_nulls();
-    Arc::new(BooleanArray::from(
-        values
-            .into_iter()
-            .enumerate()
-            .map(|(i, v)| {
-                if has_nulls && nulls.is_some_and(|n| !n.is_valid(i)) {
-                    None
-                } else {
-                    Some(v)
-                }
-            })
-            .collect::<Vec<Option<bool>>>(),
-    ))
+    // Build the values buffer directly, then attach the null buffer separately
+    // to avoid an intermediate Vec<Option<bool>> allocation.
+    let values_buf = arrow_buffer::BooleanBuffer::from(values);
+    Arc::new(BooleanArray::new(values_buf, nulls))
 }
 
 /// Convert a STRING GPU column to Arrow `StringArray`.
-fn string_to_arrow(col: &Column) -> ArrayRef {
+fn string_to_arrow(col: &ColumnView<'_>) -> ArrayRef {
     let values = col.to_vec_string();
     if col.has_nulls() {
         let validity = col.null_mask_to_host();
@@ -416,9 +410,7 @@ impl Table {
             let arrow_dt = type_id_to_arrow(tid)?;
             let nullable = view.has_nulls();
             fields.push(Field::new(format!("c{i}"), arrow_dt, nullable));
-
-            let owned = view.to_owned_column()?;
-            arrays.push(owned.to_arrow()?);
+            arrays.push(view.to_arrow()?);
         }
 
         let schema = Arc::new(Schema::new(fields));

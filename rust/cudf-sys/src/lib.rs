@@ -563,6 +563,33 @@ pub mod ffi {
         /// Extracts per-element null mask as a host vector of bools.
         fn column_null_mask_to_host(col: &Column, stream: usize) -> Vec<bool>;
 
+        // -- column_view data extraction (device -> host, avoids deep copy) --
+
+        /// Copies INT8 column_view data to a host vector.
+        fn view_to_host_i8(col: &column_view, stream: usize) -> Vec<i8>;
+        /// Copies INT16 column_view data to a host vector.
+        fn view_to_host_i16(col: &column_view, stream: usize) -> Vec<i16>;
+        /// Copies INT32 column_view data to a host vector.
+        fn view_to_host_i32(col: &column_view, stream: usize) -> Vec<i32>;
+        /// Copies INT64 column_view data to a host vector.
+        fn view_to_host_i64(col: &column_view, stream: usize) -> Vec<i64>;
+        /// Copies FLOAT32 column_view data to a host vector.
+        fn view_to_host_f32(col: &column_view, stream: usize) -> Vec<f32>;
+        /// Copies FLOAT64 column_view data to a host vector.
+        fn view_to_host_f64(col: &column_view, stream: usize) -> Vec<f64>;
+        /// Copies UINT8 column_view data to a host vector.
+        fn view_to_host_u8(col: &column_view, stream: usize) -> Vec<u8>;
+        /// Copies UINT16 column_view data to a host vector.
+        fn view_to_host_u16(col: &column_view, stream: usize) -> Vec<u16>;
+        /// Copies UINT32 column_view data to a host vector.
+        fn view_to_host_u32(col: &column_view, stream: usize) -> Vec<u32>;
+        /// Copies UINT64 column_view data to a host vector.
+        fn view_to_host_u64(col: &column_view, stream: usize) -> Vec<u64>;
+        /// Copies BOOL8 column_view data to a host vector of bools.
+        fn view_to_host_bool(col: &column_view, stream: usize) -> Vec<bool>;
+        /// Extracts per-element null mask from column_view as a host vector.
+        fn view_null_mask_to_host(col: &column_view, stream: usize) -> Vec<bool>;
+
         // -- Column factories from host data --
 
         /// Creates an INT32 column from host data.

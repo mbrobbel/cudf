@@ -587,9 +587,8 @@ std::unique_ptr<Column> make_string_column(rust::Vec<rust::String> strings, std:
   return COL(cudf::concatenate(views, s));
 }
 
-rust::Vec<rust::String> column_to_host_strings(Column const& col, std::size_t stream) {
+static rust::Vec<rust::String> strings_to_host(cudf::column_view const& view, std::size_t stream) {
   auto s = S(stream);
-  auto view = col.cached_view();
   auto size = view.size();
   rust::Vec<rust::String> result;
   result.reserve(size);
@@ -626,6 +625,14 @@ rust::Vec<rust::String> column_to_host_strings(Column const& col, std::size_t st
     result.push_back(rust::String(std::string(host_chars.data() + start, end - start)));
   }
   return result;
+}
+
+rust::Vec<rust::String> column_to_host_strings(Column const& col, std::size_t stream) {
+  return strings_to_host(col.cached_view(), stream);
+}
+
+rust::Vec<rust::String> view_to_host_strings(cudf::column_view const& col, std::size_t stream) {
+  return strings_to_host(col, stream);
 }
 
 // -- JSON path extraction --

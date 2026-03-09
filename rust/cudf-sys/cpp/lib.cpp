@@ -419,6 +419,91 @@ rust::Vec<bool> column_null_mask_to_host(Column const& col, std::size_t stream) 
   return result;
 }
 
+// -- column_view data extraction (device -> host) --
+// These operate directly on column_view, avoiding an unnecessary deep copy
+// when the caller only has a view (e.g. Table::column()).
+
+template <typename T>
+static rust::Vec<T> view_to_host(cudf::column_view const& view, std::size_t stream) {
+  auto s = S(stream);
+  auto size = view.size();
+  std::vector<T> host(size);
+  cudaMemcpyAsync(host.data(), view.data<T>(), size * sizeof(T), cudaMemcpyDeviceToHost, s.value());
+  s.synchronize();
+  rust::Vec<T> out;
+  out.reserve(size);
+  for (auto v : host) out.push_back(v);
+  return out;
+}
+
+rust::Vec<int8_t> view_to_host_i8(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<int8_t>(col, stream);
+}
+rust::Vec<int16_t> view_to_host_i16(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<int16_t>(col, stream);
+}
+rust::Vec<int32_t> view_to_host_i32(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<int32_t>(col, stream);
+}
+rust::Vec<int64_t> view_to_host_i64(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<int64_t>(col, stream);
+}
+rust::Vec<float> view_to_host_f32(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<float>(col, stream);
+}
+rust::Vec<double> view_to_host_f64(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<double>(col, stream);
+}
+rust::Vec<uint8_t> view_to_host_u8(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<uint8_t>(col, stream);
+}
+rust::Vec<uint16_t> view_to_host_u16(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<uint16_t>(col, stream);
+}
+rust::Vec<uint32_t> view_to_host_u32(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<uint32_t>(col, stream);
+}
+rust::Vec<uint64_t> view_to_host_u64(cudf::column_view const& col, std::size_t stream) {
+  return view_to_host<uint64_t>(col, stream);
+}
+
+rust::Vec<bool> view_to_host_bool(cudf::column_view const& col, std::size_t stream) {
+  auto s = S(stream);
+  auto size = col.size();
+  std::vector<int8_t> host(size);
+  cudaMemcpyAsync(host.data(), col.data<int8_t>(), size * sizeof(int8_t), cudaMemcpyDeviceToHost, s.value());
+  s.synchronize();
+  rust::Vec<bool> out;
+  out.reserve(size);
+  for (auto v : host) out.push_back(v != 0);
+  return out;
+}
+
+rust::Vec<bool> view_null_mask_to_host(cudf::column_view const& view, std::size_t stream) {
+  auto s = S(stream);
+  auto size = view.size();
+  rust::Vec<bool> result;
+  result.reserve(size);
+
+  if (!view.nullable()) {
+    for (int32_t i = 0; i < size; ++i) result.push_back(true);
+    return result;
+  }
+
+  auto num_bitmask_words = cudf::bitmask_allocation_size_bytes(size) / sizeof(cudf::bitmask_type);
+  std::vector<cudf::bitmask_type> host_mask(num_bitmask_words);
+  cudaMemcpyAsync(host_mask.data(), view.null_mask(),
+             num_bitmask_words * sizeof(cudf::bitmask_type), cudaMemcpyDeviceToHost, s.value());
+  s.synchronize();
+
+  for (int32_t i = 0; i < size; ++i) {
+    auto word = host_mask[i / 32];
+    auto bit = (word >> (i % 32)) & 1;
+    result.push_back(bit != 0);
+  }
+  return result;
+}
+
 // -- Column factories from host data --
 
 template <typename T>

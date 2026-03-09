@@ -303,6 +303,22 @@ std::unique_ptr<Column> copy_column(cudf::column_view const& col, std::size_t st
 std::unique_ptr<Column> empty_like_column(cudf::column_view const& col);
 std::unique_ptr<Table> empty_like_table(Table const& tbl);
 
+// -- column_view data extraction (device -> host, avoids deep copy) --
+
+rust::Vec<int8_t> view_to_host_i8(cudf::column_view const& col, std::size_t stream);
+rust::Vec<int16_t> view_to_host_i16(cudf::column_view const& col, std::size_t stream);
+rust::Vec<int32_t> view_to_host_i32(cudf::column_view const& col, std::size_t stream);
+rust::Vec<int64_t> view_to_host_i64(cudf::column_view const& col, std::size_t stream);
+rust::Vec<float> view_to_host_f32(cudf::column_view const& col, std::size_t stream);
+rust::Vec<double> view_to_host_f64(cudf::column_view const& col, std::size_t stream);
+rust::Vec<uint8_t> view_to_host_u8(cudf::column_view const& col, std::size_t stream);
+rust::Vec<uint16_t> view_to_host_u16(cudf::column_view const& col, std::size_t stream);
+rust::Vec<uint32_t> view_to_host_u32(cudf::column_view const& col, std::size_t stream);
+rust::Vec<uint64_t> view_to_host_u64(cudf::column_view const& col, std::size_t stream);
+rust::Vec<bool> view_to_host_bool(cudf::column_view const& col, std::size_t stream);
+rust::Vec<bool> view_null_mask_to_host(cudf::column_view const& col, std::size_t stream);
+rust::Vec<rust::String> view_to_host_strings(cudf::column_view const& col, std::size_t stream);
+
 // -- Column factories from host data --
 
 std::unique_ptr<Column> make_column_from_host_i32(rust::Slice<int32_t const> data, std::size_t stream);

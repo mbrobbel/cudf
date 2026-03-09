@@ -713,6 +713,9 @@ pub mod ffi {
         /// Copies string column data to a host vector of strings.
         fn column_to_host_strings(col: &Column, stream: usize) -> Vec<String>;
 
+        /// Copies string column_view data to a host vector (avoids deep copy).
+        fn view_to_host_strings(col: &column_view, stream: usize) -> Vec<String>;
+
         // -- JSON path extraction --
 
         /// Extract values from JSON strings using a JSONPath expression.

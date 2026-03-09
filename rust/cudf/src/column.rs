@@ -2277,6 +2277,61 @@ impl ColumnView<'_> {
         Ok(Column(c))
     }
 
+    // -- Host data extraction (operates directly on view, no deep copy) --
+
+    /// Copies the view data to host as `Vec<i8>`.
+    pub fn to_vec_i8(&self) -> Vec<i8> {
+        cudf_sys::ffi::view_to_host_i8(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<i16>`.
+    pub fn to_vec_i16(&self) -> Vec<i16> {
+        cudf_sys::ffi::view_to_host_i16(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<i32>`.
+    pub fn to_vec_i32(&self) -> Vec<i32> {
+        cudf_sys::ffi::view_to_host_i32(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<i64>`.
+    pub fn to_vec_i64(&self) -> Vec<i64> {
+        cudf_sys::ffi::view_to_host_i64(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<f32>`.
+    pub fn to_vec_f32(&self) -> Vec<f32> {
+        cudf_sys::ffi::view_to_host_f32(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<f64>`.
+    pub fn to_vec_f64(&self) -> Vec<f64> {
+        cudf_sys::ffi::view_to_host_f64(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<u8>`.
+    pub fn to_vec_u8(&self) -> Vec<u8> {
+        cudf_sys::ffi::view_to_host_u8(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<u16>`.
+    pub fn to_vec_u16(&self) -> Vec<u16> {
+        cudf_sys::ffi::view_to_host_u16(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<u32>`.
+    pub fn to_vec_u32(&self) -> Vec<u32> {
+        cudf_sys::ffi::view_to_host_u32(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<u64>`.
+    pub fn to_vec_u64(&self) -> Vec<u64> {
+        cudf_sys::ffi::view_to_host_u64(self.0, ds())
+    }
+    /// Copies the view data to host as `Vec<bool>`.
+    pub fn to_vec_bool(&self) -> Vec<bool> {
+        cudf_sys::ffi::view_to_host_bool(self.0, ds())
+    }
+    /// Returns per-element validity as a host vector of bools.
+    pub fn null_mask_to_host(&self) -> Vec<bool> {
+        cudf_sys::ffi::view_null_mask_to_host(self.0, ds())
+    }
+    /// Copies string view data to a host vector of strings.
+    pub fn to_vec_string(&self) -> Vec<String> {
+        cudf_sys::strings::ffi::view_to_host_strings(self.0, ds())
+    }
+
     // -- Transform --
 
     /// Converts NaN values to null in a floating-point column.
