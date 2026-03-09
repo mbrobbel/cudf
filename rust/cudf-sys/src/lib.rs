@@ -722,6 +722,12 @@ unsafe impl Send for ffi::Table {}
 // SAFETY: &Table only allows immutable access through the FFI.
 unsafe impl Sync for ffi::Table {}
 
+impl std::fmt::Display for ffi::TypeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
 /// Converts a `TypeId` raw i32 value from C++ into the corresponding enum variant.
 ///
 /// Returns `None` if the value is out of range.

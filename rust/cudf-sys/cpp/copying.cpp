@@ -30,6 +30,12 @@ std::unique_ptr<Table> gather_table_checked(
   return TBL(cudf::gather(tbl.cached_view(), gather_map, policy, S(stream)));
 }
 
+// -- Deep copy --
+
+std::unique_ptr<Column> copy_column(cudf::column_view const& col, std::size_t stream) {
+  return COL(std::make_unique<cudf::column>(col, S(stream)));
+}
+
 // -- Empty / Allocate --
 
 std::unique_ptr<Column> empty_like_column(cudf::column_view const& col) {

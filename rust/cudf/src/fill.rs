@@ -40,7 +40,7 @@ pub fn sequence<'a>(count: usize, init: &'a Scalar, step: &'a Scalar) -> Sequenc
     }
 }
 
-impl<'a> Sequence<'a> {
+impl Sequence<'_> {
     /// Sets the CUDA stream for this operation.
     pub fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;

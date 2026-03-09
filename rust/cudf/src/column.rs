@@ -2268,6 +2268,15 @@ impl ColumnView<'_> {
         Column(cudf_sys::copying::ffi::empty_like_column(self.0))
     }
 
+    /// Creates an owning deep copy of this column view.
+    ///
+    /// This copies all device data (values, null mask, child columns)
+    /// into a new independently-owned [`Column`].
+    pub fn to_owned_column(&self) -> Result<Column> {
+        let c = cudf_sys::copying::ffi::copy_column(self.0, Stream::default_stream().as_raw())?;
+        Ok(Column(c))
+    }
+
     // -- Transform --
 
     /// Converts NaN values to null in a floating-point column.

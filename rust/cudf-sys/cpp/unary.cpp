@@ -43,7 +43,11 @@ std::unique_ptr<Column> unary_is_not_nan(cudf::column_view const& col, std::size
 }
 
 std::unique_ptr<Column> round_column(cudf::column_view const& col, int32_t decimal_places, int32_t method, std::size_t stream) {
-  return COL(cudf::round_decimal(col, decimal_places, ENUM<cudf::rounding_method>(method), S(stream)));
+  // Use deprecated cudf::round because cudf::round_decimal does not support floating-point types.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+  return COL(cudf::round(col, decimal_places, ENUM<cudf::rounding_method>(method), S(stream)));
+#pragma GCC diagnostic pop
 }
 
 }  // namespace cudf_sys

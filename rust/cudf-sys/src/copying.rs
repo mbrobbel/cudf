@@ -31,6 +31,11 @@ pub mod ffi {
             stream: usize,
         ) -> Result<UniquePtr<Table>>;
 
+        // -- Deep copy --
+
+        /// Deep-copies a column_view into an owning Column.
+        fn copy_column(col: &column_view, stream: usize) -> Result<UniquePtr<Column>>;
+
         // -- Empty / Allocate --
 
         /// Creates an empty column with the same type as input.

@@ -896,7 +896,7 @@ impl StableDistinct<'_> {
 pub struct Scatter<'a> {
     table: &'a Table,
     source: &'a Table,
-    scatter_map: &'a ColumnView<'a>,
+    map: &'a ColumnView<'a>,
     stream: Stream,
 }
 
@@ -911,7 +911,7 @@ impl Scatter<'_> {
     pub fn call(self) -> Result<Table> {
         let t = cudf_sys::copying::ffi::scatter_table(
             &self.source.0,
-            self.scatter_map.0,
+            self.map.0,
             &self.table.0,
             self.stream.as_raw(),
         )?;
@@ -1892,7 +1892,7 @@ impl BooleanMaskScatter<'_> {
 pub struct ScatterScalars<'a> {
     table: &'a Table,
     scalars: &'a [Scalar],
-    scatter_map: &'a ColumnView<'a>,
+    map: &'a ColumnView<'a>,
     stream: Stream,
 }
 
@@ -1912,7 +1912,7 @@ impl ScatterScalars<'_> {
         }
         let t = cudf_sys::copying::ffi::scatter_scalars(
             list.pin_mut(),
-            self.scatter_map.0,
+            self.map.0,
             &self.table.0,
             self.stream.as_raw(),
         )?;
@@ -2208,6 +2208,18 @@ impl ConcatenateWith<'_> {
 // ---------------------------------------------------------------------------
 
 impl Table {
+    /// Creates a table from a vector of columns.
+    ///
+    /// All columns must have the same length. This is a convenience
+    /// constructor that builds a [`TableBuilder`] internally.
+    pub fn from_columns(columns: Vec<Column>) -> Result<Self> {
+        let mut builder = TableBuilder::new();
+        for col in columns {
+            builder.push_column(col);
+        }
+        builder.build()
+    }
+
     #[doc(alias = "num_columns")]
     /// Returns the number of columns.
     pub fn columns_len(&self) -> usize {
@@ -2230,13 +2242,21 @@ impl Table {
         cudf_sys::ffi::table_alloc_size(&self.0)
     }
 
-    /// Returns a view of the column at the given index, or `None` if out of bounds.
-    pub fn column(&self, index: usize) -> Option<ColumnView<'_>> {
+    /// Returns an immutable view of the column at `index`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::OutOfBounds`](crate::error::Error::OutOfBounds) if
+    /// `index >= self.columns_len()`.
+    pub fn column(&self, index: usize) -> Result<ColumnView<'_>> {
         if index >= self.columns_len() {
-            return None;
+            return Err(crate::error::Error::OutOfBounds {
+                index,
+                len: self.columns_len(),
+            });
         }
-        let view = cudf_sys::ffi::table_get_column_view(&self.0, usize_to_i32(index)).ok()?;
-        Some(ColumnView(view))
+        let view = cudf_sys::ffi::table_get_column_view(&self.0, usize_to_i32(index))?;
+        Ok(ColumnView(view))
     }
 
     /// Returns an iterator over all columns as [`ColumnView`]s.
@@ -2741,7 +2761,7 @@ impl Table {
         Scatter {
             table: self,
             source,
-            scatter_map,
+            map: scatter_map,
             stream: Stream::default_stream(),
         }
     }
@@ -2994,7 +3014,7 @@ impl Table {
         ScatterScalars {
             table: self,
             scalars,
-            scatter_map,
+            map: scatter_map,
             stream: Stream::default_stream(),
         }
     }
@@ -3313,7 +3333,7 @@ impl<'a> Iterator for Columns<'a> {
         if self.index >= self.len {
             return None;
         }
-        let col = self.table.column(self.index);
+        let col = self.table.column(self.index).ok();
         if col.is_some() {
             self.index += 1;
         }
@@ -3372,7 +3392,7 @@ mod tests {
     #[test]
     fn empty_table_column_out_of_bounds() {
         let table = Table::default();
-        assert!(table.column(0).is_none());
+        assert!(table.column(0).is_err());
     }
 
     #[test]

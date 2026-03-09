@@ -248,10 +248,66 @@ impl Scalar {
         }
     }
 
+    /// Extracts the value as `i8`, or `None` if the type doesn't match.
+    pub fn as_i8(&self) -> Option<i8> {
+        match self {
+            Scalar::Int8(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    /// Extracts the value as `i16`, or `None` if the type doesn't match.
+    pub fn as_i16(&self) -> Option<i16> {
+        match self {
+            Scalar::Int16(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    /// Extracts the value as `u8`, or `None` if the type doesn't match.
+    pub fn as_u8(&self) -> Option<u8> {
+        match self {
+            Scalar::UInt8(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    /// Extracts the value as `u16`, or `None` if the type doesn't match.
+    pub fn as_u16(&self) -> Option<u16> {
+        match self {
+            Scalar::UInt16(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    /// Extracts the value as `u32`, or `None` if the type doesn't match.
+    pub fn as_u32(&self) -> Option<u32> {
+        match self {
+            Scalar::UInt32(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    /// Extracts the value as `u64`, or `None` if the type doesn't match.
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            Scalar::UInt64(v) => Some(*v),
+            _ => None,
+        }
+    }
+
     /// Extracts the value as `bool`, or `None` if the type doesn't match.
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             Scalar::Bool(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    /// Extracts the value as `&str`, or `None` if not a string scalar.
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Scalar::String(v) => Some(v),
             _ => None,
         }
     }
@@ -265,6 +321,34 @@ impl Scalar {
             crate::stream::Stream::default_stream().as_raw(),
         )?;
         Ok(scalar_from_ffi(&result))
+    }
+}
+
+impl std::fmt::Display for Scalar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Scalar::Int8(v) => write!(f, "{v}i8"),
+            Scalar::Int16(v) => write!(f, "{v}i16"),
+            Scalar::Int32(v) => write!(f, "{v}i32"),
+            Scalar::Int64(v) => write!(f, "{v}i64"),
+            Scalar::UInt8(v) => write!(f, "{v}u8"),
+            Scalar::UInt16(v) => write!(f, "{v}u16"),
+            Scalar::UInt32(v) => write!(f, "{v}u32"),
+            Scalar::UInt64(v) => write!(f, "{v}u64"),
+            Scalar::Float32(v) => write!(f, "{v}f32"),
+            Scalar::Float64(v) => write!(f, "{v}f64"),
+            Scalar::Bool(v) => write!(f, "{v}"),
+            Scalar::String(v) => write!(f, "\"{v}\""),
+            Scalar::TimestampSeconds(v) => write!(f, "{v}ts"),
+            Scalar::TimestampMilliseconds(v) => write!(f, "{v}tms"),
+            Scalar::TimestampMicroseconds(v) => write!(f, "{v}tus"),
+            Scalar::TimestampNanoseconds(v) => write!(f, "{v}tns"),
+            Scalar::DurationSeconds(v) => write!(f, "{v}ds"),
+            Scalar::DurationMilliseconds(v) => write!(f, "{v}dms"),
+            Scalar::DurationMicroseconds(v) => write!(f, "{v}dus"),
+            Scalar::DurationNanoseconds(v) => write!(f, "{v}dns"),
+            Scalar::Null(tid) => write!(f, "null({tid})"),
+        }
     }
 }
 

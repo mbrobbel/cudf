@@ -13,6 +13,11 @@ repository.workspace = true
 cudf-sys = { path = "../cudf-sys" }
 rmm-sys = { path = "../rmm-sys" }
 cxx = { workspace = true }
+arrow-array = { version = "56", optional = true }
+arrow-buffer = { version = "56", optional = true }
+arrow-data = { version = "56", optional = true }
+arrow-schema = { version = "56", optional = true }
 
 [features]
 vendored = ["cudf-sys/vendored"]
+arrow = ["dep:arrow-array", "dep:arrow-buffer", "dep:arrow-data", "dep:arrow-schema"]

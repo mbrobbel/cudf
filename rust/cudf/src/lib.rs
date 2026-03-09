@@ -33,6 +33,8 @@
 //! GPU memory management is handled by [RMM](https://github.com/rapidsai/rmm)
 //! and exposed via the [`rmm`] module.
 
+#[cfg(feature = "arrow")]
+pub mod arrow;
 pub mod column;
 pub mod compaction;
 pub mod concatenate;
@@ -144,11 +146,11 @@ pub struct CalendricalMonthSequence<'a> {
 }
 
 /// Generate a calendrical month sequence starting from `init`, adding `months` each step.
-pub fn calendrical_month_sequence<'a>(
+pub fn calendrical_month_sequence(
     count: usize,
-    init: &'a Scalar,
+    init: &Scalar,
     months: i32,
-) -> CalendricalMonthSequence<'a> {
+) -> CalendricalMonthSequence<'_> {
     CalendricalMonthSequence {
         count,
         init,

@@ -20,6 +20,9 @@ pub enum Error {
     },
     /// A file path could not be converted to valid UTF-8.
     InvalidPath,
+    /// An Arrow data type is not supported for conversion.
+    #[cfg(feature = "arrow")]
+    UnsupportedArrowType(String),
 }
 
 impl fmt::Display for Error {
@@ -30,6 +33,10 @@ impl fmt::Display for Error {
                 write!(f, "index {index} out of bounds for length {len}")
             }
             Error::InvalidPath => write!(f, "path is not valid UTF-8"),
+            #[cfg(feature = "arrow")]
+            Error::UnsupportedArrowType(msg) => {
+                write!(f, "unsupported Arrow type: {msg}")
+            }
         }
     }
 }
@@ -39,6 +46,8 @@ impl std::error::Error for Error {
         match self {
             Error::Cudf(e) => Some(e),
             Error::OutOfBounds { .. } | Error::InvalidPath => None,
+            #[cfg(feature = "arrow")]
+            Error::UnsupportedArrowType(_) => None,
         }
     }
 }

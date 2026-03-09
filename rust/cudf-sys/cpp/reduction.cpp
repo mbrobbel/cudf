@@ -74,7 +74,6 @@ static std::unique_ptr<cudf::scan_aggregation> make_scan_agg(int32_t kind) {
     case 0: return cudf::make_sum_aggregation<cudf::scan_aggregation>();
     case 1: return cudf::make_min_aggregation<cudf::scan_aggregation>();
     case 2: return cudf::make_max_aggregation<cudf::scan_aggregation>();
-    case 4: return cudf::make_count_aggregation<cudf::scan_aggregation>();
     case 9: return cudf::make_product_aggregation<cudf::scan_aggregation>();
     default:
       throw std::invalid_argument("Unsupported scan aggregation kind: " + std::to_string(kind));

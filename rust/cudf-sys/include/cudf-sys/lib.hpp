@@ -299,6 +299,7 @@ std::unique_ptr<Table> gather_table(
     cudf::column_view const& indices,
     std::size_t stream);
 
+std::unique_ptr<Column> copy_column(cudf::column_view const& col, std::size_t stream);
 std::unique_ptr<Column> empty_like_column(cudf::column_view const& col);
 std::unique_ptr<Table> empty_like_table(Table const& tbl);
 
