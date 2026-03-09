@@ -10,11 +10,7 @@
 namespace cudf_sys {
 
 std::unique_ptr<Column> nans_to_nulls(cudf::column_view const& col, std::size_t stream) {
-  auto s = S(stream);
-  auto [null_mask, null_count] = cudf::nans_to_nulls(col, s);
-  auto result = std::make_unique<cudf::column>(col, s);
-  result->set_null_mask(std::move(*null_mask), null_count);
-  return COL(std::move(result));
+  return COL(cudf::column_nans_to_nulls(col, S(stream)));
 }
 
 std::unique_ptr<Column> encode_table(Table const& tbl, std::size_t stream) {
