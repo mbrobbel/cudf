@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cudf-sys/src/lib.rs.h"
+#include "cudf-sys/helpers.hpp"
 
 #include <cudf/column/column_factories.hpp>
 #include <cudf/null_mask.hpp>
@@ -97,9 +98,8 @@ cudf::table_view const& Table::cached_view() const {
 }
 
 std::unique_ptr<Table> table_empty() {
-  auto tbl = std::make_unique<cudf::table>(
-      std::vector<std::unique_ptr<cudf::column>>{});
-  return std::make_unique<Table>(std::move(tbl));
+  return TBL(std::make_unique<cudf::table>(
+      std::vector<std::unique_ptr<cudf::column>>{}));
 }
 
 int32_t table_num_columns(Table const& tbl) { return tbl.inner().num_columns(); }
@@ -124,123 +124,101 @@ int32_t table_view_num_rows(cudf::table_view const& view) { return view.num_rows
 Scalar::Scalar(std::unique_ptr<cudf::scalar> s) : scalar_(std::move(s)) {}
 
 std::unique_ptr<Scalar> make_int32_scalar(int32_t value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<int32_t>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<int32_t>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_int64_scalar(int64_t value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<int64_t>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<int64_t>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_float32_scalar(float value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<float>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<float>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_float64_scalar(double value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<double>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<double>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_bool_scalar(bool value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<bool>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<bool>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_string_scalar(rust::Str value) {
   auto sv = std::string_view(value.data(), value.size());
-  auto s = std::make_unique<cudf::string_scalar>(sv, true);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::string_scalar>(sv, true));
 }
 
 std::unique_ptr<Scalar> make_int8_scalar(int8_t value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<int8_t>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<int8_t>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_int16_scalar(int16_t value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<int16_t>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<int16_t>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_uint8_scalar(uint8_t value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<uint8_t>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<uint8_t>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_uint16_scalar(uint16_t value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<uint16_t>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<uint16_t>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_uint32_scalar(uint32_t value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<uint32_t>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<uint32_t>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_uint64_scalar(uint64_t value, bool valid) {
-  auto s = std::make_unique<cudf::numeric_scalar<uint64_t>>(value, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::numeric_scalar<uint64_t>>(value, valid));
 }
 
 std::unique_ptr<Scalar> make_timestamp_s_scalar(int64_t value, bool valid) {
-  auto s = std::make_unique<cudf::timestamp_scalar<cudf::timestamp_s>>(
-      cudf::timestamp_s{cudf::duration_s{value}}, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::timestamp_scalar<cudf::timestamp_s>>(
+      cudf::timestamp_s{cudf::duration_s{value}}, valid));
 }
 
 std::unique_ptr<Scalar> make_timestamp_ms_scalar(int64_t value, bool valid) {
-  auto s = std::make_unique<cudf::timestamp_scalar<cudf::timestamp_ms>>(
-      cudf::timestamp_ms{cudf::duration_ms{value}}, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::timestamp_scalar<cudf::timestamp_ms>>(
+      cudf::timestamp_ms{cudf::duration_ms{value}}, valid));
 }
 
 std::unique_ptr<Scalar> make_timestamp_us_scalar(int64_t value, bool valid) {
-  auto s = std::make_unique<cudf::timestamp_scalar<cudf::timestamp_us>>(
-      cudf::timestamp_us{cudf::duration_us{value}}, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::timestamp_scalar<cudf::timestamp_us>>(
+      cudf::timestamp_us{cudf::duration_us{value}}, valid));
 }
 
 std::unique_ptr<Scalar> make_timestamp_ns_scalar(int64_t value, bool valid) {
-  auto s = std::make_unique<cudf::timestamp_scalar<cudf::timestamp_ns>>(
-      cudf::timestamp_ns{cudf::duration_ns{value}}, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::timestamp_scalar<cudf::timestamp_ns>>(
+      cudf::timestamp_ns{cudf::duration_ns{value}}, valid));
 }
 
 std::unique_ptr<Scalar> make_duration_s_scalar(int64_t value, bool valid) {
-  auto s = std::make_unique<cudf::duration_scalar<cudf::duration_s>>(
-      cudf::duration_s{value}, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::duration_scalar<cudf::duration_s>>(
+      cudf::duration_s{value}, valid));
 }
 
 std::unique_ptr<Scalar> make_duration_ms_scalar(int64_t value, bool valid) {
-  auto s = std::make_unique<cudf::duration_scalar<cudf::duration_ms>>(
-      cudf::duration_ms{value}, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::duration_scalar<cudf::duration_ms>>(
+      cudf::duration_ms{value}, valid));
 }
 
 std::unique_ptr<Scalar> make_duration_us_scalar(int64_t value, bool valid) {
-  auto s = std::make_unique<cudf::duration_scalar<cudf::duration_us>>(
-      cudf::duration_us{value}, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::duration_scalar<cudf::duration_us>>(
+      cudf::duration_us{value}, valid));
 }
 
 std::unique_ptr<Scalar> make_duration_ns_scalar(int64_t value, bool valid) {
-  auto s = std::make_unique<cudf::duration_scalar<cudf::duration_ns>>(
-      cudf::duration_ns{value}, valid);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(std::make_unique<cudf::duration_scalar<cudf::duration_ns>>(
+      cudf::duration_ns{value}, valid));
 }
 
 std::unique_ptr<Scalar> make_default_constructed_scalar(int32_t type_id, int32_t scale) {
   auto dt = make_data_type(static_cast<cudf::type_id>(type_id), scale);
-  auto s = cudf::make_default_constructed_scalar(dt);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(cudf::make_default_constructed_scalar(dt));
 }
 
 std::unique_ptr<Scalar> make_empty_scalar_like(cudf::column_view const& col) {
-  auto s = cudf::make_empty_scalar_like(col);
-  return std::make_unique<Scalar>(std::move(s));
+  return std::make_unique<Scalar>(cudf::make_empty_scalar_like(col));
 }
 
 bool scalar_is_valid(Scalar const& s) { return s.inner().is_valid(); }
@@ -295,14 +273,11 @@ void scalar_list_add(ScalarList& list, std::unique_ptr<Scalar> s) {
 // -- Column factories --
 
 std::unique_ptr<Column> make_column_from_scalar(Scalar const& s, int32_t count, std::size_t stream) {
-  rmm::cuda_stream_view sv{reinterpret_cast<cudaStream_t>(stream)};
-  auto col = cudf::make_column_from_scalar(s.inner(), count, sv);
-  return std::make_unique<Column>(std::move(col));
+  return COL(cudf::make_column_from_scalar(s.inner(), count, S(stream)));
 }
 
 std::unique_ptr<Column> make_empty_column_by_type(int32_t type_id) {
-  auto col = cudf::make_empty_column(static_cast<cudf::type_id>(type_id));
-  return std::make_unique<Column>(std::move(col));
+  return COL(cudf::make_empty_column(static_cast<cudf::type_id>(type_id)));
 }
 
 std::unique_ptr<Column> make_fixed_width_column(
@@ -311,35 +286,27 @@ std::unique_ptr<Column> make_fixed_width_column(
     int32_t num_rows,
     int32_t mask_state,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
   auto dt = make_data_type(static_cast<cudf::type_id>(type_id), scale);
-  auto result = cudf::make_fixed_width_column(dt, num_rows,
-      static_cast<cudf::mask_state>(mask_state), s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::make_fixed_width_column(dt, num_rows, ENUM<cudf::mask_state>(mask_state), S(stream)));
 }
 
 std::unique_ptr<Column> make_empty_lists_column(
     int32_t child_type_id,
     std::size_t stream) {
   (void)stream;
-  auto dt = cudf::data_type{static_cast<cudf::type_id>(child_type_id)};
-  auto result = cudf::make_empty_lists_column(dt);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::make_empty_lists_column(DT(child_type_id)));
 }
 
 std::unique_ptr<Column> make_dictionary_from_scalar(
     Scalar const& scalar,
     int32_t num_rows,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::make_dictionary_from_scalar(scalar.inner(), num_rows, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::make_dictionary_from_scalar(scalar.inner(), num_rows, S(stream)));
 }
 
 std::unique_ptr<Column> make_lists_column(int32_t num_rows, std::unique_ptr<Column> offsets, std::unique_ptr<Column> child, std::size_t stream) {
-  auto result = cudf::make_lists_column(
-      num_rows, offsets->release(), child->release(), 0, rmm::device_buffer{});
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::make_lists_column(
+      num_rows, offsets->release(), child->release(), 0, rmm::device_buffer{}));
 }
 
 // StructColumnBuilder
@@ -349,10 +316,8 @@ void StructColumnBuilder::add_child(std::unique_ptr<Column> col) {
 }
 
 std::unique_ptr<Column> StructColumnBuilder::build(int32_t num_rows, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::make_structs_column(
-      num_rows, std::move(children_), 0, rmm::device_buffer{}, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::make_structs_column(
+      num_rows, std::move(children_), 0, rmm::device_buffer{}, S(stream)));
 }
 
 std::unique_ptr<StructColumnBuilder> new_struct_column_builder() {
@@ -369,170 +334,77 @@ std::unique_ptr<Column> struct_column_builder_build(StructColumnBuilder& builder
 
 // -- Column data extraction (device -> host) --
 
-rust::Vec<int16_t> column_to_host_i16(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+template <typename T>
+static rust::Vec<T> column_to_host(Column const& col, std::size_t stream) {
+  auto s = S(stream);
   auto view = col.cached_view();
   auto size = view.size();
-  rust::Vec<int16_t> result;
-  result.reserve(size);
-  std::vector<int16_t> host_data(size);
-  cudaMemcpyAsync(host_data.data(), view.data<int16_t>(),
-             size * sizeof(int16_t), cudaMemcpyDeviceToHost, s.value());
+  std::vector<T> host(size);
+  cudaMemcpyAsync(host.data(), view.data<T>(), size * sizeof(T), cudaMemcpyDeviceToHost, s.value());
   s.synchronize();
-  for (auto v : host_data) result.push_back(v);
-  return result;
-}
-
-rust::Vec<int32_t> column_to_host_i32(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto view = col.cached_view();
-  auto size = view.size();
-  rust::Vec<int32_t> result;
-  result.reserve(size);
-  std::vector<int32_t> host_data(size);
-  cudaMemcpyAsync(host_data.data(), view.data<int32_t>(),
-             size * sizeof(int32_t), cudaMemcpyDeviceToHost, s.value());
-  s.synchronize();
-  for (auto v : host_data) result.push_back(v);
-  return result;
-}
-
-rust::Vec<int64_t> column_to_host_i64(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto view = col.cached_view();
-  auto size = view.size();
-  rust::Vec<int64_t> result;
-  result.reserve(size);
-  std::vector<int64_t> host_data(size);
-  cudaMemcpyAsync(host_data.data(), view.data<int64_t>(),
-             size * sizeof(int64_t), cudaMemcpyDeviceToHost, s.value());
-  s.synchronize();
-  for (auto v : host_data) result.push_back(v);
-  return result;
-}
-
-rust::Vec<float> column_to_host_f32(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto view = col.cached_view();
-  auto size = view.size();
-  rust::Vec<float> result;
-  result.reserve(size);
-  std::vector<float> host_data(size);
-  cudaMemcpyAsync(host_data.data(), view.data<float>(),
-             size * sizeof(float), cudaMemcpyDeviceToHost, s.value());
-  s.synchronize();
-  for (auto v : host_data) result.push_back(v);
-  return result;
-}
-
-rust::Vec<double> column_to_host_f64(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto view = col.cached_view();
-  auto size = view.size();
-  rust::Vec<double> result;
-  result.reserve(size);
-  std::vector<double> host_data(size);
-  cudaMemcpyAsync(host_data.data(), view.data<double>(),
-             size * sizeof(double), cudaMemcpyDeviceToHost, s.value());
-  s.synchronize();
-  for (auto v : host_data) result.push_back(v);
-  return result;
+  rust::Vec<T> out;
+  out.reserve(size);
+  for (auto v : host) out.push_back(v);
+  return out;
 }
 
 rust::Vec<int8_t> column_to_host_i8(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto const& view = col.cached_view();
-  auto size = view.size();
-  std::vector<int8_t> host(size);
-  cudaMemcpyAsync(host.data(), view.data<int8_t>(), size * sizeof(int8_t), cudaMemcpyDeviceToHost, s.value());
-  s.synchronize();
-  rust::Vec<int8_t> out;
-  out.reserve(size);
-  for (auto v : host) out.push_back(v);
-  return out;
+  return column_to_host<int8_t>(col, stream);
 }
-
+rust::Vec<int16_t> column_to_host_i16(Column const& col, std::size_t stream) {
+  return column_to_host<int16_t>(col, stream);
+}
+rust::Vec<int32_t> column_to_host_i32(Column const& col, std::size_t stream) {
+  return column_to_host<int32_t>(col, stream);
+}
+rust::Vec<int64_t> column_to_host_i64(Column const& col, std::size_t stream) {
+  return column_to_host<int64_t>(col, stream);
+}
+rust::Vec<float> column_to_host_f32(Column const& col, std::size_t stream) {
+  return column_to_host<float>(col, stream);
+}
+rust::Vec<double> column_to_host_f64(Column const& col, std::size_t stream) {
+  return column_to_host<double>(col, stream);
+}
 rust::Vec<uint8_t> column_to_host_u8(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto const& view = col.cached_view();
-  auto size = view.size();
-  std::vector<uint8_t> host(size);
-  cudaMemcpyAsync(host.data(), view.data<uint8_t>(), size * sizeof(uint8_t), cudaMemcpyDeviceToHost, s.value());
-  s.synchronize();
-  rust::Vec<uint8_t> out;
-  out.reserve(size);
-  for (auto v : host) out.push_back(v);
-  return out;
+  return column_to_host<uint8_t>(col, stream);
 }
-
 rust::Vec<uint16_t> column_to_host_u16(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto const& view = col.cached_view();
-  auto size = view.size();
-  std::vector<uint16_t> host(size);
-  cudaMemcpyAsync(host.data(), view.data<uint16_t>(), size * sizeof(uint16_t), cudaMemcpyDeviceToHost, s.value());
-  s.synchronize();
-  rust::Vec<uint16_t> out;
-  out.reserve(size);
-  for (auto v : host) out.push_back(v);
-  return out;
+  return column_to_host<uint16_t>(col, stream);
 }
-
 rust::Vec<uint32_t> column_to_host_u32(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto const& view = col.cached_view();
-  auto size = view.size();
-  std::vector<uint32_t> host(size);
-  cudaMemcpyAsync(host.data(), view.data<uint32_t>(), size * sizeof(uint32_t), cudaMemcpyDeviceToHost, s.value());
-  s.synchronize();
-  rust::Vec<uint32_t> out;
-  out.reserve(size);
-  for (auto v : host) out.push_back(v);
-  return out;
+  return column_to_host<uint32_t>(col, stream);
 }
-
 rust::Vec<uint64_t> column_to_host_u64(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto const& view = col.cached_view();
-  auto size = view.size();
-  std::vector<uint64_t> host(size);
-  cudaMemcpyAsync(host.data(), view.data<uint64_t>(), size * sizeof(uint64_t), cudaMemcpyDeviceToHost, s.value());
-  s.synchronize();
-  rust::Vec<uint64_t> out;
-  out.reserve(size);
-  for (auto v : host) out.push_back(v);
-  return out;
+  return column_to_host<uint64_t>(col, stream);
 }
 
 rust::Vec<bool> column_to_host_bool(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto view = col.cached_view();
   auto size = view.size();
-  rust::Vec<bool> result;
-  result.reserve(size);
   // cudf BOOL8 uses int8_t internally
-  std::vector<int8_t> host_data(size);
-  cudaMemcpyAsync(host_data.data(), view.data<int8_t>(),
-             size * sizeof(int8_t), cudaMemcpyDeviceToHost, s.value());
+  std::vector<int8_t> host(size);
+  cudaMemcpyAsync(host.data(), view.data<int8_t>(), size * sizeof(int8_t), cudaMemcpyDeviceToHost, s.value());
   s.synchronize();
-  for (auto v : host_data) result.push_back(v != 0);
-  return result;
+  rust::Vec<bool> out;
+  out.reserve(size);
+  for (auto v : host) out.push_back(v != 0);
+  return out;
 }
 
 rust::Vec<bool> column_null_mask_to_host(Column const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto view = col.cached_view();
   auto size = view.size();
   rust::Vec<bool> result;
   result.reserve(size);
 
   if (!view.nullable()) {
-    // No null mask means all values are valid
     for (int32_t i = 0; i < size; ++i) result.push_back(true);
     return result;
   }
 
-  // Copy the bitmask to host
   auto num_bitmask_words = cudf::bitmask_allocation_size_bytes(size) / sizeof(cudf::bitmask_type);
   std::vector<cudf::bitmask_type> host_mask(num_bitmask_words);
   cudaMemcpyAsync(host_mask.data(), view.null_mask(),
@@ -549,215 +421,80 @@ rust::Vec<bool> column_null_mask_to_host(Column const& col, std::size_t stream) 
 
 // -- Column factories from host data --
 
+template <typename T>
+static std::unique_ptr<Column> make_column_from_host(cudf::type_id tid, rust::Slice<T const> data, std::size_t stream) {
+  auto s = S(stream);
+  auto size = static_cast<cudf::size_type>(data.size());
+  rmm::device_buffer buf(data.data(), size * sizeof(T), s);
+  s.synchronize();
+  return COL(std::make_unique<cudf::column>(
+      cudf::data_type{tid}, size, std::move(buf), rmm::device_buffer{}, 0));
+}
+
+std::unique_ptr<Column> make_column_from_host_i8(rust::Slice<int8_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::INT8, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_i16(rust::Slice<int16_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::INT16, data, stream);
+}
 std::unique_ptr<Column> make_column_from_host_i32(rust::Slice<int32_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int32_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::INT32}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
+  return make_column_from_host(cudf::type_id::INT32, data, stream);
 }
-
 std::unique_ptr<Column> make_column_from_host_i64(rust::Slice<int64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::INT64}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
+  return make_column_from_host(cudf::type_id::INT64, data, stream);
 }
-
+std::unique_ptr<Column> make_column_from_host_f32(rust::Slice<float const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::FLOAT32, data, stream);
+}
 std::unique_ptr<Column> make_column_from_host_f64(rust::Slice<double const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(double), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::FLOAT64}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
+  return make_column_from_host(cudf::type_id::FLOAT64, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_u8(rust::Slice<uint8_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::UINT8, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_u16(rust::Slice<uint16_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::UINT16, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_u32(rust::Slice<uint32_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::UINT32, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_u64(rust::Slice<uint64_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::UINT64, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_timestamp_s(rust::Slice<int64_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::TIMESTAMP_SECONDS, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_timestamp_ms(rust::Slice<int64_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::TIMESTAMP_MILLISECONDS, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_timestamp_us(rust::Slice<int64_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::TIMESTAMP_MICROSECONDS, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_timestamp_ns(rust::Slice<int64_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::TIMESTAMP_NANOSECONDS, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_duration_s(rust::Slice<int64_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::DURATION_SECONDS, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_duration_ms(rust::Slice<int64_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::DURATION_MILLISECONDS, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_duration_us(rust::Slice<int64_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::DURATION_MICROSECONDS, data, stream);
+}
+std::unique_ptr<Column> make_column_from_host_duration_ns(rust::Slice<int64_t const> data, std::size_t stream) {
+  return make_column_from_host(cudf::type_id::DURATION_NANOSECONDS, data, stream);
 }
 
 std::unique_ptr<Column> make_column_from_host_bool(rust::Slice<bool const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto size = static_cast<cudf::size_type>(data.size());
   std::vector<int8_t> int_data(size);
   for (cudf::size_type i = 0; i < size; ++i) int_data[i] = data[i] ? 1 : 0;
   rmm::device_buffer buf(int_data.data(), size * sizeof(int8_t), s);
   s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::BOOL8}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_i8(rust::Slice<int8_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int8_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::INT8}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_i16(rust::Slice<int16_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int16_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::INT16}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_f32(rust::Slice<float const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(float), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::FLOAT32}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_u8(rust::Slice<uint8_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(uint8_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::UINT8}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_u16(rust::Slice<uint16_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(uint16_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::UINT16}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_u32(rust::Slice<uint32_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(uint32_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::UINT32}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_u64(rust::Slice<uint64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(uint64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::UINT64}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_timestamp_s(rust::Slice<int64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::TIMESTAMP_SECONDS}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_timestamp_ms(rust::Slice<int64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::TIMESTAMP_MILLISECONDS}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_timestamp_us(rust::Slice<int64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::TIMESTAMP_MICROSECONDS}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_timestamp_ns(rust::Slice<int64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::TIMESTAMP_NANOSECONDS}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_duration_s(rust::Slice<int64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::DURATION_SECONDS}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_duration_ms(rust::Slice<int64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::DURATION_MILLISECONDS}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_duration_us(rust::Slice<int64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::DURATION_MICROSECONDS}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
-}
-
-std::unique_ptr<Column> make_column_from_host_duration_ns(rust::Slice<int64_t const> data, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto size = static_cast<cudf::size_type>(data.size());
-  rmm::device_buffer buf(data.data(), size * sizeof(int64_t), s);
-  s.synchronize();
-  auto col = std::make_unique<cudf::column>(
-      cudf::data_type{cudf::type_id::DURATION_NANOSECONDS}, size, std::move(buf),
-      rmm::device_buffer{}, 0);
-  return std::make_unique<Column>(std::move(col));
+  return COL(std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::BOOL8}, size, std::move(buf), rmm::device_buffer{}, 0));
 }
 
 // -- TableBuilder --
@@ -769,7 +506,7 @@ void TableBuilder::add_column(std::unique_ptr<Column> wrapper) {
 std::unique_ptr<Table> TableBuilder::build() {
   auto tbl = std::make_unique<cudf::table>(std::move(cudf_columns_));
   cudf_columns_.clear();
-  return std::make_unique<Table>(std::move(tbl));
+  return TBL(std::move(tbl));
 }
 
 std::unique_ptr<TableBuilder> new_table_builder() {
@@ -795,50 +532,40 @@ int32_t num_bitmask_words(int32_t number_of_bits) {
 }
 
 int32_t state_null_count(int32_t mask_state, int32_t num_rows) {
-  return cudf::state_null_count(static_cast<cudf::mask_state>(mask_state), num_rows);
+  return cudf::state_null_count(ENUM<cudf::mask_state>(mask_state), num_rows);
 }
 
 // -- Null mask conversions --
 
 std::unique_ptr<Column> null_mask_to_bools(cudf::column_view const& col, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto mask = col.null_mask();
   if (!mask) {
-    // No null mask means all valid — return all-true column
     cudf::numeric_scalar<bool> val(true, true, s);
-    auto result = cudf::make_column_from_scalar(val, col.size(), s);
-    return std::make_unique<Column>(std::move(result));
+    return COL(cudf::make_column_from_scalar(val, col.size(), s));
   }
-  auto begin = col.offset();
-  auto end = col.offset() + col.size();
-  auto result = cudf::mask_to_bools(mask, begin, end, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::mask_to_bools(mask, col.offset(), col.offset() + col.size(), s));
 }
 
 void set_null_mask_from_bools(Column& col, cudf::column_view const& bools, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto [mask_buf, null_count] = cudf::bools_to_mask(bools, s);
+  auto [mask_buf, null_count] = cudf::bools_to_mask(bools, S(stream));
   col.mutable_inner().set_null_mask(std::move(*mask_buf), null_count);
 }
 
 // -- Bitmask combining --
 
 std::unique_ptr<Column> bitmask_and_to_bools(Table const& tbl, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto [mask, null_count] = cudf::bitmask_and(tbl.cached_view(), s);
-  auto num_rows = tbl.cached_view().num_rows();
   auto bitmask_ptr = static_cast<cudf::bitmask_type const*>(mask.data());
-  auto result = cudf::mask_to_bools(bitmask_ptr, 0, num_rows, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::mask_to_bools(bitmask_ptr, 0, tbl.cached_view().num_rows(), s));
 }
 
 std::unique_ptr<Column> bitmask_or_to_bools(Table const& tbl, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto [mask, null_count] = cudf::bitmask_or(tbl.cached_view(), s);
-  auto num_rows = tbl.cached_view().num_rows();
   auto bitmask_ptr = static_cast<cudf::bitmask_type const*>(mask.data());
-  auto result = cudf::mask_to_bools(bitmask_ptr, 0, num_rows, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::mask_to_bools(bitmask_ptr, 0, tbl.cached_view().num_rows(), s));
 }
 
 // -- Type checking utilities --
@@ -864,10 +591,7 @@ bool is_supported_cast(int32_t from_type_id, int32_t from_scale, int32_t to_type
 // -- Column child access --
 
 std::unique_ptr<Column> column_view_child_copy(cudf::column_view const& col, int32_t index, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto child_view = col.child(index);
-  auto result = std::make_unique<cudf::column>(child_view, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(std::make_unique<cudf::column>(col.child(index), S(stream)));
 }
 
 int32_t column_view_num_children(cudf::column_view const& col) {
@@ -891,13 +615,11 @@ bool table_has_nested_nullable_columns(Table const& tbl) {
 // -- Column with null mask from bools --
 
 std::unique_ptr<Column> column_with_null_mask_from_bools(Column const& col, cudf::column_view const& validity, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  // Convert bool column to bitmask
+  auto s = S(stream);
   auto [null_mask, null_count] = cudf::bools_to_mask(validity, s);
-  // Deep-copy the source column
   auto result = std::make_unique<cudf::column>(col.cached_view(), s);
   result->set_null_mask(std::move(*null_mask), null_count);
-  return std::make_unique<Column>(std::move(result));
+  return COL(std::move(result));
 }
 
 }  // namespace cudf_sys

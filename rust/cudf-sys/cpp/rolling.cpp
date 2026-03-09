@@ -3,6 +3,7 @@
 
 #include "cudf-sys/src/rolling.rs.h"
 #include "cudf-sys/src/lib.rs.h"
+#include "cudf-sys/helpers.hpp"
 
 #include <cudf/rolling.hpp>
 #include <cudf/aggregation.hpp>
@@ -25,23 +26,13 @@ static std::unique_ptr<cudf::rolling_aggregation> make_rolling_agg(int32_t kind)
   }
 }
 
-// -- Rolling window --
-
 std::unique_ptr<Column> rolling_window(cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto agg = make_rolling_agg(agg_kind);
-  auto result = cudf::rolling_window(col, preceding, following, min_periods, *agg, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::rolling_window(col, preceding, following, min_periods, *make_rolling_agg(agg_kind), S(stream)));
 }
 
 std::unique_ptr<Column> grouped_rolling_window(Table const& group_keys, cudf::column_view const& col, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto agg = make_rolling_agg(agg_kind);
-  auto result = cudf::grouped_rolling_window(group_keys.cached_view(), col, preceding, following, min_periods, *agg, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::grouped_rolling_window(group_keys.cached_view(), col, preceding, following, min_periods, *make_rolling_agg(agg_kind), S(stream)));
 }
-
-// -- Rolling window with defaults --
 
 std::unique_ptr<Column> rolling_window_with_defaults(
     cudf::column_view const& col,
@@ -51,19 +42,12 @@ std::unique_ptr<Column> rolling_window_with_defaults(
     int32_t min_periods,
     int32_t agg_kind,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::rolling_window(col, default_outputs, preceding, following, min_periods,
-      *make_rolling_agg(agg_kind), s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::rolling_window(col, default_outputs, preceding, following, min_periods,
+      *make_rolling_agg(agg_kind), S(stream)));
 }
 
-// -- Grouped rolling window with defaults --
-
 std::unique_ptr<Column> grouped_rolling_window_with_defaults(Table const& group_keys, cudf::column_view const& col, cudf::column_view const& default_outputs, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto agg = make_rolling_agg(agg_kind);
-  auto result = cudf::grouped_rolling_window(group_keys.cached_view(), col, default_outputs, preceding, following, min_periods, *agg, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::grouped_rolling_window(group_keys.cached_view(), col, default_outputs, preceding, following, min_periods, *make_rolling_agg(agg_kind), S(stream)));
 }
 
 }  // namespace cudf_sys

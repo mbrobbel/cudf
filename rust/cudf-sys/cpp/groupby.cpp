@@ -3,6 +3,7 @@
 
 #include "cudf-sys/src/groupby.rs.h"
 #include "cudf-sys/src/lib.rs.h"
+#include "cudf-sys/helpers.hpp"
 
 #include <cudf/groupby.hpp>
 #include <cudf/aggregation.hpp>
@@ -55,27 +56,20 @@ std::unique_ptr<Table> groupby_single(
     int32_t value_index,
     int32_t agg_kind,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-
   auto view = tbl.cached_view();
-
-  // Build keys table_view
-  std::vector<cudf::size_type> key_cols(key_indices.begin(), key_indices.end());
-  auto keys_view = view.select(key_cols);
+  auto keys_view = view.select(VEC(key_indices));
 
   cudf::groupby::groupby gb(keys_view, cudf::null_policy::EXCLUDE,
       cudf::sorted::NO, {}, {});
 
-  // Build aggregation request
   std::vector<cudf::groupby::aggregation_request> requests;
   cudf::groupby::aggregation_request req;
   req.values = view.column(value_index);
   req.aggregations.push_back(make_groupby_agg(agg_kind));
   requests.push_back(std::move(req));
 
-  auto [result_keys, result_vals] = gb.aggregate(requests, s);
+  auto [result_keys, result_vals] = gb.aggregate(requests, S(stream));
 
-  // Combine keys + result value columns into one table
   auto key_cols_owned = result_keys->release();
   auto& val_results = result_vals[0].results;
 
@@ -84,8 +78,7 @@ std::unique_ptr<Table> groupby_single(
   for (auto& c : key_cols_owned) all_cols.push_back(std::move(c));
   for (auto& c : val_results) all_cols.push_back(std::move(c));
 
-  return std::make_unique<Table>(
-      std::make_unique<cudf::table>(std::move(all_cols)));
+  return TBL(std::make_unique<cudf::table>(std::move(all_cols)));
 }
 
 std::unique_ptr<Table> groupby_multi(
@@ -94,18 +87,12 @@ std::unique_ptr<Table> groupby_multi(
     rust::Slice<int32_t const> value_indices,
     rust::Slice<int32_t const> agg_kinds,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-
   auto view = tbl.cached_view();
-
-  // Build keys table_view
-  std::vector<cudf::size_type> key_cols(key_indices.begin(), key_indices.end());
-  auto keys_view = view.select(key_cols);
+  auto keys_view = view.select(VEC(key_indices));
 
   cudf::groupby::groupby gb(keys_view, cudf::null_policy::EXCLUDE,
       cudf::sorted::NO, {}, {});
 
-  // Build aggregation requests -- one per (value_column, agg) pair
   std::vector<cudf::groupby::aggregation_request> requests;
   requests.reserve(value_indices.size());
   for (size_t i = 0; i < value_indices.size(); ++i) {
@@ -115,11 +102,9 @@ std::unique_ptr<Table> groupby_multi(
     requests.push_back(std::move(req));
   }
 
-  auto [result_keys, result_vals] = gb.aggregate(requests, s);
+  auto [result_keys, result_vals] = gb.aggregate(requests, S(stream));
 
-  // Combine keys + all result value columns into one table
   auto key_cols_owned = result_keys->release();
-
   std::vector<std::unique_ptr<cudf::column>> all_cols;
   all_cols.reserve(key_cols_owned.size() + result_vals.size());
   for (auto& c : key_cols_owned) all_cols.push_back(std::move(c));
@@ -127,8 +112,7 @@ std::unique_ptr<Table> groupby_multi(
     for (auto& c : rv.results) all_cols.push_back(std::move(c));
   }
 
-  return std::make_unique<Table>(
-      std::make_unique<cudf::table>(std::move(all_cols)));
+  return TBL(std::make_unique<cudf::table>(std::move(all_cols)));
 }
 
 std::unique_ptr<Table> groupby_scan(
@@ -137,11 +121,8 @@ std::unique_ptr<Table> groupby_scan(
     rust::Slice<int32_t const> value_indices,
     rust::Slice<int32_t const> agg_kinds,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-
   auto view = tbl.cached_view();
-  std::vector<cudf::size_type> key_cols(key_indices.begin(), key_indices.end());
-  auto keys_view = view.select(key_cols);
+  auto keys_view = view.select(VEC(key_indices));
 
   cudf::groupby::groupby gb(keys_view, cudf::null_policy::EXCLUDE,
       cudf::sorted::NO, {}, {});
@@ -155,7 +136,7 @@ std::unique_ptr<Table> groupby_scan(
     requests.push_back(std::move(req));
   }
 
-  auto [result_keys, result_vals] = gb.scan(requests, s);
+  auto [result_keys, result_vals] = gb.scan(requests, S(stream));
 
   auto key_cols_owned = result_keys->release();
   std::vector<std::unique_ptr<cudf::column>> all_cols;
@@ -165,8 +146,7 @@ std::unique_ptr<Table> groupby_scan(
     for (auto& c : rv.results) all_cols.push_back(std::move(c));
   }
 
-  return std::make_unique<Table>(
-      std::make_unique<cudf::table>(std::move(all_cols)));
+  return TBL(std::make_unique<cudf::table>(std::move(all_cols)));
 }
 
 std::unique_ptr<Table> groupby_shift(
@@ -176,25 +156,18 @@ std::unique_ptr<Table> groupby_shift(
     rust::Slice<int32_t const> offsets,
     ScalarList& fill_values,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-
   auto view = tbl.cached_view();
-  std::vector<cudf::size_type> key_cols(key_indices.begin(), key_indices.end());
-  auto keys_view = view.select(key_cols);
+  auto keys_view = view.select(VEC(key_indices));
 
   cudf::groupby::groupby gb(keys_view, cudf::null_policy::EXCLUDE,
       cudf::sorted::NO, {}, {});
 
-  // Build values table
   std::vector<cudf::column_view> val_views;
   val_views.reserve(value_indices.size());
   for (auto idx : value_indices) val_views.push_back(view.column(idx));
   cudf::table_view values_view(val_views);
 
-  std::vector<cudf::size_type> offset_vec(offsets.begin(), offsets.end());
-  auto fill_refs = fill_values.refs();
-
-  auto [result_keys, result_values] = gb.shift(values_view, offset_vec, fill_refs, s);
+  auto [result_keys, result_values] = gb.shift(values_view, VEC(offsets), fill_values.refs(), S(stream));
 
   auto key_cols_owned = result_keys->release();
   auto val_cols_owned = result_values->release();
@@ -203,8 +176,7 @@ std::unique_ptr<Table> groupby_shift(
   for (auto& c : key_cols_owned) all_cols.push_back(std::move(c));
   for (auto& c : val_cols_owned) all_cols.push_back(std::move(c));
 
-  return std::make_unique<Table>(
-      std::make_unique<cudf::table>(std::move(all_cols)));
+  return TBL(std::make_unique<cudf::table>(std::move(all_cols)));
 }
 
 std::unique_ptr<Table> groupby_replace_nulls(
@@ -213,11 +185,8 @@ std::unique_ptr<Table> groupby_replace_nulls(
     rust::Slice<int32_t const> value_indices,
     rust::Slice<int32_t const> policies,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-
   auto view = tbl.cached_view();
-  std::vector<cudf::size_type> key_cols(key_indices.begin(), key_indices.end());
-  auto keys_view = view.select(key_cols);
+  auto keys_view = view.select(VEC(key_indices));
 
   cudf::groupby::groupby gb(keys_view, cudf::null_policy::EXCLUDE,
       cudf::sorted::NO, {}, {});
@@ -230,10 +199,10 @@ std::unique_ptr<Table> groupby_replace_nulls(
   std::vector<cudf::replace_policy> pol_vec;
   pol_vec.reserve(policies.size());
   for (auto p : policies) {
-    pol_vec.push_back(static_cast<cudf::replace_policy>(p));
+    pol_vec.push_back(ENUM<cudf::replace_policy>(p));
   }
 
-  auto [result_keys, result_values] = gb.replace_nulls(values_view, pol_vec, s);
+  auto [result_keys, result_values] = gb.replace_nulls(values_view, pol_vec, S(stream));
 
   auto key_cols_owned = result_keys->release();
   auto val_cols_owned = result_values->release();
@@ -242,8 +211,7 @@ std::unique_ptr<Table> groupby_replace_nulls(
   for (auto& c : key_cols_owned) all_cols.push_back(std::move(c));
   for (auto& c : val_cols_owned) all_cols.push_back(std::move(c));
 
-  return std::make_unique<Table>(
-      std::make_unique<cudf::table>(std::move(all_cols)));
+  return TBL(std::make_unique<cudf::table>(std::move(all_cols)));
 }
 
 }  // namespace cudf_sys

@@ -3,28 +3,24 @@
 
 #include "cudf-sys/src/search.rs.h"
 #include "cudf-sys/src/lib.rs.h"
+#include "cudf-sys/helpers.hpp"
 
 #include <cudf/search.hpp>
 
 namespace cudf_sys {
 
-// -- Search operations --
-
 bool contains_scalar(
     cudf::column_view const& haystack,
     Scalar const& needle,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  return cudf::contains(haystack, needle.inner(), s);
+  return cudf::contains(haystack, needle.inner(), S(stream));
 }
 
 std::unique_ptr<Column> contains_column(
     cudf::column_view const& haystack,
     cudf::column_view const& needles,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::contains(haystack, needles, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::contains(haystack, needles, S(stream)));
 }
 
 std::unique_ptr<Column> lower_bound(
@@ -33,17 +29,8 @@ std::unique_ptr<Column> lower_bound(
     rust::Slice<int32_t const> column_orders,
     rust::Slice<int32_t const> null_orders,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  std::vector<cudf::order> orders;
-  orders.reserve(column_orders.size());
-  for (auto o : column_orders) orders.push_back(static_cast<cudf::order>(o));
-
-  std::vector<cudf::null_order> nulls;
-  nulls.reserve(null_orders.size());
-  for (auto n : null_orders) nulls.push_back(static_cast<cudf::null_order>(n));
-
-  auto result = cudf::lower_bound(haystack.cached_view(), needles.cached_view(), orders, nulls, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::lower_bound(haystack.cached_view(), needles.cached_view(),
+      ORDERS(column_orders), NULL_ORDERS(null_orders), S(stream)));
 }
 
 std::unique_ptr<Column> upper_bound(
@@ -52,17 +39,8 @@ std::unique_ptr<Column> upper_bound(
     rust::Slice<int32_t const> column_orders,
     rust::Slice<int32_t const> null_orders,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  std::vector<cudf::order> orders;
-  orders.reserve(column_orders.size());
-  for (auto o : column_orders) orders.push_back(static_cast<cudf::order>(o));
-
-  std::vector<cudf::null_order> nulls;
-  nulls.reserve(null_orders.size());
-  for (auto n : null_orders) nulls.push_back(static_cast<cudf::null_order>(n));
-
-  auto result = cudf::upper_bound(haystack.cached_view(), needles.cached_view(), orders, nulls, s);
-  return std::make_unique<Column>(std::move(result));
+  return COL(cudf::upper_bound(haystack.cached_view(), needles.cached_view(),
+      ORDERS(column_orders), NULL_ORDERS(null_orders), S(stream)));
 }
 
 }  // namespace cudf_sys

@@ -3,6 +3,7 @@
 
 #include "cudf-sys/src/join.rs.h"
 #include "cudf-sys/src/lib.rs.h"
+#include "cudf-sys/helpers.hpp"
 
 #include <cudf/copying.hpp>
 #include <cudf/join/join.hpp>
@@ -55,8 +56,7 @@ static std::unique_ptr<Table> gather_and_combine(
   for (auto& c : left_cols) all_cols.push_back(std::move(c));
   for (auto& c : right_cols) all_cols.push_back(std::move(c));
 
-  return std::make_unique<Table>(
-      std::make_unique<cudf::table>(std::move(all_cols)));
+  return TBL(std::make_unique<cudf::table>(std::move(all_cols)));
 }
 
 std::unique_ptr<Table> inner_join(
@@ -64,21 +64,15 @@ std::unique_ptr<Table> inner_join(
     rust::Slice<int32_t const> left_on,
     rust::Slice<int32_t const> right_on,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto left_view = left.cached_view();
   auto right_view = right.cached_view();
-
-  auto left_keys = select_columns(left_view, left_on);
-  auto right_keys = select_columns(right_view, right_on);
-
-  auto [left_indices, right_indices] = cudf::inner_join(left_keys, right_keys,
+  auto [left_indices, right_indices] = cudf::inner_join(
+      select_columns(left_view, left_on), select_columns(right_view, right_on),
       cudf::null_equality::EQUAL, s);
-
-  auto left_idx_col = indices_to_column(std::move(left_indices));
-  auto right_idx_col = indices_to_column(std::move(right_indices));
-
   return gather_and_combine(left_view, right_view,
-      std::move(left_idx_col), std::move(right_idx_col), s);
+      indices_to_column(std::move(left_indices)),
+      indices_to_column(std::move(right_indices)), s);
 }
 
 std::unique_ptr<Table> left_join(
@@ -86,22 +80,15 @@ std::unique_ptr<Table> left_join(
     rust::Slice<int32_t const> left_on,
     rust::Slice<int32_t const> right_on,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto left_view = left.cached_view();
   auto right_view = right.cached_view();
-
-  auto left_keys = select_columns(left_view, left_on);
-  auto right_keys = select_columns(right_view, right_on);
-
-  auto [left_indices, right_indices] = cudf::left_join(left_keys, right_keys,
+  auto [left_indices, right_indices] = cudf::left_join(
+      select_columns(left_view, left_on), select_columns(right_view, right_on),
       cudf::null_equality::EQUAL, s);
-
-  auto left_idx_col = indices_to_column(std::move(left_indices));
-  auto right_idx_col = indices_to_column(std::move(right_indices));
-
-  // Right indices may contain JoinNoMatch for unmatched rows -> nullify
   return gather_and_combine(left_view, right_view,
-      std::move(left_idx_col), std::move(right_idx_col), s);
+      indices_to_column(std::move(left_indices)),
+      indices_to_column(std::move(right_indices)), s);
 }
 
 std::unique_ptr<Table> full_join(
@@ -109,22 +96,15 @@ std::unique_ptr<Table> full_join(
     rust::Slice<int32_t const> left_on,
     rust::Slice<int32_t const> right_on,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto left_view = left.cached_view();
   auto right_view = right.cached_view();
-
-  auto left_keys = select_columns(left_view, left_on);
-  auto right_keys = select_columns(right_view, right_on);
-
-  auto [left_indices, right_indices] = cudf::full_join(left_keys, right_keys,
+  auto [left_indices, right_indices] = cudf::full_join(
+      select_columns(left_view, left_on), select_columns(right_view, right_on),
       cudf::null_equality::EQUAL, s);
-
-  auto left_idx_col = indices_to_column(std::move(left_indices));
-  auto right_idx_col = indices_to_column(std::move(right_indices));
-
-  // Both sides may contain JoinNoMatch -> nullify on both
   return gather_and_combine(left_view, right_view,
-      std::move(left_idx_col), std::move(right_idx_col), s, true);
+      indices_to_column(std::move(left_indices)),
+      indices_to_column(std::move(right_indices)), s, true);
 }
 
 std::unique_ptr<Table> left_semi_join(
@@ -132,24 +112,15 @@ std::unique_ptr<Table> left_semi_join(
     rust::Slice<int32_t const> left_on,
     rust::Slice<int32_t const> right_on,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto left_view = left.cached_view();
-  auto right_view = right.cached_view();
-
   auto left_keys = select_columns(left_view, left_on);
-  auto right_keys = select_columns(right_view, right_on);
-
-  // Build hash table on right keys, probe with left keys
+  auto right_keys = select_columns(right.cached_view(), right_on);
   cudf::filtered_join joiner(right_keys, cudf::null_equality::EQUAL,
                              cudf::set_as_build_table::RIGHT, s);
-  auto left_indices = joiner.semi_join(left_keys, s);
-
-  auto left_idx_col = indices_to_column(std::move(left_indices));
-
-  // Gather only from left table
-  auto result = cudf::gather(left_view, left_idx_col->view(),
-      cudf::out_of_bounds_policy::DONT_CHECK, s);
-  return std::make_unique<Table>(std::move(result));
+  auto left_idx_col = indices_to_column(joiner.semi_join(left_keys, s));
+  return TBL(cudf::gather(left_view, left_idx_col->view(),
+      cudf::out_of_bounds_policy::DONT_CHECK, s));
 }
 
 std::unique_ptr<Table> left_anti_join(
@@ -157,30 +128,19 @@ std::unique_ptr<Table> left_anti_join(
     rust::Slice<int32_t const> left_on,
     rust::Slice<int32_t const> right_on,
     std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
+  auto s = S(stream);
   auto left_view = left.cached_view();
-  auto right_view = right.cached_view();
-
   auto left_keys = select_columns(left_view, left_on);
-  auto right_keys = select_columns(right_view, right_on);
-
-  // Build hash table on right keys, probe with left keys
+  auto right_keys = select_columns(right.cached_view(), right_on);
   cudf::filtered_join joiner(right_keys, cudf::null_equality::EQUAL,
                              cudf::set_as_build_table::RIGHT, s);
-  auto left_indices = joiner.anti_join(left_keys, s);
-
-  auto left_idx_col = indices_to_column(std::move(left_indices));
-
-  // Gather only from left table
-  auto result = cudf::gather(left_view, left_idx_col->view(),
-      cudf::out_of_bounds_policy::DONT_CHECK, s);
-  return std::make_unique<Table>(std::move(result));
+  auto left_idx_col = indices_to_column(joiner.anti_join(left_keys, s));
+  return TBL(cudf::gather(left_view, left_idx_col->view(),
+      cudf::out_of_bounds_policy::DONT_CHECK, s));
 }
 
 std::unique_ptr<Table> cross_join(Table const& left, Table const& right, std::size_t stream) {
-  rmm::cuda_stream_view s{reinterpret_cast<cudaStream_t>(stream)};
-  auto result = cudf::cross_join(left.cached_view(), right.cached_view(), s);
-  return std::make_unique<Table>(std::move(result));
+  return TBL(cudf::cross_join(left.cached_view(), right.cached_view(), S(stream)));
 }
 
 }  // namespace cudf_sys
