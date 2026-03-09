@@ -3,26 +3,85 @@
 
 //! Reshape operations on tables and columns.
 //!
-//! Available as methods on [`Table`]:
-//! `table.interleave_columns()`, `table.tile(...)`.
+//! These operations change the shape of a table or column without modifying
+//! the underlying data values.
 //!
-//! Free functions:
-//! - [`one_hot_encode`] — one-hot encode input against categories.
+//! # Table methods
+//!
+//! - [`Table::interleave_columns`](crate::table::Table::interleave_columns) --
+//!   merges all columns into a single column by interleaving rows.
+//! - [`Table::tile`](crate::table::Table::tile) -- repeats the entire table
+//!   vertically a specified number of times.
+//!
+//! # Free functions
+//!
+//! - [`one_hot_encode`] -- produces a `BOOL8` table from a column and a set
+//!   of category values.
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use cudf::column::Column;
+//! use cudf::stream::GpuOp;
+//! use cudf::table::TableBuilder;
+//!
+//! let c1 = Column::from_slice_i32(&[1, 2, 3]).call()?;
+//! let c2 = Column::from_slice_i32(&[4, 5, 6]).call()?;
+//! let mut b = TableBuilder::new();
+//! b.push_column(c1);
+//! b.push_column(c2);
+//! let table = b.build()?;
+//!
+//! // Interleave: [1, 4, 2, 5, 3, 6]
+//! let interleaved = table.interleave_columns().call()?;
+//! assert_eq!(interleaved.len(), 6);
+//!
+//! // Tile: repeat twice => 6 rows
+//! let tiled = table.tile(2).call()?;
+//! assert_eq!(tiled.len(), 6);
+//! # Ok::<(), cudf::error::Error>(())
+//! ```
 
 use crate::column::ColumnView;
 use crate::error::Result;
 use crate::stream::Stream;
 use crate::table::Table;
 
-/// Builder for [`one_hot_encode`].
+/// Builder for [`one_hot_encode`]. See that function for details.
 pub struct OneHotEncode<'a> {
     input: &'a ColumnView<'a>,
     categories: &'a ColumnView<'a>,
     stream: Stream,
 }
 
-/// One-hot encode `input` against `categories`, returning a table of BOOL8 columns
-/// (one column per category).
+/// One-hot encodes `input` against `categories`.
+///
+/// For each element in `categories`, the output table contains a `BOOL8`
+/// column where row *i* is `true` if `input[i]` equals that category value,
+/// and `false` otherwise. The output table has `categories.len()` columns
+/// and `input.len()` rows.
+///
+/// `input` and `categories` must have the same data type.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::column::Column;
+/// use cudf::reshape::one_hot_encode;
+/// use cudf::stream::GpuOp;
+///
+/// let input = Column::from_slice_i32(&[1, 2, 3, 1]).call()?;
+/// let cats = Column::from_slice_i32(&[1, 2, 3]).call()?;
+/// let result = one_hot_encode(&input.view(), &cats.view()).call()?;
+/// assert_eq!(result.columns_len(), 3); // one column per category
+/// assert_eq!(result.len(), 4);         // same row count as input
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the data types of `input` and `categories` are
+/// incompatible, or if a GPU error occurs.
 pub fn one_hot_encode<'a>(
     input: &'a ColumnView<'a>,
     categories: &'a ColumnView<'a>,

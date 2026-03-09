@@ -4,7 +4,11 @@
 //! Filtering operations on GPU tables.
 //!
 //! Filtering is available as methods on [`Table`](crate::table::Table):
-//! `table.filter(...)`, `table.drop_nulls()`.
+//!
+//! * [`Table::filter`](crate::table::Table::filter) -- select rows where a
+//!   boolean mask column is `true`.
+//! * [`Table::drop_nulls`](crate::table::Table::drop_nulls) -- drop rows where
+//!   all columns are null.
 
 #[cfg(test)]
 mod tests {

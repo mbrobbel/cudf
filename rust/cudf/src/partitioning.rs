@@ -3,8 +3,18 @@
 
 //! Table partitioning operations.
 //!
-//! Available as methods on [`Table`](crate::table::Table):
-//! `table.hash_partition(...)`, `table.round_robin(...)`, etc.
+//! Partitioning rearranges table rows so that rows belonging to the same
+//! partition are contiguous. Available as methods on
+//! [`Table`](crate::table::Table):
+//!
+//! * [`Table::hash_partition`](crate::table::Table::hash_partition) -- partition
+//!   rows by hashing specified columns.
+//! * [`Table::hash_partition_offsets`](crate::table::Table::hash_partition_offsets) --
+//!   returns only the partition boundary offsets.
+//! * [`Table::round_robin`](crate::table::Table::round_robin) -- distribute rows
+//!   round-robin across partitions.
+//! * [`Table::round_robin_offsets`](crate::table::Table::round_robin_offsets) --
+//!   returns only the partition boundary offsets.
 
 #[cfg(test)]
 mod tests {

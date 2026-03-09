@@ -3,8 +3,35 @@
 
 //! Join operations on GPU tables.
 //!
+//! This module provides SQL-style join operations that combine two tables
+//! based on equality of key columns. Each join variant determines which rows
+//! appear in the output:
+//!
+//! | Join type | Output rows |
+//! |---|---|
+//! | [`inner_join`](crate::table::Table::inner_join) | Only rows with matching keys in both tables |
+//! | [`left_join`](crate::table::Table::left_join) | All left rows; right columns nulled where no match |
+//! | [`full_join`](crate::table::Table::full_join) | All rows from both sides; nulls where no match |
+//! | [`left_semi_join`](crate::table::Table::left_semi_join) | Left rows that have a match in right (left columns only) |
+//! | [`left_anti_join`](crate::table::Table::left_anti_join) | Left rows that have no match in right (left columns only) |
+//!
+//! All join methods take `left_on` and `right_on` slices of zero-based column
+//! indices that identify the key columns. The key columns at corresponding
+//! positions must have compatible types.
+//!
+//! For inner, left, and full joins the output table contains all columns from
+//! the left table followed by all columns from the right table. For semi and
+//! anti joins the output contains only the left table's columns.
+//!
 //! Joins are available as methods on [`Table`](crate::table::Table):
-//! `table.inner_join(...)`, `table.left_join(...)`, etc.
+//!
+//! ```ignore
+//! use cudf::stream::GpuOp;
+//!
+//! // Inner join on column 0
+//! let result = left.inner_join(&right, &[0], &[0]).call()?;
+//! # Ok::<(), cudf::error::Error>(())
+//! ```
 
 #[cfg(test)]
 mod tests {

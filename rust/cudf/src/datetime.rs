@@ -2,6 +2,28 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Datetime operations on timestamp columns.
+//!
+//! The [`DatetimeExt`] trait provides component extraction (year, month, day,
+//! hour, etc.), calendar queries (leap year, days in month), and rounding
+//! operations (ceil, floor, round) for timestamp columns.
+//!
+//! All methods operate on columns with a `TIMESTAMP_*` type
+//! (`TIMESTAMP_DAYS`, `TIMESTAMP_SECONDS`,
+//! `TIMESTAMP_MILLISECONDS`, `TIMESTAMP_MICROSECONDS`, or
+//! `TIMESTAMP_NANOSECONDS`).
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use cudf::column::Column;
+//! use cudf::datetime::DatetimeExt;
+//! use cudf::stream::GpuOp;
+//!
+//! let ts = Column::from_timestamps_s(&[1718443845]).call()?;
+//! let years = ts.view().extract_year().call()?;
+//! let months = ts.view().extract_month().call()?;
+//! # Ok::<(), cudf::error::Error>(())
+//! ```
 
 use crate::column::{Column, ColumnView};
 use crate::error::Result;
@@ -12,54 +34,362 @@ mod private {
 }
 
 /// Extension trait for datetime operations on timestamp columns.
+///
+/// Provides component extraction, calendar queries, rounding, and month
+/// arithmetic for columns with a `TIMESTAMP_*` type. This trait is implemented
+/// for [`ColumnView`] and is sealed -- it cannot be implemented outside this
+/// crate.
+///
+/// All methods return builder structs that implement [`GpuOp`](crate::stream::GpuOp).
+/// Call `.call()` to execute the operation, or chain `.stream(s)` first to run
+/// on a non-default CUDA stream.
+///
+/// # Errors
+///
+/// Methods return an error if the input column does not have a timestamp type.
 pub trait DatetimeExt: private::Sealed {
-    /// Extracts the year component (returns INT16).
+    /// Extracts the year component from each timestamp.
+    ///
+    /// Returns an `INT16` column containing the year (e.g. `2024`).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::column::Column;
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let ts = Column::from_timestamps_s(&[1718443845]).call()?;
+    /// let years = ts.view().extract_year().call()?;
+    /// // years contains [2024]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_year(&self) -> ExtractYear<'_>;
-    /// Extracts the month component (returns INT16).
+
+    /// Extracts the month component from each timestamp.
+    ///
+    /// Returns an `INT16` column with values in the range `1..=12`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let months = ts.view().extract_month().call()?;
+    /// // months contains values 1-12
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_month(&self) -> ExtractMonth<'_>;
-    /// Extracts the day component (returns INT16).
+
+    /// Extracts the day-of-month component from each timestamp.
+    ///
+    /// Returns an `INT16` column with values in the range `1..=31`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let days = ts.view().extract_day().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_day(&self) -> ExtractDay<'_>;
-    /// Extracts the weekday component (returns INT16).
+
+    /// Extracts the weekday component from each timestamp.
+    ///
+    /// Returns an `INT16` column where Monday is `0` and Sunday is `6`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let weekdays = ts.view().extract_weekday().call()?;
+    /// // 0=Monday, 1=Tuesday, ..., 6=Sunday
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_weekday(&self) -> ExtractWeekday<'_>;
-    /// Extracts the hour component (returns INT16).
+
+    /// Extracts the hour component from each timestamp.
+    ///
+    /// Returns an `INT16` column with values in the range `0..=23`.
+    /// For `TIMESTAMP_DAYS` columns the result is always `0`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let hours = ts.view().extract_hour().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_hour(&self) -> ExtractHour<'_>;
-    /// Extracts the minute component (returns INT16).
+
+    /// Extracts the minute component from each timestamp.
+    ///
+    /// Returns an `INT16` column with values in the range `0..=59`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let minutes = ts.view().extract_minute().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_minute(&self) -> ExtractMinute<'_>;
-    /// Extracts the second component (returns INT16).
+
+    /// Extracts the second component from each timestamp.
+    ///
+    /// Returns an `INT16` column with values in the range `0..=59`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let seconds = ts.view().extract_second().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_second(&self) -> ExtractSecond<'_>;
-    /// Returns the day of year (1-366) (returns INT16).
+
+    /// Returns the 1-based day of the year for each timestamp.
+    ///
+    /// Returns an `INT16` column with values in the range `1..=366`.
+    /// January 1 is day `1`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let doy = ts.view().day_of_year().call()?;
+    /// // Jan 1 => 1, Feb 1 => 32, etc.
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn day_of_year(&self) -> DayOfYear<'_>;
-    /// Returns whether each year is a leap year (returns BOOL8).
+
+    /// Tests whether each timestamp falls in a leap year.
+    ///
+    /// Returns a `BOOL8` column: `true` if the year is a leap year, `false`
+    /// otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let leap = ts.view().is_leap_year().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn is_leap_year(&self) -> IsLeapYear<'_>;
-    /// Returns the number of days in the month (returns INT16).
+
+    /// Returns the number of days in the month for each timestamp.
+    ///
+    /// Returns an `INT16` column (e.g. `28`, `29`, `30`, or `31`).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let dim = ts.view().days_in_month().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn days_in_month(&self) -> DaysInMonth<'_>;
-    /// Returns the last day of the month (returns `TIMESTAMP_DAYS`).
+
+    /// Returns the last day of the month for each timestamp.
+    ///
+    /// Returns a `TIMESTAMP_DAYS` column where each value is set to the last
+    /// calendar day of that row's month. For example, any date in June yields
+    /// June 30.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let last = ts.view().last_day_of_month().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn last_day_of_month(&self) -> LastDayOfMonth<'_>;
-    /// Returns the quarter (1-4) (returns INT16).
+
+    /// Extracts the quarter for each timestamp.
+    ///
+    /// Returns an `INT16` column with values `1` (Jan-Mar), `2` (Apr-Jun),
+    /// `3` (Jul-Sep), or `4` (Oct-Dec).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let quarters = ts.view().extract_quarter().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_quarter(&self) -> ExtractQuarter<'_>;
-    /// Ceil datetimes to given frequency.
+
+    /// Rounds each timestamp up (ceiling) to the given frequency.
+    ///
+    /// The `freq` parameter specifies the unit boundary to ceil to (e.g.
+    /// [`RoundingFrequency::Day`], [`RoundingFrequency::Hour`]). The output
+    /// column has the same timestamp type as the input.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::{DatetimeExt, RoundingFrequency};
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let ceiled = ts.view().dt_ceil(RoundingFrequency::Hour).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn dt_ceil(&self, freq: RoundingFrequency) -> DtCeil<'_>;
-    /// Floor datetimes to given frequency.
+
+    /// Rounds each timestamp down (floor) to the given frequency.
+    ///
+    /// The `freq` parameter specifies the unit boundary to floor to (e.g.
+    /// [`RoundingFrequency::Day`], [`RoundingFrequency::Second`]). The output
+    /// column has the same timestamp type as the input.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::{DatetimeExt, RoundingFrequency};
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let floored = ts.view().dt_floor(RoundingFrequency::Minute).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn dt_floor(&self, freq: RoundingFrequency) -> DtFloor<'_>;
-    /// Round datetimes to given frequency.
+
+    /// Rounds each timestamp to the nearest frequency boundary.
+    ///
+    /// The `freq` parameter specifies the unit to round to. Values exactly at
+    /// the midpoint are rounded up. The output column has the same timestamp
+    /// type as the input.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::{DatetimeExt, RoundingFrequency};
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let rounded = ts.view().dt_round(RoundingFrequency::Second).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn dt_round(&self, freq: RoundingFrequency) -> DtRound<'_>;
-    /// Add months (from another column) to timestamps.
+
+    /// Adds months to each timestamp using per-row values from a column.
+    ///
+    /// The `months` column must be an integer type (`INT16` or `INT32`)
+    /// with the same number of rows. Negative values subtract months. If the
+    /// resulting day exceeds the target month's length, it is clamped to the
+    /// last valid day (e.g. Jan 31 + 1 month = Feb 28/29).
+    ///
+    /// Returns a timestamp column of the same type as the input.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let months = Column::from_i32(&[1, -2, 3]).call()?;
+    /// let shifted = ts.view().dt_add_months(&months.view()).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn dt_add_months<'a>(&'a self, months: &'a ColumnView<'a>) -> DtAddMonths<'a>;
-    /// Add months (from a scalar) to timestamps.
+
+    /// Adds a scalar number of months to every timestamp in the column.
+    ///
+    /// The `months` scalar must be an integer type. Negative values subtract
+    /// months. Day clamping applies as in [`dt_add_months`](DatetimeExt::dt_add_months).
+    ///
+    /// Returns a timestamp column of the same type as the input.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let months = Scalar::from_i32(6);
+    /// let shifted = ts.view().dt_add_months_scalar(&months).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn dt_add_months_scalar<'a>(
         &'a self,
         months: &'a crate::scalar::Scalar,
     ) -> DtAddMonthsScalar<'a>;
-    /// Extracts the millisecond fraction component (returns INT16).
+
+    /// Extracts the millisecond fraction component from each timestamp.
+    ///
+    /// Returns an `INT16` column with values in the range `0..=999`.
+    /// This is the sub-second millisecond part, not the total milliseconds
+    /// since epoch.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let ms = ts.view().extract_millisecond().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_millisecond(&self) -> ExtractMillisecond<'_>;
-    /// Extracts the microsecond fraction component (returns INT16).
+
+    /// Extracts the microsecond fraction component from each timestamp.
+    ///
+    /// Returns an `INT16` column with values in the range `0..=999`.
+    /// This is the sub-millisecond microsecond part.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let us = ts.view().extract_microsecond().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_microsecond(&self) -> ExtractMicrosecond<'_>;
-    /// Extracts the nanosecond fraction component (returns INT16).
+
+    /// Extracts the nanosecond fraction component from each timestamp.
+    ///
+    /// Returns an `INT16` column with values in the range `0..=999`.
+    /// This is the sub-microsecond nanosecond part.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::datetime::DatetimeExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let ns = ts.view().extract_nanosecond().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn extract_nanosecond(&self) -> ExtractNanosecond<'_>;
 }
 
 #[doc(alias = "rounding_frequency")]
-/// Datetime rounding frequency.
+/// Specifies the time unit boundary for datetime rounding operations.
+///
+/// Used with [`DatetimeExt::dt_ceil`], [`DatetimeExt::dt_floor`], and
+/// [`DatetimeExt::dt_round`] to control the granularity of rounding.
 #[repr(i32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RoundingFrequency {
@@ -91,6 +421,9 @@ impl From<RoundingFrequency> for i32 {
 // ---------------------------------------------------------------------------
 
 /// Builder for [`DatetimeExt::extract_year`].
+///
+/// Created by [`DatetimeExt::extract_year`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractYear<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -111,6 +444,9 @@ impl crate::stream::GpuOp for ExtractYear<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_month`].
+///
+/// Created by [`DatetimeExt::extract_month`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractMonth<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -131,6 +467,9 @@ impl crate::stream::GpuOp for ExtractMonth<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_day`].
+///
+/// Created by [`DatetimeExt::extract_day`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractDay<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -151,6 +490,9 @@ impl crate::stream::GpuOp for ExtractDay<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_weekday`].
+///
+/// Created by [`DatetimeExt::extract_weekday`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractWeekday<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -172,6 +514,9 @@ impl crate::stream::GpuOp for ExtractWeekday<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_hour`].
+///
+/// Created by [`DatetimeExt::extract_hour`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractHour<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -192,6 +537,9 @@ impl crate::stream::GpuOp for ExtractHour<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_minute`].
+///
+/// Created by [`DatetimeExt::extract_minute`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractMinute<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -213,6 +561,9 @@ impl crate::stream::GpuOp for ExtractMinute<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_second`].
+///
+/// Created by [`DatetimeExt::extract_second`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractSecond<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -234,6 +585,9 @@ impl crate::stream::GpuOp for ExtractSecond<'_> {
 }
 
 /// Builder for [`DatetimeExt::day_of_year`].
+///
+/// Created by [`DatetimeExt::day_of_year`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct DayOfYear<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -254,6 +608,9 @@ impl crate::stream::GpuOp for DayOfYear<'_> {
 }
 
 /// Builder for [`DatetimeExt::is_leap_year`].
+///
+/// Created by [`DatetimeExt::is_leap_year`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct IsLeapYear<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -274,6 +631,9 @@ impl crate::stream::GpuOp for IsLeapYear<'_> {
 }
 
 /// Builder for [`DatetimeExt::days_in_month`].
+///
+/// Created by [`DatetimeExt::days_in_month`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct DaysInMonth<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -294,6 +654,9 @@ impl crate::stream::GpuOp for DaysInMonth<'_> {
 }
 
 /// Builder for [`DatetimeExt::last_day_of_month`].
+///
+/// Created by [`DatetimeExt::last_day_of_month`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct LastDayOfMonth<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -315,6 +678,9 @@ impl crate::stream::GpuOp for LastDayOfMonth<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_quarter`].
+///
+/// Created by [`DatetimeExt::extract_quarter`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractQuarter<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -336,6 +702,9 @@ impl crate::stream::GpuOp for ExtractQuarter<'_> {
 }
 
 /// Builder for [`DatetimeExt::dt_ceil`].
+///
+/// Created by [`DatetimeExt::dt_ceil`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct DtCeil<'a> {
     view: &'a ColumnView<'a>,
     freq: RoundingFrequency,
@@ -361,6 +730,9 @@ impl crate::stream::GpuOp for DtCeil<'_> {
 }
 
 /// Builder for [`DatetimeExt::dt_floor`].
+///
+/// Created by [`DatetimeExt::dt_floor`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct DtFloor<'a> {
     view: &'a ColumnView<'a>,
     freq: RoundingFrequency,
@@ -386,6 +758,9 @@ impl crate::stream::GpuOp for DtFloor<'_> {
 }
 
 /// Builder for [`DatetimeExt::dt_round`].
+///
+/// Created by [`DatetimeExt::dt_round`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct DtRound<'a> {
     view: &'a ColumnView<'a>,
     freq: RoundingFrequency,
@@ -411,6 +786,9 @@ impl crate::stream::GpuOp for DtRound<'_> {
 }
 
 /// Builder for [`DatetimeExt::dt_add_months`].
+///
+/// Created by [`DatetimeExt::dt_add_months`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct DtAddMonths<'a> {
     view: &'a ColumnView<'a>,
     months: &'a ColumnView<'a>,
@@ -436,6 +814,9 @@ impl crate::stream::GpuOp for DtAddMonths<'_> {
 }
 
 /// Builder for [`DatetimeExt::dt_add_months_scalar`].
+///
+/// Created by [`DatetimeExt::dt_add_months_scalar`]. Call `.call()` to execute,
+/// or chain `.stream(s)` to run on a specific CUDA stream.
 pub struct DtAddMonthsScalar<'a> {
     view: &'a ColumnView<'a>,
     months: &'a crate::scalar::Scalar,
@@ -462,6 +843,9 @@ impl crate::stream::GpuOp for DtAddMonthsScalar<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_millisecond`].
+///
+/// Created by [`DatetimeExt::extract_millisecond`]. Call `.call()` to execute,
+/// or chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractMillisecond<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -485,6 +869,9 @@ impl crate::stream::GpuOp for ExtractMillisecond<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_microsecond`].
+///
+/// Created by [`DatetimeExt::extract_microsecond`]. Call `.call()` to execute,
+/// or chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractMicrosecond<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -508,6 +895,9 @@ impl crate::stream::GpuOp for ExtractMicrosecond<'_> {
 }
 
 /// Builder for [`DatetimeExt::extract_nanosecond`].
+///
+/// Created by [`DatetimeExt::extract_nanosecond`]. Call `.call()` to execute,
+/// or chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ExtractNanosecond<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,

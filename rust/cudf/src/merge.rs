@@ -3,7 +3,14 @@
 
 //! Merge operations on sorted tables.
 //!
-//! Available as a method on [`Table`](crate::table::Table): `table.merge(...)`.
+//! Merges two tables that are each independently sorted by the same key
+//! columns, producing a single sorted output table. This is the merge step of
+//! a merge-sort and runs in O(n + m) time.
+//!
+//! Available as a method on [`Table`](crate::table::Table):
+//!
+//! * [`Table::merge`](crate::table::Table::merge) -- merge two pre-sorted
+//!   tables while maintaining sort order.
 
 #[cfg(test)]
 mod tests {

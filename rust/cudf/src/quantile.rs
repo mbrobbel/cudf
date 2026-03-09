@@ -1,11 +1,23 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
-//! Quantile operations on GPU columns.
+//! Quantile and percentile operations on GPU columns.
 //!
-//! Available as methods on [`ColumnView`](crate::ColumnView):
-//! `col.quantile(...)`, `col.quantile_with_interp(...)`.
+//! Available as methods on [`ColumnView`](crate::column::ColumnView):
+//!
+//! * [`ColumnView::quantile`](crate::column::ColumnView::quantile) -- compute
+//!   quantiles using the default `LINEAR` interpolation.
+//! * [`ColumnView::quantile_with_interp`](crate::column::ColumnView::quantile_with_interp) --
+//!   compute quantiles with a specified [`Interpolation`] method.
+//!
+//! And on [`Table`](crate::table::Table):
+//!
+//! * [`Table::quantiles`](crate::table::Table::quantiles) -- select rows at
+//!   the given quantile positions across the table.
 
+/// Interpolation method used when a quantile falls between two data points.
+///
+/// Variants: `LINEAR`, `LOWER`, `HIGHER`, `MIDPOINT`, `NEAREST`.
 #[doc(alias = "interpolation")]
 pub use cudf_sys::ffi::Interpolation;
 

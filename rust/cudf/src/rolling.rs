@@ -2,6 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Rolling window aggregation operations.
+//!
+//! Rolling windows compute an aggregate over a sliding window of rows around
+//! each element. Available as methods on
+//! [`ColumnView`]:
+//!
+//! * [`ColumnView::rolling_window`](crate::column::ColumnView::rolling_window) --
+//!   fixed-size window on the entire column.
+//! * [`ColumnView::grouped_rolling_window`](crate::column::ColumnView::grouped_rolling_window) --
+//!   fixed-size window that resets at group boundaries.
+//! * [`ColumnView::rolling_window_with_defaults`](crate::column::ColumnView::rolling_window_with_defaults) --
+//!   fixed-size window with fallback default values (for LEAD/LAG).
+//! * [`ColumnView::grouped_rolling_window_with_defaults`](crate::column::ColumnView::grouped_rolling_window_with_defaults) --
+//!   grouped variant with default values.
+//! * [`ColumnView::grouped_range_rolling_window`](crate::column::ColumnView::grouped_range_rolling_window) --
+//!   window defined by a value range rather than a fixed row count.
 
 use cxx::UniquePtr;
 
@@ -18,6 +33,11 @@ use cudf_sys::ffi::AggregationKind;
 ///
 /// Created by [`ColumnView::rolling_window`].
 /// Call [`.call()`](crate::stream::GpuOp::call) to execute.
+/// Use [`.stream()`](crate::stream::GpuOp::stream) to set a custom CUDA stream.
+///
+/// For element *i* the window covers rows
+/// `[i - preceding + 1, i + following]` (inclusive). If the window contains
+/// fewer than `min_periods` non-null values the output element is null.
 pub struct RollingWindow<'a> {
     view: &'a ColumnView<'a>,
     preceding: i32,
@@ -52,6 +72,10 @@ impl crate::stream::GpuOp for RollingWindow<'_> {
 ///
 /// Created by [`ColumnView::grouped_rolling_window`].
 /// Call [`.call()`](crate::stream::GpuOp::call) to execute.
+/// Use [`.stream()`](crate::stream::GpuOp::stream) to set a custom CUDA stream.
+///
+/// The window does not cross group boundaries defined by `group_keys`.
+/// The input data must be pre-sorted by the group key columns.
 pub struct GroupedRollingWindow<'a> {
     view: &'a ColumnView<'a>,
     group_keys: &'a Table,
@@ -88,6 +112,11 @@ impl crate::stream::GpuOp for GroupedRollingWindow<'_> {
 ///
 /// Created by [`ColumnView::rolling_window_with_defaults`].
 /// Call [`.call()`](crate::stream::GpuOp::call) to execute.
+/// Use [`.stream()`](crate::stream::GpuOp::stream) to set a custom CUDA stream.
+///
+/// When the window extends beyond column boundaries (e.g. for `LEAD` or `LAG`
+/// aggregations), values from `default_outputs` are used instead of null.
+/// `default_outputs` must have the same length as the input column.
 pub struct RollingWindowWithDefaults<'a> {
     view: &'a ColumnView<'a>,
     default_outputs: &'a ColumnView<'a>,
@@ -124,6 +153,10 @@ impl crate::stream::GpuOp for RollingWindowWithDefaults<'_> {
 ///
 /// Created by [`ColumnView::grouped_rolling_window_with_defaults`].
 /// Call [`.call()`](crate::stream::GpuOp::call) to execute.
+/// Use [`.stream()`](crate::stream::GpuOp::stream) to set a custom CUDA stream.
+///
+/// Combines grouped semantics (window resets at group boundaries) with default
+/// output values for out-of-bounds positions.
 pub struct GroupedRollingWindowWithDefaults<'a> {
     view: &'a ColumnView<'a>,
     group_keys: &'a Table,
@@ -161,9 +194,45 @@ impl crate::stream::GpuOp for GroupedRollingWindowWithDefaults<'_> {
 impl<'a> ColumnView<'a> {
     /// Applies a fixed-size rolling window aggregation.
     ///
-    /// `preceding` and `following` define the window around each element.
-    /// Total window size = preceding + following.
-    /// Element `i` uses elements `[i - preceding + 1, i + following]`.
+    /// For element *i*, the window covers rows
+    /// `[i - preceding + 1, i + following]` (inclusive on both ends).
+    /// The total window size is `preceding + following`.
+    ///
+    /// # Arguments
+    ///
+    /// * `preceding` -- Number of rows before the current row (inclusive of
+    ///   the current row) in the window. Must be >= 1 to include the current
+    ///   row itself.
+    /// * `following` -- Number of rows after the current row in the window.
+    ///   Use 0 for a trailing window.
+    /// * `min_periods` -- Minimum number of non-null values in the window
+    ///   required to produce a non-null output. If fewer non-null values are
+    ///   present the output element is null.
+    /// * `agg_kind` -- The aggregation to apply (e.g. `SUM`, `MEAN`, `MIN`,
+    ///   `MAX`, `COUNT_VALID`, `COUNT_ALL`, `LEAD`, `LAG`, etc.).
+    ///
+    /// # Returns
+    ///
+    /// A [`Column`] of the same length as `self` containing the aggregated
+    /// values. The output type depends on the aggregation kind.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the aggregation kind is incompatible with the
+    /// column type, or if the libcudf call fails.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::column::Column;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    /// use cudf_sys::ffi::AggregationKind;
+    ///
+    /// let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+    /// // 3-element trailing window sum
+    /// let result = col.view().rolling_window(3, 0, 1, AggregationKind::SUM).call()?;
+    /// ```
     ///
     /// Returns a [`RollingWindow`] builder. Use `.stream()` to set a custom
     /// CUDA stream, then `.call()` to execute.
@@ -186,8 +255,30 @@ impl<'a> ColumnView<'a> {
 
     /// Applies a grouped fixed-size rolling window aggregation.
     ///
-    /// Elements are grouped by `group_keys` (must be pre-sorted).
-    /// The window does not cross group boundaries.
+    /// Elements are grouped by `group_keys`. The window does not cross group
+    /// boundaries -- it resets at each group start. The input data **must**
+    /// be pre-sorted by the group key columns.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_keys` -- A [`Table`] whose columns define the groups.
+    ///   Must have the same number of rows as `self` and be sorted by the
+    ///   group key columns.
+    /// * `preceding` -- Number of preceding rows in the window (see
+    ///   [`rolling_window`](ColumnView::rolling_window) for semantics).
+    /// * `following` -- Number of following rows in the window.
+    /// * `min_periods` -- Minimum non-null values required for a non-null
+    ///   output.
+    /// * `agg_kind` -- The aggregation to apply.
+    ///
+    /// # Returns
+    ///
+    /// A [`Column`] of the same length as `self` with per-group aggregated
+    /// values.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the libcudf call fails.
     ///
     /// Returns a [`GroupedRollingWindow`] builder. Use `.stream()` to set a
     /// custom CUDA stream, then `.call()` to execute.
@@ -213,7 +304,27 @@ impl<'a> ColumnView<'a> {
     /// Rolling window with default output values (for LEAD/LAG aggregations).
     ///
     /// When the window extends beyond column boundaries, values from
-    /// `default_outputs` are used instead of null.
+    /// `default_outputs` are used instead of null. This is primarily useful
+    /// for `LEAD` and `LAG` aggregations where you want a specific fill
+    /// value at the edges.
+    ///
+    /// # Arguments
+    ///
+    /// * `default_outputs` -- Column of default values to use when the window
+    ///   extends past the column boundaries. Must have the same length as
+    ///   `self` and a compatible type.
+    /// * `preceding` -- Number of preceding rows in the window.
+    /// * `following` -- Number of following rows in the window.
+    /// * `min_periods` -- Minimum non-null values required.
+    /// * `agg_kind` -- The aggregation to apply.
+    ///
+    /// # Returns
+    ///
+    /// A [`Column`] of the same length as `self`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the libcudf call fails.
     ///
     /// Returns a [`RollingWindowWithDefaults`] builder. Use `.stream()` to set
     /// a custom CUDA stream, then `.call()` to execute.
@@ -237,6 +348,26 @@ impl<'a> ColumnView<'a> {
     }
 
     /// Grouped rolling window with default output values (for LEAD/LAG).
+    ///
+    /// Combines grouped semantics (window resets at group boundaries) with
+    /// default output values for out-of-bounds positions. The input must be
+    /// pre-sorted by the group key columns.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_keys` -- A [`Table`] defining the groups (sorted).
+    /// * `default_outputs` -- Column of default values. Must have the same
+    ///   length as `self`.
+    /// * `preceding`, `following`, `min_periods`, `agg_kind` -- See
+    ///   [`rolling_window`](ColumnView::rolling_window).
+    ///
+    /// # Returns
+    ///
+    /// A [`Column`] of the same length as `self`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the libcudf call fails.
     ///
     /// Returns a [`GroupedRollingWindowWithDefaults`] builder. Use `.stream()`
     /// to set a custom CUDA stream, then `.call()` to execute.
@@ -263,8 +394,31 @@ impl<'a> ColumnView<'a> {
 
     /// Grouped range-based rolling window aggregation.
     ///
-    /// Uses a range of values in `orderby` (rather than a fixed row count) to
-    /// define the window around each element.
+    /// Instead of a fixed number of rows, the window is defined by a **value
+    /// range** on the `orderby` column. For each row, all rows within the
+    /// group whose `orderby` value falls within
+    /// `[current - preceding, current + following]` are included. The input
+    /// must be pre-sorted by both `group_keys` and `orderby`.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_keys` -- A [`Table`] defining the groups (sorted).
+    /// * `orderby` -- The column whose values define the range window.
+    ///   Must be a numeric or timestamp type, sorted within each group.
+    /// * `order` -- Sort order of `orderby` (`ASCENDING` or `DESCENDING`).
+    /// * `preceding` -- [`RangeWindowBounds`] for the preceding boundary.
+    /// * `following` -- [`RangeWindowBounds`] for the following boundary.
+    /// * `min_periods` -- Minimum non-null values in the window required
+    ///   for a non-null output.
+    /// * `agg_kind` -- The aggregation to apply.
+    ///
+    /// # Returns
+    ///
+    /// A [`Column`] of the same length as `self`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the libcudf call fails.
     ///
     /// Returns a [`GroupedRangeRollingWindow`] builder. Use `.stream()` to set
     /// a custom CUDA stream, then `.call()` to execute.
@@ -299,14 +453,40 @@ impl<'a> ColumnView<'a> {
 
 /// Defines the bounds for a range-based rolling window.
 ///
+/// Range window bounds specify how far the window extends based on the
+/// **value** of an order-by column, rather than a fixed number of rows.
+///
 /// Created via the factory methods [`bounded`](RangeWindowBounds::bounded),
 /// [`current_row`](RangeWindowBounds::current_row), or
 /// [`unbounded`](RangeWindowBounds::unbounded).
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::rolling::RangeWindowBounds;
+/// use cudf::scalar::Scalar;
+/// use cudf::data_type::TypeId;
+///
+/// // Window extends 5 units before/after the current row's orderby value
+/// let preceding = RangeWindowBounds::bounded(&Scalar::from_i32(5))?;
+/// let following = RangeWindowBounds::bounded(&Scalar::from_i32(5))?;
+///
+/// // Window extends to the beginning/end of the group
+/// let unbounded = RangeWindowBounds::unbounded(TypeId::INT32)?;
+/// ```
 #[doc(alias = "range_window_bounds")]
 pub struct RangeWindowBounds(UniquePtr<cudf_sys::rolling::ffi::RangeWindowBounds>);
 
 impl RangeWindowBounds {
     /// Creates bounded range window bounds from a scalar value.
+    ///
+    /// The scalar `boundary` specifies how far the window extends from the
+    /// current row's order-by value. The scalar type must match the order-by
+    /// column's type.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the libcudf call fails.
     pub fn bounded(boundary: &Scalar) -> Result<Self> {
         let ffi = crate::scalar::scalar_to_ffi(boundary);
         let b = cudf_sys::rolling::ffi::range_window_bounds_get(
@@ -316,7 +496,13 @@ impl RangeWindowBounds {
         Ok(Self(b))
     }
 
-    /// Creates range window bounds matching the current row.
+    /// Creates range window bounds matching only the current row's value.
+    ///
+    /// The `type_id` must match the order-by column's type.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the libcudf call fails.
     pub fn current_row(type_id: TypeId) -> Result<Self> {
         let b = cudf_sys::rolling::ffi::range_window_bounds_current_row(
             type_id.repr,
@@ -325,7 +511,14 @@ impl RangeWindowBounds {
         Ok(Self(b))
     }
 
-    /// Creates unbounded range window bounds (extends to the entire group).
+    /// Creates unbounded range window bounds that extend to the entire group.
+    ///
+    /// Effectively includes all rows in the group. The `type_id` must match
+    /// the order-by column's type.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the libcudf call fails.
     pub fn unbounded(type_id: TypeId) -> Result<Self> {
         let b = cudf_sys::rolling::ffi::range_window_bounds_unbounded(
             type_id.repr,
@@ -339,6 +532,11 @@ impl RangeWindowBounds {
 ///
 /// Created by [`ColumnView::grouped_range_rolling_window`].
 /// Call [`.call()`](crate::stream::GpuOp::call) to execute.
+/// Use [`.stream()`](crate::stream::GpuOp::stream) to set a custom CUDA stream.
+///
+/// The window for each element is defined by a value range on the `orderby`
+/// column rather than a fixed row count. The window does not cross group
+/// boundaries.
 pub struct GroupedRangeRollingWindow<'a> {
     view: &'a ColumnView<'a>,
     group_keys: &'a Table,

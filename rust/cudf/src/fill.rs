@@ -15,6 +15,8 @@ use crate::stream::Stream;
 /// Builder for generating an arithmetic sequence: \[init, init+step, init+2*step, ...\].
 ///
 /// Created by [`sequence()`]. Call [`.call()`](crate::stream::GpuOp::call) to execute.
+/// Use [`.stream()`](crate::stream::GpuOp::stream) to set a custom CUDA stream before
+/// calling `.call()`.
 pub struct Sequence<'a> {
     count: usize,
     init: &'a Scalar,
@@ -24,12 +26,39 @@ pub struct Sequence<'a> {
 
 /// Generates an arithmetic sequence: \[init, init+step, init+2*step, ...\].
 ///
+/// Produces a GPU column of length `count` where element *i* has value
+/// `init + i * step`. Both `init` and `step` must be the same numeric type
+/// (e.g. both `INT32` or both `FLOAT64`); the output column inherits that type.
+///
 /// Returns a [`Sequence`] builder. Use `.stream()` to set a custom CUDA stream,
 /// then `.call()` to execute.
 ///
-/// # Example
+/// # Arguments
+///
+/// * `count` -- Number of elements to generate.
+/// * `init` -- Starting value of the sequence.
+/// * `step` -- Increment added for each successive element.
+///
+/// # Returns
+///
+/// A [`Column`] of length `count` containing the generated sequence.
+///
+/// # Errors
+///
+/// Returns an error if the underlying libcudf call fails (e.g. mismatched
+/// scalar types between `init` and `step`).
+///
+/// # Examples
+///
 /// ```ignore
-/// let col = sequence(5, &Scalar::from_i32(0), &Scalar::from_i32(2)).call()?;
+/// use cudf::fill::sequence;
+/// use cudf::scalar::Scalar;
+/// use cudf::stream::GpuOp;
+///
+/// let init = Scalar::from_i32(0);
+/// let step = Scalar::from_i32(2);
+/// let col = sequence(5, &init, &step).call()?;
+/// // col contains [0, 2, 4, 6, 8]
 /// ```
 pub fn sequence<'a>(count: usize, init: &'a Scalar, step: &'a Scalar) -> Sequence<'a> {
     Sequence {

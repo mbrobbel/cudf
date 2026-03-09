@@ -2,6 +2,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! String operations on GPU columns.
+//!
+//! The [`StringExt`] trait provides a comprehensive set of per-element string
+//! operations: case conversion, searching, replacing, splitting, joining,
+//! padding, regex matching, type conversions, encoding, and more.
+//!
+//! Free functions in this module provide multi-column string operations:
+//! [`concatenate_strings_with_separator`] and [`get_json_object`].
+//!
+//! The [`char_types`] submodule defines bitmask constants for character type
+//! classification.
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use cudf::column::Column;
+//! use cudf::strings::StringExt;
+//! use cudf::stream::GpuOp;
+//!
+//! let col = Column::from_strings(&["Hello", "World"]).call()?;
+//! let lower = col.view().to_lower().call()?;
+//! let lengths = col.view().count_characters().call()?;
+//! # Ok::<(), cudf::error::Error>(())
+//! ```
 
 use crate::column::{Column, ColumnView};
 use crate::data_type::TypeId;
@@ -11,6 +34,10 @@ use crate::stream::Stream;
 use crate::table::Table;
 
 #[doc(alias = "side_type")]
+/// Specifies which side(s) of a string to operate on for padding and stripping.
+///
+/// Re-exported from `cudf_sys`. Used with [`StringExt::str_pad`] and
+/// [`StringExt::str_strip_chars`].
 pub use cudf_sys::ffi::SideType;
 
 mod private {
@@ -21,217 +48,1157 @@ impl private::Sealed for crate::column::ColumnView<'_> {}
 
 #[doc(alias = "strings")]
 /// Extension trait for string operations on GPU columns.
+///
+/// Provides a comprehensive set of per-element string operations for columns
+/// with type `STRING`. This trait is implemented for [`ColumnView`] and is
+/// sealed -- it cannot be implemented outside this crate.
+///
+/// All methods return builder structs that implement [`GpuOp`](crate::stream::GpuOp).
+/// Call `.call()` to execute the operation, or chain `.stream(s)` first to run
+/// on a non-default CUDA stream.
+///
+/// # Errors
+///
+/// Methods generally return an error if the input column does not have the
+/// expected type (e.g. `STRING` for most methods, integer for `str_from_integers`).
 pub trait StringExt: private::Sealed {
-    /// Converts each string to lower case.
+    /// Converts each string element to lower case.
+    ///
+    /// Returns a `STRING` column with all characters converted to their
+    /// lowercase equivalents. Supports full Unicode case mapping.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let col = Column::from_strings(&["HELLO", "World"]).call()?;
+    /// let lower = col.view().to_lower().call()?;
+    /// // ["hello", "world"]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn to_lower(&self) -> ToLower<'_>;
-    /// Converts each string to upper case.
+
+    /// Converts each string element to upper case.
+    ///
+    /// Returns a `STRING` column with all characters converted to their
+    /// uppercase equivalents. Supports full Unicode case mapping.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let upper = col.view().to_upper().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn to_upper(&self) -> ToUpper<'_>;
-    /// Returns a BOOL8 column indicating whether each string contains the target.
+
+    /// Tests whether each string contains the `target` substring.
+    ///
+    /// The `target` must be a string [`Scalar`]. Returns a `BOOL8` column:
+    /// `true` if the string contains `target`, `false` otherwise. Null rows
+    /// produce null results.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let target = Scalar::from_string("abc");
+    /// let found = col.view().str_contains(&target).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_contains<'a>(&'a self, target: &'a Scalar) -> StrContains<'a>;
-    /// Returns a BOOL8 column indicating whether each string starts with the target.
+
+    /// Tests whether each string starts with the `target` prefix.
+    ///
+    /// The `target` must be a string [`Scalar`]. Returns a `BOOL8` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let prefix = Scalar::from_string("http");
+    /// let result = col.view().str_starts_with(&prefix).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_starts_with<'a>(&'a self, target: &'a Scalar) -> StrStartsWith<'a>;
-    /// Returns a BOOL8 column indicating whether each string ends with the target.
+
+    /// Tests whether each string ends with the `target` suffix.
+    ///
+    /// The `target` must be a string [`Scalar`]. Returns a `BOOL8` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let suffix = Scalar::from_string(".txt");
+    /// let result = col.view().str_ends_with(&suffix).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_ends_with<'a>(&'a self, target: &'a Scalar) -> StrEndsWith<'a>;
-    /// Returns an INT32 column with the position of the first occurrence of the target.
+
+    /// Finds the first position of the `target` substring in each string.
+    ///
+    /// The `target` must be a string [`Scalar`]. Returns an `INT32` column
+    /// containing the 0-based character position of the first occurrence,
+    /// or `-1` if the target is not found.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let target = Scalar::from_string("lo");
+    /// let positions = col.view().str_find(&target).call()?;
+    /// // "hello world" => 3, "goodbye" => -1
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_find<'a>(&'a self, target: &'a Scalar) -> StrFind<'a>;
-    /// Replaces all occurrences of `target` with `replacement`.
+
+    /// Replaces all occurrences of `target` with `replacement` in each string.
+    ///
+    /// Both `target` and `replacement` must be string [`Scalar`] values.
+    /// Returns a `STRING` column with all substitutions applied.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let target = Scalar::from_string("o");
+    /// let repl = Scalar::from_string("0");
+    /// let result = col.view().str_replace(&target, &repl).call()?;
+    /// // "hello" => "hell0"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_replace<'a>(&'a self, target: &'a Scalar, replacement: &'a Scalar) -> StrReplace<'a>;
-    /// Strips whitespace from both sides.
+
+    /// Strips leading and trailing whitespace from each string.
+    ///
+    /// Returns a `STRING` column with whitespace removed from both sides.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let stripped = col.view().str_strip().call()?;
+    /// // "  hello  " => "hello"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_strip(&self) -> StrStrip<'_>;
-    /// Strips whitespace from the left side.
+
+    /// Strips leading whitespace from each string.
+    ///
+    /// Returns a `STRING` column with whitespace removed from the left side only.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let stripped = col.view().str_lstrip().call()?;
+    /// // "  hello  " => "hello  "
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_lstrip(&self) -> StrLstrip<'_>;
-    /// Strips whitespace from the right side.
+
+    /// Strips trailing whitespace from each string.
+    ///
+    /// Returns a `STRING` column with whitespace removed from the right side only.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let stripped = col.view().str_rstrip().call()?;
+    /// // "  hello  " => "  hello"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_rstrip(&self) -> StrRstrip<'_>;
-    /// Returns an INT32 column with the character count.
+
+    /// Returns the number of characters in each string.
+    ///
+    /// Returns an `INT32` column containing Unicode character counts (not byte
+    /// counts). For multi-byte UTF-8 characters, this differs from
+    /// [`count_bytes`](StringExt::count_bytes).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let lengths = col.view().count_characters().call()?;
+    /// // "hello" => 5, "" => 0
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn count_characters(&self) -> CountCharacters<'_>;
-    /// Returns an INT32 column with the byte count.
+
+    /// Returns the number of bytes in each string's UTF-8 encoding.
+    ///
+    /// Returns an `INT32` column containing byte lengths. For ASCII-only
+    /// strings this equals the character count; for multi-byte UTF-8 it
+    /// may be larger.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let byte_lens = col.view().count_bytes().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn count_bytes(&self) -> CountBytes<'_>;
-    /// Converts an integer column to a string column.
+
+    /// Converts an integer column to its decimal string representation.
+    ///
+    /// The input column must be an integer type (`INT8`, `INT16`, `INT32`,
+    /// `INT64`, etc.). Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let strings = int_col.view().str_from_integers().call()?;
+    /// // [1, 2, 3] => ["1", "2", "3"]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_from_integers(&self) -> StrFromIntegers<'_>;
-    /// Converts a string column to an integer column.
+
+    /// Parses strings as integers of the specified `output_type`.
+    ///
+    /// The `output_type` determines the target integer type (e.g.
+    /// [`TypeId::INT32`], [`TypeId::INT64`]). Strings that cannot be parsed
+    /// produce zero or undefined values.
+    ///
+    /// Returns a column of the specified integer type.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::data_type::TypeId;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let ints = col.view().str_to_integers(TypeId::INT32).call()?;
+    /// // ["10", "20"] => [10, 20]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_to_integers(&self, output_type: TypeId) -> StrToIntegers<'_>;
-    /// Converts a float column to a string column.
+
+    /// Converts a floating-point column to its string representation.
+    ///
+    /// The input column must be a float type (`FLOAT32` or `FLOAT64`).
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let strings = float_col.view().str_from_floats().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_from_floats(&self) -> StrFromFloats<'_>;
-    /// Converts a string column to a float column.
+
+    /// Parses strings as floating-point values of the specified `output_type`.
+    ///
+    /// The `output_type` must be [`TypeId::FLOAT32`] or [`TypeId::FLOAT64`].
+    /// Strings that cannot be parsed produce NaN.
+    ///
+    /// Returns a column of the specified float type.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::data_type::TypeId;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let floats = col.view().str_to_floats(TypeId::FLOAT64).call()?;
+    /// // ["1.5", "2.5"] => [1.5, 2.5]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_to_floats(&self, output_type: TypeId) -> StrToFloats<'_>;
-    /// Pads strings to a minimum width.
+
+    /// Pads each string to a minimum `width` using a fill character.
+    ///
+    /// The `side` parameter controls where padding is added: left, right, or
+    /// both sides (see [`SideType`]). The `fill_char` is a single-character
+    /// string used for padding. Strings already at or above `width` are
+    /// unchanged.
+    ///
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::{StringExt, SideType};
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let padded = col.view().str_pad(10, SideType::LEFT, " ").call()?;
+    /// // "hi" => "        hi"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_pad<'a>(&'a self, width: usize, side: SideType, fill_char: &'a str) -> StrPad<'a>;
-    /// Zero-fills strings to a minimum width.
+
+    /// Pads numeric strings with leading zeros to reach `width` characters.
+    ///
+    /// A leading sign character (`+` or `-`) is preserved before the zeros.
+    /// Non-numeric strings are left-padded with zeros. Strings already at or
+    /// above `width` are unchanged.
+    ///
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let zfilled = col.view().str_zfill(5).call()?;
+    /// // "42" => "00042", "-7" => "-0007"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_zfill(&self, width: usize) -> StrZfill<'_>;
-    /// Zero-fills strings using per-row widths from a column.
+
+    /// Pads numeric strings with leading zeros using per-row widths from a column.
+    ///
+    /// The `widths` column must be an `INT32` column with the same number of
+    /// rows. Behavior is otherwise identical to [`str_zfill`](StringExt::str_zfill).
+    ///
+    /// Returns a `STRING` column.
     fn str_zfill_by_widths<'a>(&'a self, widths: &'a ColumnView<'a>) -> StrZfillByWidths<'a>;
-    /// Extracts a substring [start, stop) with optional step.
+
+    /// Extracts a substring from each string using character indices.
+    ///
+    /// Extracts characters in the half-open range `[start, stop)` with the
+    /// given `step`. A `step` of `1` extracts every character. Negative
+    /// `start`/`stop` values are not supported (they are treated as 0).
+    /// A `stop` of `-1` means through the end of the string.
+    ///
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let sliced = col.view().str_slice(0, 3, 1).call()?;
+    /// // "hello" => "hel"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_slice(&self, start: i32, stop: i32, step: i32) -> StrSlice<'_>;
-    /// Repeats each string N times.
+
+    /// Repeats each string `times` times by concatenating it with itself.
+    ///
+    /// A `times` value of `0` produces empty strings. Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let repeated = col.view().str_repeat(3).call()?;
+    /// // "ab" => "ababab"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_repeat(&self, times: usize) -> StrRepeat<'_>;
-    /// Splits strings by a delimiter into a table of columns.
+
+    /// Splits each string by a delimiter into a [`Table`] of string columns.
+    ///
+    /// The `delimiter` must be a string [`Scalar`]. Each output column
+    /// corresponds to a split part. The `maxsplit` parameter limits the number
+    /// of splits (`-1` for unlimited). Splitting proceeds left-to-right.
+    ///
+    /// Returns a [`Table`] with one column per split part.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let delim = Scalar::from_string(",");
+    /// let parts = col.view().str_split(&delim, -1).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_split<'a>(&'a self, delimiter: &'a Scalar, maxsplit: i32) -> StrSplit<'a>;
-    /// Right-splits strings by a delimiter into a table of columns.
+
+    /// Splits each string by a delimiter right-to-left into a [`Table`] of string columns.
+    ///
+    /// Behaves like [`str_split`](StringExt::str_split) but splitting proceeds
+    /// from the right end of each string.
     fn str_rsplit<'a>(&'a self, delimiter: &'a Scalar, maxsplit: i32) -> StrRsplit<'a>;
-    /// Returns the Nth part after splitting by delimiter.
+
+    /// Returns the Nth part after splitting each string by a delimiter.
+    ///
+    /// The `delimiter` must be a string [`Scalar`]. The `index` is 0-based
+    /// and selects which split part to return. Negative `index` counts from
+    /// the last part (`-1` = last part).
+    ///
+    /// Returns a `STRING` column. If a row has fewer parts than `index`,
+    /// the result for that row is null.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let delim = Scalar::from_string("/");
+    /// let part = col.view().str_split_part(&delim, 1).call()?;
+    /// // "a/b/c" => "b"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_split_part<'a>(&'a self, delimiter: &'a Scalar, index: i32) -> StrSplitPart<'a>;
-    /// Joins all strings into a single string.
+
+    /// Joins all strings in the column into a single string.
+    ///
+    /// The `separator` scalar is placed between consecutive strings. The
+    /// `narep` scalar is substituted for null elements. If `narep` is a null
+    /// scalar, null elements are skipped.
+    ///
+    /// Returns a single-row `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let sep = Scalar::from_string(", ");
+    /// let na = Scalar::from_string("");
+    /// let joined = col.view().str_join(&sep, &na).call()?;
+    /// // ["a", "b", "c"] => "a, b, c"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_join<'a>(&'a self, separator: &'a Scalar, narep: &'a Scalar) -> StrJoin<'a>;
-    /// SQL LIKE pattern matching.
+
+    /// Performs SQL `LIKE` pattern matching on each string.
+    ///
+    /// The `pattern` uses SQL `LIKE` wildcards: `%` matches zero or more
+    /// characters, `_` matches exactly one character. The `escape_char` is
+    /// used to escape wildcards in the pattern (typically `"\\"`).
+    ///
+    /// Returns a `BOOL8` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let matched = col.view().str_like("%hello%", "\\").call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_like<'a>(&'a self, pattern: &'a str, escape_char: &'a str) -> StrLike<'a>;
-    /// Regex contains check.
+
+    /// Tests whether each string contains a match for a regular expression.
+    ///
+    /// The `pattern` is a regular expression in libcudf regex syntax. Returns
+    /// a `BOOL8` column: `true` if the pattern matches anywhere within the
+    /// string.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let found = col.view().str_contains_re("\\d+").call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_contains_re<'a>(&'a self, pattern: &'a str) -> StrContainsRe<'a>;
-    /// Regex match from start of string.
+
+    /// Tests whether each string matches a regular expression from the beginning.
+    ///
+    /// The `pattern` is anchored to the start of the string (like `^pattern`).
+    /// Returns a `BOOL8` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let matched = col.view().str_matches_re("[A-Z].*").call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_matches_re<'a>(&'a self, pattern: &'a str) -> StrMatchesRe<'a>;
-    /// Counts regex matches per string.
+
+    /// Counts the number of non-overlapping regex matches in each string.
+    ///
+    /// Returns an `INT32` column containing the match count per string.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let counts = col.view().str_count_re("\\d").call()?;
+    /// // "a1b2c3" => 3
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_count_re<'a>(&'a self, pattern: &'a str) -> StrCountRe<'a>;
-    /// Replaces regex matches.
+
+    /// Replaces all regex matches in each string with a replacement string.
+    ///
+    /// The `pattern` is a regular expression and `replacement` is a literal
+    /// string (no back-references; use
+    /// [`str_replace_with_backrefs`](StringExt::str_replace_with_backrefs) for
+    /// that). Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let result = col.view().str_replace_re("\\d+", "NUM").call()?;
+    /// // "abc123def" => "abcNUMdef"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_replace_re<'a>(&'a self, pattern: &'a str, replacement: &'a str) -> StrReplaceRe<'a>;
-    /// Swap case (upper to lower, lower to upper).
+
+    /// Swaps the case of every character in each string.
+    ///
+    /// Uppercase characters become lowercase and vice versa. Returns a
+    /// `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let swapped = col.view().swapcase().call()?;
+    /// // "Hello" => "hELLO"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn swapcase(&self) -> Swapcase<'_>;
-    /// Strip specified characters from sides of strings.
+
+    /// Strips the specified characters from one or both sides of each string.
+    ///
+    /// The `side` parameter controls which side(s) to strip (see [`SideType`]).
+    /// The `to_strip` string lists the characters to remove (each character is
+    /// removed independently, not as a substring).
+    ///
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::{StringExt, SideType};
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let stripped = col.view().str_strip_chars(SideType::BOTH, "xyz").call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_strip_chars<'a>(&'a self, side: SideType, to_strip: &'a str) -> StrStripChars<'a>;
-    /// Replace literal target with replacement (max `maxrepl` times, -1 = all).
+
+    /// Replaces occurrences of a literal `target` with `repl` in each string.
+    ///
+    /// The `maxrepl` parameter limits the number of replacements per string;
+    /// `-1` means replace all occurrences. Unlike [`str_replace`](StringExt::str_replace),
+    /// this takes string slices instead of scalars.
+    ///
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let result = col.view().str_replace_literal("foo", "bar", -1).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_replace_literal<'a>(
         &'a self,
         target: &'a str,
         repl: &'a str,
         maxrepl: i32,
     ) -> StrReplaceLiteral<'a>;
-    /// Find first position of literal target in range [start, stop).
+
+    /// Finds the first position of a literal `target` within the character range `[start, stop)`.
+    ///
+    /// Returns an `INT32` column with 0-based positions, or `-1` if not found.
+    /// The `start` and `stop` are character positions (not byte offsets).
+    /// Use `stop = -1` to search through the end of the string.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let pos = col.view().str_find_str("abc", 0, -1).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_find_str<'a>(&'a self, target: &'a str, start: i32, stop: i32) -> StrFindStr<'a>;
-    /// Find last position of literal target (reverse find).
+
+    /// Finds the last position of a literal `target` within `[start, stop)` (reverse find).
+    ///
+    /// Returns an `INT32` column with 0-based positions, or `-1` if not found.
+    /// Searches from the end of the string toward the beginning.
     fn str_rfind<'a>(&'a self, target: &'a str, start: i32, stop: i32) -> StrRfind<'a>;
-    /// Check if string contains literal target.
+
+    /// Tests whether each string contains a literal `target` substring.
+    ///
+    /// Unlike [`str_contains`](StringExt::str_contains), this takes a string
+    /// slice instead of a [`Scalar`]. Returns a `BOOL8` column.
     fn str_contains_literal<'a>(&'a self, target: &'a str) -> StrContainsLiteral<'a>;
-    /// Check if string starts with literal target.
+
+    /// Tests whether each string starts with a literal `target` prefix.
+    ///
+    /// Unlike [`str_starts_with`](StringExt::str_starts_with), this takes a
+    /// string slice instead of a [`Scalar`]. Returns a `BOOL8` column.
     fn str_starts_with_str<'a>(&'a self, target: &'a str) -> StrStartsWithStr<'a>;
-    /// Check if string ends with literal target.
+
+    /// Tests whether each string ends with a literal `target` suffix.
+    ///
+    /// Unlike [`str_ends_with`](StringExt::str_ends_with), this takes a
+    /// string slice instead of a [`Scalar`]. Returns a `BOOL8` column.
     fn str_ends_with_str<'a>(&'a self, target: &'a str) -> StrEndsWithStr<'a>;
-    /// Reverse characters within each string.
+
+    /// Reverses the characters within each string.
+    ///
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let reversed = col.view().str_reverse().call()?;
+    /// // "hello" => "olleh"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_reverse(&self) -> StrReverse<'_>;
-    /// Regex extract groups into a Table (one column per group).
+
+    /// Extracts regex capture groups into a [`Table`], one column per group.
+    ///
+    /// The `pattern` must contain one or more capture groups (parenthesized
+    /// sub-expressions). Each group becomes a `STRING` column in the output
+    /// table. If a row does not match, all group columns for that row are null.
+    ///
+    /// Returns a [`Table`] with as many columns as capture groups.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let parts = col.view().str_extract("(\\w+)@(\\w+)").call()?;
+    /// // Two columns: user part and domain part
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_extract<'a>(&'a self, pattern: &'a str) -> StrExtract<'a>;
-    /// Regex extract all matches into a lists column.
+
+    /// Extracts all regex matches into a `LIST(STRING)` column.
+    ///
+    /// Each row contains a list of all non-overlapping matches of `pattern`.
+    /// If there are no matches, the list is empty.
+    ///
+    /// Returns a `LIST` column of strings.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let all_matches = col.view().str_extract_all("\\d+").call()?;
+    /// // "a1b2c3" => ["1", "2", "3"]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_extract_all<'a>(&'a self, pattern: &'a str) -> StrExtractAll<'a>;
-    /// Find all regex matches as a lists column.
+
+    /// Finds all regex matches in each string as a `LIST(STRING)` column.
+    ///
+    /// Similar to [`str_extract_all`](StringExt::str_extract_all) but returns
+    /// the full match rather than capture groups.
     fn str_findall<'a>(&'a self, pattern: &'a str) -> StrFindall<'a>;
-    /// Find first regex match position.
+
+    /// Finds the character position of the first regex match in each string.
+    ///
+    /// Returns an `INT32` column with the 0-based starting position of the
+    /// first match, or `-1` if no match is found.
     fn str_find_re<'a>(&'a self, pattern: &'a str) -> StrFindRe<'a>;
+
     /// Capitalizes the first character of each string.
+    ///
+    /// The first character is upper-cased and the rest are lower-cased.
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let result = col.view().capitalize().call()?;
+    /// // "hello WORLD" => "Hello world"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn capitalize(&self) -> Capitalize<'_>;
-    /// Title-cases each string.
+
+    /// Title-cases each string (first letter of each word uppercased).
+    ///
+    /// Word boundaries are defined by non-alphanumeric characters. Returns a
+    /// `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let titled = col.view().title().call()?;
+    /// // "hello world" => "Hello World"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn title(&self) -> Title<'_>;
-    /// Returns BOOL8 column indicating whether each string is title-cased.
+
+    /// Tests whether each string is title-cased.
+    ///
+    /// Returns a `BOOL8` column: `true` if every word in the string starts with
+    /// an uppercase character followed by lowercase characters.
     fn is_title(&self) -> IsTitle<'_>;
-    /// Wraps strings onto multiple lines shorter than `width`.
+
+    /// Wraps each string onto multiple lines, each no longer than `width` characters.
+    ///
+    /// Long words that exceed `width` are not broken. Returns a `STRING` column
+    /// with newline characters inserted at wrap points.
     fn wrap(&self, width: i32) -> Wrap<'_>;
-    /// Convert strings to timestamps using format (e.g. "%Y-%m-%d").
+
+    /// Parses timestamp strings into a timestamp column using a `strftime`-style format.
+    ///
+    /// The `timestamp_type` specifies the output resolution (e.g.
+    /// [`TypeId::TIMESTAMP_SECONDS`], [`TypeId::TIMESTAMP_MILLISECONDS`]).
+    /// The `format` string uses `strftime` directives (e.g. `"%Y-%m-%d %H:%M:%S"`).
+    ///
+    /// Returns a timestamp column of the specified type.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::data_type::TypeId;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let ts = col.view().str_to_timestamps(
+    ///     TypeId::TIMESTAMP_SECONDS, "%Y-%m-%d",
+    /// ).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_to_timestamps<'a>(
         &'a self,
         timestamp_type: TypeId,
         format: &'a str,
     ) -> StrToTimestamps<'a>;
-    /// Convert timestamps to strings using format.
+
+    /// Formats timestamp values as strings using a `strftime`-style format.
+    ///
+    /// The input column must be a `TIMESTAMP_*` type. The `format` string uses
+    /// `strftime` directives (e.g. `"%Y-%m-%d"`). Returns a `STRING` column.
     fn str_from_timestamps<'a>(&'a self, format: &'a str) -> StrFromTimestamps<'a>;
-    /// Check if strings are valid timestamps with given format.
+
+    /// Tests whether each string is a valid timestamp matching the given format.
+    ///
+    /// Returns a `BOOL8` column: `true` if the string can be parsed with
+    /// the specified `strftime` `format`.
     fn str_is_timestamp<'a>(&'a self, format: &'a str) -> StrIsTimestamp<'a>;
-    /// Convert strings to booleans (matching `true_string` to true, else false).
+
+    /// Converts string values to booleans.
+    ///
+    /// Strings matching `true_string` (case-sensitive) produce `true`; all
+    /// others produce `false`. Null strings remain null. Returns a `BOOL8`
+    /// column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let bools = col.view().str_to_booleans("True").call()?;
+    /// // ["True", "False", "True"] => [true, false, true]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_to_booleans<'a>(&'a self, true_string: &'a str) -> StrToBooleans<'a>;
-    /// Convert booleans to strings.
+
+    /// Converts a boolean column to strings.
+    ///
+    /// `true` values become `true_string`, `false` values become
+    /// `false_string`. Null values remain null. Returns a `STRING` column.
     fn str_from_booleans<'a>(
         &'a self,
         true_string: &'a str,
         false_string: &'a str,
     ) -> StrFromBooleans<'a>;
-    /// Convert strings to durations using format.
+
+    /// Parses duration strings into a duration column using a format string.
+    ///
+    /// The `duration_type` specifies the output resolution (e.g.
+    /// [`TypeId::DURATION_SECONDS`]). The `format` string defines the expected
+    /// pattern. Returns a duration column of the specified type.
     fn str_to_durations<'a>(&'a self, duration_type: TypeId, format: &'a str)
     -> StrToDurations<'a>;
-    /// Convert durations to strings.
+
+    /// Formats duration values as strings using a format string.
+    ///
+    /// The input column must be a `DURATION_*` type. Returns a `STRING` column.
     fn str_from_durations<'a>(&'a self, format: &'a str) -> StrFromDurations<'a>;
-    /// Convert strings to fixed-point decimals.
+
+    /// Converts strings to fixed-point (decimal) values.
+    ///
+    /// The `type_id` must be a decimal type (e.g. [`TypeId::DECIMAL32`]) and
+    /// `scale` controls the number of decimal places. Returns a column of the
+    /// specified decimal type.
     fn str_to_fixed_point(&self, type_id: TypeId, scale: i32) -> StrToFixedPoint<'_>;
-    /// Convert fixed-point decimals to strings.
+
+    /// Converts fixed-point (decimal) values to their string representation.
+    ///
+    /// The input column must be a decimal type. Returns a `STRING` column.
     fn str_from_fixed_point(&self) -> StrFromFixedPoint<'_>;
-    /// Check if strings are valid fixed-point.
+
+    /// Tests whether each string is a valid fixed-point number for the given type and scale.
+    ///
+    /// Returns a `BOOL8` column: `true` if the string can be parsed as a
+    /// decimal of the specified `type_id` and `scale`.
     fn str_is_fixed_point(&self, type_id: TypeId, scale: i32) -> StrIsFixedPoint<'_>;
-    /// URL-encode each string.
+
+    /// URL-encodes each string (percent-encoding).
+    ///
+    /// Replaces unsafe characters with `%XX` hex sequences. Returns a `STRING`
+    /// column.
     fn url_encode(&self) -> UrlEncode<'_>;
-    /// URL-decode each string.
+
+    /// URL-decodes each string (reverses percent-encoding).
+    ///
+    /// Replaces `%XX` hex sequences with their corresponding characters.
+    /// Returns a `STRING` column.
     fn url_decode(&self) -> UrlDecode<'_>;
-    /// Convert IPv4 strings to UINT32.
+
+    /// Converts IPv4 address strings to their `UINT32` integer representation.
+    ///
+    /// Each string must be a dotted-decimal IPv4 address (e.g. `"192.168.1.1"`).
+    /// Returns a `UINT32` column.
     fn ipv4_to_integers(&self) -> Ipv4ToIntegers<'_>;
-    /// Convert UINT32 to IPv4 strings.
+
+    /// Converts `UINT32` integers to IPv4 address strings.
+    ///
+    /// The input column must be `UINT32`. Returns a `STRING` column with
+    /// dotted-decimal notation (e.g. `"192.168.1.1"`).
     fn integers_to_ipv4(&self) -> IntegersToIpv4<'_>;
-    /// Check if strings are valid IPv4.
+
+    /// Tests whether each string is a valid IPv4 address.
+    ///
+    /// Returns a `BOOL8` column.
     fn is_ipv4(&self) -> IsIpv4<'_>;
-    /// Regex split to table of columns.
+
+    /// Splits each string by a regex pattern into a [`Table`] of string columns.
+    ///
+    /// The `pattern` is a regular expression used as the delimiter. The
+    /// `maxsplit` parameter limits the number of splits (`-1` for unlimited).
+    /// Splitting proceeds left-to-right.
     fn str_split_re<'a>(&'a self, pattern: &'a str, maxsplit: i32) -> StrSplitRe<'a>;
-    /// Regex reverse split to table of columns.
+
+    /// Splits each string by a regex pattern right-to-left into a [`Table`].
+    ///
+    /// Behaves like [`str_split_re`](StringExt::str_split_re) but splitting
+    /// proceeds from the right.
     fn str_rsplit_re<'a>(&'a self, pattern: &'a str, maxsplit: i32) -> StrRsplitRe<'a>;
-    /// Regex split to lists column.
+
+    /// Splits each string by a regex pattern into a `LIST(STRING)` column.
+    ///
+    /// Each row becomes a list of the split parts. The `maxsplit` parameter
+    /// limits the number of splits (`-1` for unlimited). Splitting proceeds
+    /// left-to-right.
     fn str_split_record_re<'a>(&'a self, pattern: &'a str, maxsplit: i32) -> StrSplitRecordRe<'a>;
-    /// Regex reverse split to lists column.
+
+    /// Splits each string by a regex pattern right-to-left into a `LIST(STRING)` column.
+    ///
+    /// Behaves like [`str_split_record_re`](StringExt::str_split_record_re)
+    /// but splitting proceeds from the right.
     fn str_rsplit_record_re<'a>(&'a self, pattern: &'a str, maxsplit: i32)
     -> StrRsplitRecordRe<'a>;
-    /// Partition around first delimiter into 3-column table.
+
+    /// Partitions each string around the first occurrence of `delimiter`.
+    ///
+    /// Returns a 3-column [`Table`]: the part before the delimiter, the
+    /// delimiter itself, and the part after. If the delimiter is not found, the
+    /// first column contains the original string and the other two are empty.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let parts = col.view().str_partition("@").call()?;
+    /// // "user@host" => ["user", "@", "host"]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_partition<'a>(&'a self, delimiter: &'a str) -> StrPartition<'a>;
-    /// Partition around last delimiter into 3-column table.
+
+    /// Partitions each string around the last occurrence of `delimiter`.
+    ///
+    /// Returns a 3-column [`Table`]: the part before the last delimiter, the
+    /// delimiter, and the part after. If the delimiter is not found, the
+    /// last column contains the original string and the first two are empty.
     fn str_rpartition<'a>(&'a self, delimiter: &'a str) -> StrRpartition<'a>;
-    /// Regex replace with back-reference template.
+
+    /// Replaces regex matches using a back-reference replacement template.
+    ///
+    /// The `replacement` string may contain back-references like `\\1`, `\\2`,
+    /// etc. to refer to captured groups in `pattern`. Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let result = col.view().str_replace_with_backrefs(
+    ///     "(\\w+)@(\\w+)", "\\2@\\1",
+    /// ).call()?;
+    /// // "user@host" => "host@user"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_replace_with_backrefs<'a>(
         &'a self,
         pattern: &'a str,
         replacement: &'a str,
     ) -> StrReplaceWithBackrefs<'a>;
-    /// Repeat each string by count in another column.
-    fn str_repeat_column<'a>(&'a self, repeat_times: &'a ColumnView<'a>) -> StrRepeatColumn<'a>;
-    /// Check if strings contain multiple targets (Table of BOOL8 columns).
-    fn str_contains_multiple<'a>(&'a self, targets: &'a ColumnView<'a>) -> StrContainsMultiple<'a>;
-    /// Find positions of multiple targets in each string (lists column).
-    fn str_find_multiple<'a>(&'a self, targets: &'a ColumnView<'a>) -> StrFindMultiple<'a>;
-    /// Check if all characters match the given type bitmask.
+
+    /// Repeats each string a per-row number of times given by another column.
     ///
-    /// Types are bitmasks: DECIMAL=1, NUMERIC=2, DIGIT=4, ALPHA=8, SPACE=16, UPPER=32, LOWER=64.
-    /// `verify_types` restricts which types are checked (default `ALL_TYPES=127`).
+    /// The `repeat_times` column must be an integer type (`INT32`) with the
+    /// same number of rows. Returns a `STRING` column.
+    fn str_repeat_column<'a>(&'a self, repeat_times: &'a ColumnView<'a>) -> StrRepeatColumn<'a>;
+
+    /// Tests each string against multiple targets simultaneously.
+    ///
+    /// The `targets` column is a `STRING` column of target strings. Returns a
+    /// [`Table`] with one `BOOL8` column per target. Each column indicates
+    /// whether the corresponding target is contained in each source string.
+    fn str_contains_multiple<'a>(&'a self, targets: &'a ColumnView<'a>) -> StrContainsMultiple<'a>;
+
+    /// Finds the positions of multiple targets in each string.
+    ///
+    /// The `targets` column is a `STRING` column of target strings. Returns a
+    /// `LIST(INT32)` column where each list contains the positions of the first
+    /// occurrence of each target (`-1` if not found).
+    fn str_find_multiple<'a>(&'a self, targets: &'a ColumnView<'a>) -> StrFindMultiple<'a>;
+
+    /// Tests whether all characters in each string match the given type bitmask.
+    ///
+    /// Character types are bitmask constants from [`char_types`]:
+    /// `DECIMAL=1`, `NUMERIC=2`, `DIGIT=4`, `ALPHA=8`, `SPACE=16`, `UPPER=32`,
+    /// `LOWER=64`. Combine with bitwise OR for multiple types.
+    ///
+    /// The `types` parameter specifies which character types must be present.
+    /// The `verify_types` parameter restricts which types are checked (use
+    /// [`char_types::ALL_TYPES`] to check all).
+    ///
+    /// Returns a `BOOL8` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::strings::char_types;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let is_alpha = col.view().all_characters_of_type(
+    ///     char_types::ALPHA, char_types::ALL_TYPES,
+    /// ).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn all_characters_of_type(&self, types: u32, verify_types: u32) -> AllCharactersOfType<'_>;
-    /// Filter characters by type, replacing removed chars with replacement string.
+
+    /// Filters characters by type, replacing removed characters with a replacement string.
+    ///
+    /// Characters matching `types_to_remove` (but not `types_to_keep`) are
+    /// replaced with the `replacement` string. See [`char_types`] for bitmask
+    /// constants.
+    ///
+    /// Returns a `STRING` column.
     fn filter_characters_of_type<'a>(
         &'a self,
         types_to_remove: u32,
         replacement: &'a str,
         types_to_keep: u32,
     ) -> FilterCharactersOfType<'a>;
-    /// Check if all chars in each string are valid integers.
+
+    /// Tests whether each string represents a valid integer.
+    ///
+    /// Returns a `BOOL8` column: `true` if the entire string can be parsed as
+    /// any integer type.
     fn str_is_integer(&self) -> StrIsInteger<'_>;
-    /// Check if all chars are valid integers within the given type range.
+
+    /// Tests whether each string is a valid integer within the range of `int_type`.
+    ///
+    /// The `int_type` specifies the target integer type (e.g. [`TypeId::INT32`]).
+    /// Returns a `BOOL8` column: `true` if the string can be parsed as an
+    /// integer that fits in the specified type.
     fn str_is_integer_with_type(&self, int_type: TypeId) -> StrIsIntegerWithType<'_>;
-    /// Check if all chars in each string are valid floats.
+
+    /// Tests whether each string represents a valid floating-point number.
+    ///
+    /// Returns a `BOOL8` column.
     fn str_is_float(&self) -> StrIsFloat<'_>;
-    /// Convert hex strings to integers of given type.
+
+    /// Converts hexadecimal strings to integers of the given type.
+    ///
+    /// The `output_type` specifies the target integer type. Strings may
+    /// optionally include a `0x` prefix. Returns a column of the specified
+    /// integer type.
     fn str_hex_to_integers(&self, output_type: TypeId) -> StrHexToIntegers<'_>;
-    /// Check if strings are valid hex format.
+
+    /// Tests whether each string is a valid hexadecimal number.
+    ///
+    /// Returns a `BOOL8` column.
     fn str_is_hex(&self) -> StrIsHex<'_>;
-    /// Convert integers to hex strings.
+
+    /// Converts integer values to hexadecimal string representations.
+    ///
+    /// The input column must be an integer type. Returns a `STRING` column.
     fn str_integers_to_hex(&self) -> StrIntegersToHex<'_>;
-    /// Replace substring at positions [start, stop) with replacement string.
+
+    /// Replaces a character-position slice `[start, stop)` in each string with `repl`.
+    ///
+    /// Positions are 0-based character indices. Use `stop = -1` to replace
+    /// through the end of the string. Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let result = col.view().str_replace_slice("XY", 1, 3).call()?;
+    /// // "abcde" => "aXYde"
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_replace_slice<'a>(&'a self, repl: &'a str, start: i32, stop: i32)
     -> StrReplaceSlice<'a>;
-    /// Replace multiple targets with corresponding replacement strings.
+
+    /// Replaces multiple target strings with corresponding replacements.
+    ///
+    /// The `targets` and `repls` columns must be `STRING` columns of equal
+    /// length. Each occurrence of `targets[i]` in the source strings is
+    /// replaced with `repls[i]`. Replacements are applied sequentially.
+    ///
+    /// Returns a `STRING` column.
     fn str_replace_multiple<'a>(
         &'a self,
         targets: &'a ColumnView<'a>,
         repls: &'a ColumnView<'a>,
     ) -> StrReplaceMultiple<'a>;
-    /// Split strings by delimiter into a lists column (left-to-right).
+
+    /// Splits each string by a delimiter into a `LIST(STRING)` column (left-to-right).
+    ///
+    /// The `delimiter` must be a string [`Scalar`]. Each row becomes a list of
+    /// split parts. The `maxsplit` parameter limits the number of splits
+    /// (`-1` for unlimited).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let delim = Scalar::from_string(",");
+    /// let lists = col.view().str_split_record(&delim, -1).call()?;
+    /// // "a,b,c" => ["a", "b", "c"]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_split_record<'a>(&'a self, delimiter: &'a Scalar, maxsplit: i32) -> StrSplitRecord<'a>;
-    /// Split strings by delimiter into a lists column (right-to-left).
+
+    /// Splits each string by a delimiter into a `LIST(STRING)` column (right-to-left).
+    ///
+    /// Behaves like [`str_split_record`](StringExt::str_split_record) but
+    /// splitting proceeds from the right end of each string.
     fn str_rsplit_record<'a>(&'a self, delimiter: &'a Scalar, maxsplit: i32)
     -> StrRsplitRecord<'a>;
-    /// Join lists of strings into a single string per row with separator.
+
+    /// Joins a `LIST(STRING)` column's lists into single strings per row.
+    ///
+    /// The input must be a `LIST(STRING)` column. Elements within each list
+    /// are joined using `separator`. Null elements are replaced with `narep`.
+    ///
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let joined = list_col.view().str_join_list_elements(", ", "NULL").call()?;
+    /// // [["a","b","c"]] => ["a, b, c"]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_join_list_elements<'a>(
         &'a self,
         separator: &'a str,
         narep: &'a str,
     ) -> StrJoinListElements<'a>;
-    /// Translate individual characters using from-to mapping.
+
+    /// Translates individual characters in each string using a character mapping.
+    ///
+    /// The `from_chars` and `to_chars` slices must have the same length. Each
+    /// occurrence of `from_chars[i]` (as a Unicode code point) is replaced
+    /// with `to_chars[i]`. Returns a `STRING` column.
     fn str_translate<'a>(&'a self, from_chars: &'a [u32], to_chars: &'a [u32]) -> StrTranslate<'a>;
-    /// Filter character ranges. `keep=true` keeps only characters in ranges, `false` removes them.
+
+    /// Filters characters from each string by Unicode code point ranges.
+    ///
+    /// The `from_chars` and `to_chars` slices define ranges: characters with
+    /// code points in `[from_chars[i], to_chars[i]]` are selected. When
+    /// `keep` is `true`, only characters within the ranges are kept; when
+    /// `false`, characters within the ranges are removed. Removed characters
+    /// are replaced with `replacement`.
+    ///
+    /// Returns a `STRING` column.
     fn str_filter_characters<'a>(
         &'a self,
         from_chars: &'a [u32],
@@ -239,33 +1206,93 @@ pub trait StringExt: private::Sealed {
         keep: bool,
         replacement: &'a str,
     ) -> StrFilterCharacters<'a>;
-    /// Returns an INT32 column of Unicode code points for all characters (concatenated).
+
+    /// Returns the Unicode code points for all characters, concatenated across rows.
+    ///
+    /// Returns a single `INT32` column containing the code points of every
+    /// character in every row, concatenated end-to-end. Use with
+    /// [`count_characters`](StringExt::count_characters) to determine row
+    /// boundaries.
     fn code_points(&self) -> CodePoints<'_>;
-    /// Encode strings as integers (binary byte representation).
+
+    /// Encodes each string as a binary integer value.
+    ///
+    /// The string's raw bytes are reinterpreted as an integer of `output_type`.
+    /// When `big_endian` is `true`, bytes are in big-endian order; otherwise
+    /// little-endian. Returns a column of the specified integer type.
     fn str_cast_to_integer(&self, output_type: TypeId, big_endian: bool) -> StrCastToInteger<'_>;
-    /// Decode integer-encoded bytes back to strings.
+
+    /// Decodes integer-encoded binary values back to strings.
+    ///
+    /// The inverse of [`str_cast_to_integer`](StringExt::str_cast_to_integer).
+    /// When `big_endian` is `true`, bytes are read in big-endian order.
+    /// Returns a `STRING` column.
     fn str_cast_from_integer(&self, big_endian: bool) -> StrCastFromInteger<'_>;
-    /// Slice strings using per-row start/stop columns (INT32).
+
+    /// Extracts substrings using per-row start and stop positions from columns.
+    ///
+    /// The `starts` and `stops` columns must be `INT32` columns with the same
+    /// number of rows. Each row is sliced at `[starts[i], stops[i])`.
+    ///
+    /// Returns a `STRING` column.
     fn str_slice_column<'a>(
         &'a self,
         starts: &'a ColumnView<'a>,
         stops: &'a ColumnView<'a>,
     ) -> StrSliceColumn<'a>;
-    /// Extract a single regex capture group from each string.
+
+    /// Extracts a single regex capture group from each string.
+    ///
+    /// The `pattern` must contain at least `group_index + 1` capture groups.
+    /// The `group_index` is 0-based. Returns a `STRING` column containing the
+    /// matched group text, or null for non-matching rows.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::strings::StringExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let domains = col.view().str_extract_single("@(\\w+)", 0).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn str_extract_single<'a>(&'a self, pattern: &'a str, group_index: i32)
     -> StrExtractSingle<'a>;
-    /// Join lists of strings with per-row separator column.
+
+    /// Joins a `LIST(STRING)` column's lists using per-row separators from a column.
+    ///
+    /// The `separators` column must be a `STRING` column with the same number
+    /// of rows. The `separator_narep` is used when a separator is null. The
+    /// `string_narep` is used when a list element is null.
+    ///
+    /// Returns a `STRING` column.
     fn str_join_list_elements_column<'a>(
         &'a self,
         separators: &'a ColumnView<'a>,
         separator_narep: &'a str,
         string_narep: &'a str,
     ) -> StrJoinListElementsColumn<'a>;
-    /// Join all strings in a column into a single-row column using a string separator.
+
+    /// Joins all strings in the column into a single-row string using a literal separator.
+    ///
+    /// The `separator` is placed between consecutive strings. The `narep` is
+    /// substituted for null elements. Returns a single-row `STRING` column.
     fn str_join_strings<'a>(&'a self, separator: &'a str, narep: &'a str) -> StrJoinStrings<'a>;
-    /// Find the Nth occurrence of a target substring, returning INT32 positions.
+
+    /// Finds the Nth occurrence of a target substring in each string.
+    ///
+    /// The `instance` parameter is 0-based: `0` finds the first occurrence,
+    /// `1` the second, etc. Returns an `INT32` column with 0-based positions,
+    /// or `-1` if the Nth occurrence is not found.
     fn str_find_instance<'a>(&'a self, target: &'a str, instance: i32) -> StrFindInstance<'a>;
-    /// SQL LIKE pattern matching with per-row patterns from another column.
+
+    /// Performs SQL `LIKE` pattern matching using per-row patterns from another column.
+    ///
+    /// The `patterns` column must be a `STRING` column with the same number of
+    /// rows. Each row is matched against its corresponding pattern. The
+    /// `escape_char` escapes wildcards in the pattern.
+    ///
+    /// Returns a `BOOL8` column.
     fn str_like_column<'a>(
         &'a self,
         patterns: &'a ColumnView<'a>,
@@ -1432,6 +2459,9 @@ simple_builder!(StrLikeColumn -> Column, |s: StrLikeColumn<'_>| {
 });
 
 /// Builder for [`concatenate_strings_with_separator`].
+///
+/// Created by [`concatenate_strings_with_separator`]. Call `.call()` to
+/// execute, or chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ConcatenateStringsWithSeparator<'a> {
     tbl: &'a Table,
     separators: &'a ColumnView<'a>,
@@ -1447,6 +2477,9 @@ simple_builder!(ConcatenateStringsWithSeparator -> Column, |s: ConcatenateString
 });
 
 /// Builder for [`get_json_object`].
+///
+/// Created by [`get_json_object`]. Call `.call()` to execute, or chain
+/// `.stream(s)` to run on a specific CUDA stream.
 pub struct GetJsonObject<'a> {
     col: &'a ColumnView<'a>,
     json_path: &'a str,
@@ -2240,10 +3273,31 @@ impl StringExt for ColumnView<'_> {
 // Free functions
 // ---------------------------------------------------------------------------
 
-/// Concatenate string columns row-wise with per-row separator column.
+/// Concatenates string columns row-wise with per-row separators.
 ///
-/// Returns a [`ConcatenateStringsWithSeparator`] builder. Use `.stream()` to set
-/// a custom CUDA stream, then `.call()` to execute.
+/// For each row, the strings from all columns in `tbl` are concatenated with
+/// the separator from the corresponding row of `separators`. The
+/// `separator_narep` is used when a separator is null. The `col_narep` is used
+/// when a column value is null.
+///
+/// Returns a [`ConcatenateStringsWithSeparator`] builder. Call `.call()` to
+/// execute, or chain `.stream(s)` to run on a specific CUDA stream.
+///
+/// # Errors
+///
+/// Returns an error if the table columns or separator column are not `STRING` type.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::strings::concatenate_strings_with_separator;
+/// use cudf::stream::GpuOp;
+///
+/// let result = concatenate_strings_with_separator(
+///     &tbl, &separators.view(), "-", "N/A",
+/// ).call()?;
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub fn concatenate_strings_with_separator<'a>(
     tbl: &'a Table,
     separators: &'a ColumnView<'a>,
@@ -2259,13 +3313,37 @@ pub fn concatenate_strings_with_separator<'a>(
     }
 }
 
-/// Extract values from JSON strings using a `JSONPath` expression.
+/// Extracts values from JSON strings using a `JSONPath` expression.
 ///
-/// Each row in the input column must be a valid JSON string. The `JSONPath`
-/// expression is applied to every row, returning the matched values as strings.
+/// Each row in the input `col` must be a valid JSON string. The `json_path`
+/// expression (e.g. `"$.store.book[0].title"`) is applied to every row,
+/// returning the matched values as strings.
 ///
-/// Returns a [`GetJsonObject`] builder. Use `.stream()` to set a custom CUDA
-/// stream, then `.call()` to execute.
+/// Options:
+/// - `allow_single_quotes` -- when `true`, accepts single-quoted JSON strings.
+/// - `strip_quotes` -- when `true`, removes surrounding quotes from extracted
+///   string values.
+/// - `missing_fields_as_nulls` -- when `true`, missing fields produce null
+///   rather than an error.
+///
+/// Returns a [`GetJsonObject`] builder. Call `.call()` to execute, or chain
+/// `.stream(s)` to run on a specific CUDA stream.
+///
+/// # Errors
+///
+/// Returns an error if the input column is not `STRING` type.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::strings::get_json_object;
+/// use cudf::stream::GpuOp;
+///
+/// let values = get_json_object(
+///     &json_col.view(), "$.name", false, true, true,
+/// ).call()?;
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub fn get_json_object<'a>(
     col: &'a ColumnView<'a>,
     json_path: &'a str,
@@ -2283,7 +3361,12 @@ pub fn get_json_object<'a>(
     }
 }
 
-/// String character type bitmask constants.
+/// String character type bitmask constants for use with
+/// [`StringExt::all_characters_of_type`] and
+/// [`StringExt::filter_characters_of_type`].
+///
+/// Combine constants with bitwise OR to match multiple types (e.g.
+/// `ALPHA | DIGIT` matches alphanumeric characters).
 pub mod char_types {
     /// Decimal characters (e.g. `0`–`9` in various scripts).
     pub const DECIMAL: u32 = 1;

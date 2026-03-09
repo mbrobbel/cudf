@@ -3,8 +3,20 @@
 
 //! Reduction operations on GPU columns.
 //!
-//! Available as methods on [`ColumnView`](crate::ColumnView):
-//! `col.sum(...)`, `col.min(...)`, `col.max(...)`, etc.
+//! All reductions are available as methods on
+//! [`ColumnView`](crate::column::ColumnView). Each reduces an entire column
+//! to a single [`Scalar`](crate::scalar::Scalar). Null values are skipped
+//! during the reduction.
+//!
+//! - [`sum`](crate::column::ColumnView::sum) -- sum of all elements.
+//! - [`min`](crate::column::ColumnView::min) -- minimum element.
+//! - [`max`](crate::column::ColumnView::max) -- maximum element.
+//! - [`product`](crate::column::ColumnView::product) -- product of all
+//!   elements.
+//! - [`any`](crate::column::ColumnView::any) -- `true` if any element is
+//!   true (`BOOL8` columns).
+//! - [`all`](crate::column::ColumnView::all) -- `true` only if every element
+//!   is true (`BOOL8` columns).
 
 #[cfg(test)]
 mod tests {

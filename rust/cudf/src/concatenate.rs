@@ -9,6 +9,9 @@ use crate::stream::Stream;
 use crate::table::Table;
 
 /// Builder for [`concatenate_columns`].
+///
+/// Created by [`concatenate_columns()`]. Call [`.call()`](crate::stream::GpuOp::call) to
+/// execute. Use [`.stream()`](crate::stream::GpuOp::stream) to set a custom CUDA stream.
 pub struct ConcatenateColumns<'a> {
     columns: &'a [&'a ColumnView<'a>],
     stream: Stream,
@@ -16,7 +19,38 @@ pub struct ConcatenateColumns<'a> {
 
 /// Concatenates multiple columns vertically into a single column.
 ///
-/// All columns must have the same type.
+/// The output column contains all elements from each input column in order.
+/// All input columns must have the same [`TypeId`](crate::data_type::TypeId);
+/// null masks are concatenated accordingly.
+///
+/// # Arguments
+///
+/// * `columns` -- Slice of column views to concatenate. An empty slice produces
+///   an error since the output type cannot be determined.
+///
+/// # Returns
+///
+/// A new [`Column`] whose length is the sum of all input column lengths.
+///
+/// # Errors
+///
+/// Returns an error if the columns have mismatched types or if the libcudf
+/// call fails.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::concatenate::concatenate_columns;
+/// use cudf::column::Column;
+/// use cudf::scalar::Scalar;
+/// use cudf::stream::GpuOp;
+///
+/// let a = Column::from_scalar(&Scalar::from_i32(1), 3).call()?;
+/// let b = Column::from_scalar(&Scalar::from_i32(2), 2).call()?;
+/// let result = concatenate_columns(&[&a.view(), &b.view()]).call()?;
+/// // result contains [1, 1, 1, 2, 2]
+/// assert_eq!(result.len(), 5);
+/// ```
 pub fn concatenate_columns<'a>(columns: &'a [&'a ColumnView<'a>]) -> ConcatenateColumns<'a> {
     ConcatenateColumns {
         columns,
@@ -46,6 +80,9 @@ impl crate::stream::GpuOp for ConcatenateColumns<'_> {
 }
 
 /// Builder for [`concatenate_tables`].
+///
+/// Created by [`concatenate_tables()`]. Call [`.call()`](crate::stream::GpuOp::call) to
+/// execute. Use [`.stream()`](crate::stream::GpuOp::stream) to set a custom CUDA stream.
 pub struct ConcatenateTables<'a> {
     tables: &'a [&'a Table],
     stream: Stream,
@@ -53,7 +90,45 @@ pub struct ConcatenateTables<'a> {
 
 /// Concatenates multiple tables vertically into a single table.
 ///
-/// All tables must have the same number of columns and matching types.
+/// Stacks the rows of each input table in order. All tables must have the same
+/// number of columns and each corresponding column pair must have the same
+/// [`TypeId`](crate::data_type::TypeId).
+///
+/// # Arguments
+///
+/// * `tables` -- Slice of tables to concatenate.
+///
+/// # Returns
+///
+/// A new [`Table`] whose row count is the sum of all input table row counts.
+///
+/// # Errors
+///
+/// Returns an error if the tables have mismatched schemas (column count or
+/// types) or if the libcudf call fails.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::concatenate::concatenate_tables;
+/// use cudf::column::Column;
+/// use cudf::scalar::Scalar;
+/// use cudf::stream::GpuOp;
+/// use cudf::table::TableBuilder;
+///
+/// let c1 = Column::from_scalar(&Scalar::from_i32(1), 2).call()?;
+/// let mut b1 = TableBuilder::new();
+/// b1.push_column(c1);
+/// let t1 = b1.build()?;
+///
+/// let c2 = Column::from_scalar(&Scalar::from_i32(3), 2).call()?;
+/// let mut b2 = TableBuilder::new();
+/// b2.push_column(c2);
+/// let t2 = b2.build()?;
+///
+/// let result = concatenate_tables(&[&t1, &t2]).call()?;
+/// assert_eq!(result.len(), 4);
+/// ```
 pub fn concatenate_tables<'a>(tables: &'a [&'a Table]) -> ConcatenateTables<'a> {
     ConcatenateTables {
         tables,

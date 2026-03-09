@@ -1,12 +1,67 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
-//! `GroupBy` aggregation operations.
+//! Group-by aggregation operations on GPU tables.
 //!
-//! `GroupBy` is available as methods on [`Table`](crate::table::Table):
-//! `table.groupby(...)`, `table.groupby_multi(...)`.
+//! Group-by partitions a table into groups defined by one or more key columns,
+//! then applies an aggregation function to a value column within each group.
+//! The output table contains the unique key combinations followed by the
+//! aggregated result column(s).
+//!
+//! Two entry points are available on [`Table`](crate::table::Table):
+//!
+//! - [`groupby`](crate::table::Table::groupby) -- single aggregation on one value column.
+//! - [`groupby_multi`](crate::table::Table::groupby_multi) -- multiple aggregations on
+//!   (potentially different) value columns in a single pass.
+//!
+//! The output row order is **not** guaranteed to match the input order; sort the
+//! result if a deterministic order is required.
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use cudf::column::Column;
+//! use cudf::groupby::AggregationKind;
+//! use cudf::stream::GpuOp;
+//! use cudf::table::TableBuilder;
+//!
+//! let keys = Column::from_slice_i32(&[1, 1, 2, 2]).call()?;
+//! let vals = Column::from_slice_i32(&[10, 20, 30, 40]).call()?;
+//! let mut b = TableBuilder::new();
+//! b.push_column(keys);
+//! b.push_column(vals);
+//! let table = b.build()?;
+//!
+//! // Sum values grouped by column 0
+//! let result = table.groupby(&[0], 1, AggregationKind::SUM).call()?;
+//! assert_eq!(result.columns_len(), 2); // key column + aggregated column
+//! # Ok::<(), cudf::error::Error>(())
+//! ```
 
 /// Aggregation operation kind for groupby.
+///
+/// Selects the aggregation function applied to each group's values.
+/// Common variants include:
+///
+/// | Variant | Description |
+/// |---|---|
+/// | `SUM` | Sum of values in the group |
+/// | `MIN` | Minimum value in the group |
+/// | `MAX` | Maximum value in the group |
+/// | `MEAN` | Arithmetic mean (result is `FLOAT64`) |
+/// | `COUNT` | Number of non-null values |
+/// | `NUNIQUE` | Number of distinct values |
+/// | `MEDIAN` | Median value (result is `FLOAT64`) |
+/// | `STD` | Sample standard deviation |
+/// | `VAR` | Sample variance |
+/// | `PRODUCT` | Product of values |
+/// | `ANY` | Logical OR (any true) |
+/// | `ALL` | Logical AND (all true) |
+/// | `ARGMAX` | Index of maximum value |
+/// | `ARGMIN` | Index of minimum value |
+/// | `COLLECT_LIST` | Collect values into a list |
+/// | `COLLECT_SET` | Collect distinct values into a list |
+/// | `SUM_OF_SQUARES` | Sum of squared values |
 #[doc(alias = "aggregation")]
 pub use cudf_sys::ffi::AggregationKind;
 

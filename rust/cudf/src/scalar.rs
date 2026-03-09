@@ -10,8 +10,32 @@ use crate::data_type::TypeId;
 #[doc(alias = "scalar")]
 /// A scalar value that can be sent to the GPU.
 ///
-/// This is a pure Rust enum; the FFI scalar is created on demand via
-/// `scalar_to_ffi` when calling into libcudf.
+/// `Scalar` is a pure Rust enum that represents a single typed value (or null).
+/// The FFI representation is created on demand via the internal `scalar_to_ffi`
+/// conversion when calling into libcudf. This keeps the Rust side cheap and
+/// avoids unnecessary GPU allocations for scalar construction.
+///
+/// # Null scalars
+///
+/// A null scalar is represented by the [`Null`](Scalar::Null) variant, which
+/// carries a [`TypeId`] to preserve type information. Null scalars are created
+/// via methods like [`null_i32`](Scalar::null_i32), [`null_f64`](Scalar::null_f64), etc.
+///
+/// # Examples
+///
+/// ```
+/// use cudf::scalar::Scalar;
+/// use cudf::data_type::TypeId;
+///
+/// let s = Scalar::from_i32(42);
+/// assert!(s.is_valid());
+/// assert_eq!(s.type_id(), TypeId::INT32);
+/// assert_eq!(s.as_i32(), Some(42));
+///
+/// let null = Scalar::null_i32();
+/// assert!(!null.is_valid());
+/// assert_eq!(null.as_i32(), None);
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub enum Scalar {
     /// Signed 8-bit integer.
@@ -59,137 +83,221 @@ pub enum Scalar {
 }
 
 impl Scalar {
-    /// Creates a valid INT32 scalar.
+    /// Creates a valid `INT32` scalar.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cudf::scalar::Scalar;
+    /// let s = Scalar::from_i32(42);
+    /// assert_eq!(s.as_i32(), Some(42));
+    /// ```
     pub fn from_i32(value: i32) -> Self {
         Scalar::Int32(value)
     }
 
-    /// Creates a null INT32 scalar.
+    /// Creates a null `INT32` scalar.
+    ///
+    /// The scalar has type [`TypeId::INT32`](crate::data_type::TypeId::INT32) but
+    /// carries no value. [`is_valid`](Scalar::is_valid) returns `false` and
+    /// [`as_i32`](Scalar::as_i32) returns `None`.
     pub fn null_i32() -> Self {
         Scalar::Null(TypeId::INT32)
     }
 
-    /// Creates a valid INT64 scalar.
+    /// Creates a valid `INT64` scalar.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cudf::scalar::Scalar;
+    /// let s = Scalar::from_i64(100_000);
+    /// assert_eq!(s.as_i64(), Some(100_000));
+    /// ```
     pub fn from_i64(value: i64) -> Self {
         Scalar::Int64(value)
     }
 
-    /// Creates a null INT64 scalar.
+    /// Creates a null `INT64` scalar.
+    ///
+    /// See [`null_i32`](Scalar::null_i32) for null scalar semantics.
     pub fn null_i64() -> Self {
         Scalar::Null(TypeId::INT64)
     }
 
-    /// Creates a valid FLOAT32 scalar.
+    /// Creates a valid `FLOAT32` scalar.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cudf::scalar::Scalar;
+    /// let s = Scalar::from_f32(3.14);
+    /// assert!((s.as_f32().unwrap() - 3.14).abs() < 1e-5);
+    /// ```
     pub fn from_f32(value: f32) -> Self {
         Scalar::Float32(value)
     }
 
-    /// Creates a null FLOAT32 scalar.
+    /// Creates a null `FLOAT32` scalar.
+    ///
+    /// See [`null_i32`](Scalar::null_i32) for null scalar semantics.
     pub fn null_f32() -> Self {
         Scalar::Null(TypeId::FLOAT32)
     }
 
-    /// Creates a valid FLOAT64 scalar.
+    /// Creates a valid `FLOAT64` scalar.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cudf::scalar::Scalar;
+    /// let s = Scalar::from_f64(2.718);
+    /// assert!((s.as_f64().unwrap() - 2.718).abs() < 1e-9);
+    /// ```
     pub fn from_f64(value: f64) -> Self {
         Scalar::Float64(value)
     }
 
-    /// Creates a null FLOAT64 scalar.
+    /// Creates a null `FLOAT64` scalar.
+    ///
+    /// See [`null_i32`](Scalar::null_i32) for null scalar semantics.
     pub fn null_f64() -> Self {
         Scalar::Null(TypeId::FLOAT64)
     }
 
-    /// Creates a valid BOOL8 scalar.
+    /// Creates a valid `BOOL8` scalar.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cudf::scalar::Scalar;
+    /// let s = Scalar::from_bool(true);
+    /// assert_eq!(s.as_bool(), Some(true));
+    /// ```
     pub fn from_bool(value: bool) -> Self {
         Scalar::Bool(value)
     }
 
-    /// Creates a null BOOL8 scalar.
+    /// Creates a null `BOOL8` scalar.
+    ///
+    /// See [`null_i32`](Scalar::null_i32) for null scalar semantics.
     pub fn null_bool() -> Self {
         Scalar::Null(TypeId::BOOL8)
     }
 
-    /// Creates a valid INT8 scalar.
+    /// Creates a valid `INT8` scalar.
     pub fn from_i8(value: i8) -> Self {
         Scalar::Int8(value)
     }
 
-    /// Creates a valid INT16 scalar.
+    /// Creates a valid `INT16` scalar.
     pub fn from_i16(value: i16) -> Self {
         Scalar::Int16(value)
     }
 
-    /// Creates a valid UINT8 scalar.
+    /// Creates a valid `UINT8` scalar.
     pub fn from_u8(value: u8) -> Self {
         Scalar::UInt8(value)
     }
 
-    /// Creates a valid UINT16 scalar.
+    /// Creates a valid `UINT16` scalar.
     pub fn from_u16(value: u16) -> Self {
         Scalar::UInt16(value)
     }
 
-    /// Creates a valid UINT32 scalar.
+    /// Creates a valid `UINT32` scalar.
     pub fn from_u32(value: u32) -> Self {
         Scalar::UInt32(value)
     }
 
-    /// Creates a valid UINT64 scalar.
+    /// Creates a valid `UINT64` scalar.
     pub fn from_u64(value: u64) -> Self {
         Scalar::UInt64(value)
     }
 
-    /// Creates a valid STRING scalar.
+    /// Creates a valid `STRING` scalar.
+    ///
+    /// The string is cloned into an owned `String`. For GPU operations,
+    /// the string data is transferred to device memory on demand.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cudf::scalar::Scalar;
+    /// let s = Scalar::from_string("hello");
+    /// assert_eq!(s.as_str(), Some("hello"));
+    /// ```
     pub fn from_string(value: &str) -> Self {
         Scalar::String(value.to_owned())
     }
 
     /// Creates a valid `TIMESTAMP_SECONDS` scalar from epoch seconds.
+    ///
+    /// The `value` is the number of seconds since the Unix epoch
+    /// (1970-01-01 00:00:00 UTC).
     pub fn from_timestamp_s(value: i64) -> Self {
         Scalar::TimestampSeconds(value)
     }
 
     /// Creates a valid `TIMESTAMP_MILLISECONDS` scalar.
+    ///
+    /// The `value` is the number of milliseconds since the Unix epoch.
     pub fn from_timestamp_ms(value: i64) -> Self {
         Scalar::TimestampMilliseconds(value)
     }
 
     /// Creates a valid `TIMESTAMP_MICROSECONDS` scalar.
+    ///
+    /// The `value` is the number of microseconds since the Unix epoch.
     pub fn from_timestamp_us(value: i64) -> Self {
         Scalar::TimestampMicroseconds(value)
     }
 
     /// Creates a valid `TIMESTAMP_NANOSECONDS` scalar.
+    ///
+    /// The `value` is the number of nanoseconds since the Unix epoch.
     pub fn from_timestamp_ns(value: i64) -> Self {
         Scalar::TimestampNanoseconds(value)
     }
 
     /// Creates a valid `DURATION_SECONDS` scalar.
+    ///
+    /// The `value` is a duration in whole seconds.
     pub fn from_duration_s(value: i64) -> Self {
         Scalar::DurationSeconds(value)
     }
 
     /// Creates a valid `DURATION_MILLISECONDS` scalar.
+    ///
+    /// The `value` is a duration in milliseconds.
     pub fn from_duration_ms(value: i64) -> Self {
         Scalar::DurationMilliseconds(value)
     }
 
     /// Creates a valid `DURATION_MICROSECONDS` scalar.
+    ///
+    /// The `value` is a duration in microseconds.
     pub fn from_duration_us(value: i64) -> Self {
         Scalar::DurationMicroseconds(value)
     }
 
     /// Creates a valid `DURATION_NANOSECONDS` scalar.
+    ///
+    /// The `value` is a duration in nanoseconds.
     pub fn from_duration_ns(value: i64) -> Self {
         Scalar::DurationNanoseconds(value)
     }
 
     /// Returns `true` if the scalar holds a valid (non-null) value.
+    ///
+    /// Returns `false` for [`Null`](Scalar::Null) variants.
     pub fn is_valid(&self) -> bool {
         !matches!(self, Scalar::Null(_))
     }
 
-    /// Returns the type identifier of the scalar.
+    /// Returns the [`TypeId`] of the scalar.
+    ///
+    /// Every scalar carries its type, including null scalars.
     pub fn type_id(&self) -> TypeId {
         match self {
             Scalar::Int8(_) => TypeId::INT8,
@@ -217,6 +325,9 @@ impl Scalar {
     }
 
     /// Extracts the value as `i32`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for scalars of a different type
+    /// (e.g. calling `as_i32()` on a `FLOAT64` scalar).
     pub fn as_i32(&self) -> Option<i32> {
         match self {
             Scalar::Int32(v) => Some(*v),
@@ -225,6 +336,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `i64`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`INT64` scalars.
     pub fn as_i64(&self) -> Option<i64> {
         match self {
             Scalar::Int64(v) => Some(*v),
@@ -233,6 +346,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `f32`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`FLOAT32` scalars.
     pub fn as_f32(&self) -> Option<f32> {
         match self {
             Scalar::Float32(v) => Some(*v),
@@ -241,6 +356,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `f64`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`FLOAT64` scalars.
     pub fn as_f64(&self) -> Option<f64> {
         match self {
             Scalar::Float64(v) => Some(*v),
@@ -249,6 +366,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `i8`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`INT8` scalars.
     pub fn as_i8(&self) -> Option<i8> {
         match self {
             Scalar::Int8(v) => Some(*v),
@@ -257,6 +376,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `i16`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`INT16` scalars.
     pub fn as_i16(&self) -> Option<i16> {
         match self {
             Scalar::Int16(v) => Some(*v),
@@ -265,6 +386,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `u8`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`UINT8` scalars.
     pub fn as_u8(&self) -> Option<u8> {
         match self {
             Scalar::UInt8(v) => Some(*v),
@@ -273,6 +396,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `u16`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`UINT16` scalars.
     pub fn as_u16(&self) -> Option<u16> {
         match self {
             Scalar::UInt16(v) => Some(*v),
@@ -281,6 +406,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `u32`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`UINT32` scalars.
     pub fn as_u32(&self) -> Option<u32> {
         match self {
             Scalar::UInt32(v) => Some(*v),
@@ -289,6 +416,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `u64`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`UINT64` scalars.
     pub fn as_u64(&self) -> Option<u64> {
         match self {
             Scalar::UInt64(v) => Some(*v),
@@ -297,6 +426,8 @@ impl Scalar {
     }
 
     /// Extracts the value as `bool`, or `None` if the type doesn't match.
+    ///
+    /// Returns `None` for null scalars and for non-`BOOL8` scalars.
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             Scalar::Bool(v) => Some(*v),
@@ -304,7 +435,9 @@ impl Scalar {
         }
     }
 
-    /// Extracts the value as `&str`, or `None` if not a string scalar.
+    /// Extracts the value as `&str`, or `None` if not a `STRING` scalar.
+    ///
+    /// Returns `None` for null scalars and for non-string scalars.
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Scalar::String(v) => Some(v),
@@ -312,7 +445,25 @@ impl Scalar {
         }
     }
 
-    /// Repeats a string scalar N times, returning a new string scalar.
+    /// Repeats a string scalar `times` times, returning a new string scalar.
+    ///
+    /// The scalar must be a `STRING` variant. The result is a new `STRING`
+    /// scalar whose value is the original string concatenated `times` times.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the scalar is not a string or if the libcudf call
+    /// fails.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::scalar::Scalar;
+    ///
+    /// let s = Scalar::from_string("ab");
+    /// let repeated = s.repeat_string(3)?;
+    /// assert_eq!(repeated.as_str(), Some("ababab"));
+    /// ```
     pub fn repeat_string(&self, times: i32) -> crate::error::Result<Self> {
         let ffi = scalar_to_ffi(self);
         let result = cudf_sys::strings::ffi::repeat_string_scalar(

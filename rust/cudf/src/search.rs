@@ -3,8 +3,18 @@
 
 //! Search operations on GPU columns and tables.
 //!
-//! - `column_view.contains_scalar(...)` and `column_view.contains_column(...)`
-//! - `table.lower_bound(...)` and `table.upper_bound(...)`
+//! All methods are defined as inherent methods on their respective types
+//! and follow the builder pattern:
+//!
+//! - [`ColumnView::contains_scalar`](crate::column::ColumnView::contains_scalar)
+//!   -- returns `bool` indicating whether a scalar exists in the column.
+//! - [`ColumnView::contains_column`](crate::column::ColumnView::contains_column)
+//!   -- returns a `BOOL8` column with per-element membership results.
+//! - [`Table::lower_bound`](crate::table::Table::lower_bound) -- for a sorted
+//!   table, finds the first insertion position for each needle row.
+//! - [`Table::upper_bound`](crate::table::Table::upper_bound) -- for a sorted
+//!   table, finds the position after the last matching element for each needle
+//!   row.
 
 #[cfg(test)]
 mod tests {

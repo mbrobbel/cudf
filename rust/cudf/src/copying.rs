@@ -3,8 +3,28 @@
 
 //! Copying operations for GPU columns and tables.
 //!
-//! Available as methods: `table.gather(...)`, `table.empty_like()`,
-//! `column_view.empty_like()`.
+//! These operations copy, gather, scatter, or reshape column/table data on the
+//! GPU. Available as methods on [`Table`](crate::table::Table) and
+//! [`ColumnView`](crate::column::ColumnView):
+//!
+//! * [`Table::gather`](crate::table::Table::gather) -- select rows by index.
+//! * [`Table::gather_checked`](crate::table::Table::gather_checked) -- gather
+//!   with out-of-bounds policy.
+//! * [`Table::scatter`](crate::table::Table::scatter) -- scatter rows into a
+//!   target table at given positions.
+//! * [`Table::scatter_scalars`](crate::table::Table::scatter_scalars) -- scatter
+//!   scalar values to specified positions.
+//! * [`Table::boolean_mask_scatter`](crate::table::Table::boolean_mask_scatter) --
+//!   scatter using a boolean mask.
+//! * [`Table::empty_like`](crate::table::Table::empty_like) -- empty table with
+//!   same schema.
+//! * [`Table::reverse`](crate::table::Table::reverse) -- reverse row order.
+//! * [`ColumnView::empty_like`](crate::column::ColumnView::empty_like) -- empty
+//!   column with same type.
+//! * [`ColumnView::copy_range_into`](crate::column::ColumnView::copy_range_into) --
+//!   copy a range of elements into another column.
+//! * [`ColumnView::copy_if_else`](crate::column::ColumnView::copy_if_else) --
+//!   select from two columns based on a mask.
 
 #[cfg(test)]
 mod tests {

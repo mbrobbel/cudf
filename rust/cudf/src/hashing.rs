@@ -3,8 +3,27 @@
 
 //! Hashing operations on GPU tables.
 //!
-//! Available as methods on [`Table`](crate::table::Table):
-//! `table.murmur3(...)`, `table.xxhash64(...)`, `table.md5()`, `table.sha256()`.
+//! All hashing methods produce one output value per input row, computed across
+//! all columns of the table. Available as methods on
+//! [`Table`](crate::table::Table):
+//!
+//! **Non-cryptographic hashes** (fast, for partitioning and hash joins):
+//! * [`Table::murmur3`](crate::table::Table::murmur3) -- `MurmurHash3` 32-bit
+//!   hash, returns a `UINT32` column.
+//! * [`Table::murmurhash3_x64_128`](crate::table::Table::murmurhash3_x64_128) --
+//!   `MurmurHash3` 128-bit, returns a `Table` of two `UINT64` columns.
+//! * [`Table::xxhash64`](crate::table::Table::xxhash64) -- `XXHash64`, returns
+//!   a `UINT64` column.
+//! * [`Table::xxhash_32`](crate::table::Table::xxhash_32) -- `XXHash` 32-bit,
+//!   returns a `UINT32` column.
+//!
+//! **Cryptographic hashes** (returns hex-encoded `STRING` columns):
+//! * [`Table::md5`](crate::table::Table::md5) -- 32-char hex.
+//! * [`Table::sha1`](crate::table::Table::sha1) -- 40-char hex.
+//! * [`Table::sha224`](crate::table::Table::sha224) -- 56-char hex.
+//! * [`Table::sha256`](crate::table::Table::sha256) -- 64-char hex.
+//! * [`Table::sha384`](crate::table::Table::sha384) -- 96-char hex.
+//! * [`Table::sha512`](crate::table::Table::sha512) -- 128-char hex.
 
 #[cfg(test)]
 mod tests {

@@ -2,6 +2,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! List column operations.
+//!
+//! List columns contain variable-length arrays of elements per row. The
+//! [`ListExt`] trait provides per-row operations such as element extraction,
+//! sorting, searching, deduplication, and gathering.
+//!
+//! Free functions in this module provide cross-column list operations:
+//! [`list_sequences`], [`lists_concatenate_rows`], [`lists_have_overlap`],
+//! [`lists_intersect_distinct`], [`lists_union_distinct`], and
+//! [`lists_difference_distinct`].
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use cudf::lists::ListExt;
+//! use cudf::stream::GpuOp;
+//!
+//! // Count elements in each list row
+//! let counts = list_col.view().list_count_elements().call()?;
+//!
+//! // Extract the first element from each list
+//! let firsts = list_col.view().list_extract_element(0).call()?;
+//! # Ok::<(), cudf::error::Error>(())
+//! ```
 
 use crate::column::{Column, ColumnView};
 use crate::error::Result;
@@ -13,56 +36,352 @@ mod private {
 }
 
 /// Extension trait for list column operations.
+///
+/// Provides per-row operations on columns whose type is `LIST`. Each row in a
+/// list column contains a variable-length sequence of elements of the same child
+/// type.
+///
+/// This trait is implemented for [`ColumnView`] and is sealed -- it cannot be
+/// implemented outside this crate.
+///
+/// All methods return builder structs that implement [`GpuOp`](crate::stream::GpuOp).
+/// Call `.call()` to execute the operation, or chain `.stream(s)` first to run
+/// on a non-default CUDA stream.
+///
+/// # Errors
+///
+/// Methods return an error if the input column is not a `LIST` column.
 pub trait ListExt: private::Sealed {
-    /// Returns an INT32 column with the number of elements in each list row.
+    /// Returns the number of elements in each list row.
+    ///
+    /// Returns an `INT32` column where each value is the length of the
+    /// corresponding list. Null list rows produce null counts.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let counts = list_col.view().list_count_elements().call()?;
+    /// // For [[1,2,3], [4,5], []] => [3, 2, 0]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_count_elements(&self) -> ListCountElements<'_>;
-    /// Extract element at `index` from each list row.
+
+    /// Extracts the element at `index` from each list row.
+    ///
+    /// Negative indices count from the end of the list (`-1` is the last
+    /// element). If `index` is out of bounds for a given row, the result for
+    /// that row is null.
+    ///
+    /// Returns a column whose type matches the list's child type.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// // Extract the first element from each list
+    /// let firsts = list_col.view().list_extract_element(0).call()?;
+    ///
+    /// // Extract the last element from each list
+    /// let lasts = list_col.view().list_extract_element(-1).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_extract_element(&self, index: i32) -> ListExtractElement<'_>;
-    /// Sort elements within each list row.
+
+    /// Sorts the elements within each list row independently.
+    ///
+    /// When `ascending` is `true`, elements are sorted in ascending order;
+    /// otherwise in descending order. When `nulls_last` is `true`, null
+    /// elements are placed at the end of each sorted list; otherwise at the
+    /// beginning.
+    ///
+    /// Returns a new `LIST` column with sorted lists. The sort is **not**
+    /// guaranteed to be stable; use [`list_stable_sort`](ListExt::list_stable_sort)
+    /// if stability is required.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let sorted = list_col.view().list_sort(true, true).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_sort(&self, ascending: bool, nulls_last: bool) -> ListSort<'_>;
-    /// Reverse elements within each list row.
+
+    /// Reverses the element order within each list row.
+    ///
+    /// Returns a new `LIST` column where each list's elements appear in
+    /// reverse order.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let reversed = list_col.view().list_reverse().call()?;
+    /// // [[1,2,3], [4,5]] => [[3,2,1], [5,4]]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_reverse(&self) -> ListReverse<'_>;
-    /// Returns a BOOL8 column indicating whether each list contains nulls.
+
+    /// Tests whether each list row contains at least one null element.
+    ///
+    /// Returns a `BOOL8` column: `true` if the list contains any null, `false`
+    /// otherwise. Null list rows produce null results.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let has_nulls = list_col.view().list_contains_nulls().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_contains_nulls(&self) -> ListContainsNulls<'_>;
-    /// Remove duplicate elements from each list.
+
+    /// Removes duplicate elements from each list row.
+    ///
+    /// Returns a new `LIST` column where each list contains only distinct
+    /// values. Nulls are treated as equal (at most one null is kept).
+    /// The order of the remaining elements is not guaranteed.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let unique = list_col.view().list_distinct().call()?;
+    /// // [[1,2,1,3], [4,4]] => [[1,2,3], [4]]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_distinct(&self) -> ListDistinct<'_>;
-    /// Concatenate nested list elements within each row (flatten one level).
+
+    /// Flattens one level of nesting within each list row.
+    ///
+    /// For a column of type `LIST(LIST(T))`, this concatenates the inner lists
+    /// within each row to produce a column of type `LIST(T)`.
+    ///
+    /// Returns a new `LIST` column with one fewer level of nesting.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// // [[[1,2],[3]], [[4,5]]] => [[1,2,3], [4,5]]
+    /// let flat = nested_list_col.view().list_concatenate_elements().call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_concatenate_elements(&self) -> ListConcatenateElements<'_>;
-    /// Check if each list row contains a scalar value (returns BOOL8 column).
+
+    /// Tests whether each list row contains a given scalar value.
+    ///
+    /// The `search_key` scalar must have the same type as the list's child
+    /// elements. Returns a `BOOL8` column: `true` if the list contains the
+    /// value, `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let key = Scalar::from_i32(42);
+    /// let found = list_col.view().list_contains_scalar(&key).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_contains_scalar<'a>(&'a self, search_key: &'a Scalar) -> ListContainsScalar<'a>;
-    /// Check if each list row contains the corresponding `search_keys` value.
+
+    /// Tests whether each list row contains the corresponding search key.
+    ///
+    /// The `search_keys` column must have the same type as the list's child
+    /// elements and the same number of rows. Row `i` is checked for
+    /// `search_keys[i]`.
+    ///
+    /// Returns a `BOOL8` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let found = list_col.view().list_contains_column(&keys.view()).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_contains_column<'a>(
         &'a self,
         search_keys: &'a ColumnView<'a>,
     ) -> ListContainsColumn<'a>;
-    /// Find position of scalar in each list row (-1 if not found).
+
+    /// Finds the position of a scalar value within each list row.
+    ///
+    /// Returns an `INT32` column. If the value is found, the position
+    /// (0-based) is returned; if not found, `-1` is returned. When
+    /// `find_first` is `true`, the first occurrence is returned; when `false`,
+    /// the last occurrence is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::scalar::Scalar;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let key = Scalar::from_i32(42);
+    /// let positions = list_col.view().list_index_of_scalar(&key, true).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_index_of_scalar<'a>(
         &'a self,
         search_key: &'a Scalar,
         find_first: bool,
     ) -> ListIndexOfScalar<'a>;
-    /// Find position of each `search_keys` value in corresponding list row.
+
+    /// Finds the position of each per-row search key within the corresponding list.
+    ///
+    /// The `search_keys` column must have the same type as the list's child
+    /// elements and the same number of rows. Returns an `INT32` column with
+    /// positions (`-1` if not found). When `find_first` is `true`, the first
+    /// occurrence is returned; when `false`, the last.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let positions = list_col.view().list_index_of_column(&keys.view(), true).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_index_of_column<'a>(
         &'a self,
         search_keys: &'a ColumnView<'a>,
         find_first: bool,
     ) -> ListIndexOfColumn<'a>;
-    /// Gather elements from each list row using a gather map list column.
+
+    /// Gathers elements from each list row at the positions specified by a gather map.
+    ///
+    /// The `gather_map` is a `LIST(INT32)` column with the same number of rows.
+    /// For each row, the integers in the gather map select elements from the
+    /// corresponding source list. Negative indices count from the end.
+    ///
+    /// When `nullify_oob` is `true`, out-of-bounds indices produce null
+    /// elements; when `false`, the behavior for out-of-bounds indices is
+    /// undefined.
+    ///
+    /// Returns a new `LIST` column with the gathered elements.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let gathered = list_col.view()
+    ///     .list_segmented_gather(&gather_map.view(), true)
+    ///     .call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_segmented_gather<'a>(
         &'a self,
         gather_map: &'a ColumnView<'a>,
         nullify_oob: bool,
     ) -> ListSegmentedGather<'a>;
-    /// Format a list-of-strings column into formatted strings.
+
+    /// Formats a list-of-strings column into a single string per row.
+    ///
+    /// Each list of strings is formatted into a bracketed, comma-separated
+    /// representation. The `na_rep` string is used in place of null elements.
+    ///
+    /// Returns a `STRING` column.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let formatted = list_col.view().list_format("NULL").call()?;
+    /// // [["a","b"], ["c",null]] => ["[a, b]", "[c, NULL]"]
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_format<'a>(&'a self, na_rep: &'a str) -> ListFormat<'a>;
-    /// Extract element from each list using per-row column indices.
+
+    /// Extracts an element from each list using per-row indices from a column.
+    ///
+    /// The `indices` column must be an `INT32` column with the same number of
+    /// rows. Negative indices count from the end of the list. Out-of-bounds
+    /// indices produce null results.
+    ///
+    /// Returns a column whose type matches the list's child type.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let elements = list_col.view()
+    ///     .list_extract_element_column(&indices.view())
+    ///     .call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_extract_element_column<'a>(
         &'a self,
         indices: &'a ColumnView<'a>,
     ) -> ListExtractElementColumn<'a>;
-    /// Stable sort elements within each list row.
+
+    /// Sorts the elements within each list row with guaranteed stability.
+    ///
+    /// Behaves identically to [`list_sort`](ListExt::list_sort) but guarantees
+    /// that equal elements retain their original relative order.
+    ///
+    /// When `ascending` is `true`, elements are sorted in ascending order.
+    /// When `nulls_last` is `true`, null elements are placed at the end.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let sorted = list_col.view().list_stable_sort(true, true).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_stable_sort(&self, ascending: bool, nulls_last: bool) -> ListStableSort<'_>;
-    /// Filter elements within each list row using a boolean mask list column.
+
+    /// Filters elements within each list row using a boolean mask.
+    ///
+    /// The `boolean_mask` is a `LIST(BOOL8)` column with the same number of
+    /// rows. For each row, only elements whose corresponding mask value is
+    /// `true` are kept. The mask lists must have the same lengths as the source
+    /// lists.
+    ///
+    /// Returns a new `LIST` column with filtered elements.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::lists::ListExt;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let filtered = list_col.view()
+    ///     .list_apply_boolean_mask(&mask.view())
+    ///     .call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
     fn list_apply_boolean_mask<'a>(
         &'a self,
         boolean_mask: &'a ColumnView<'a>,
@@ -74,6 +393,9 @@ pub trait ListExt: private::Sealed {
 // ---------------------------------------------------------------------------
 
 /// Builder for [`ListExt::list_count_elements`].
+///
+/// Created by [`ListExt::list_count_elements`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListCountElements<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -94,6 +416,9 @@ impl crate::stream::GpuOp for ListCountElements<'_> {
 }
 
 /// Builder for [`ListExt::list_extract_element`].
+///
+/// Created by [`ListExt::list_extract_element`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListExtractElement<'a> {
     view: &'a ColumnView<'a>,
     index: i32,
@@ -119,6 +444,9 @@ impl crate::stream::GpuOp for ListExtractElement<'_> {
 }
 
 /// Builder for [`ListExt::list_sort`].
+///
+/// Created by [`ListExt::list_sort`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListSort<'a> {
     view: &'a ColumnView<'a>,
     ascending: bool,
@@ -146,6 +474,9 @@ impl crate::stream::GpuOp for ListSort<'_> {
 }
 
 /// Builder for [`ListExt::list_reverse`].
+///
+/// Created by [`ListExt::list_reverse`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListReverse<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -166,6 +497,9 @@ impl crate::stream::GpuOp for ListReverse<'_> {
 }
 
 /// Builder for [`ListExt::list_contains_nulls`].
+///
+/// Created by [`ListExt::list_contains_nulls`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListContainsNulls<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -186,6 +520,9 @@ impl crate::stream::GpuOp for ListContainsNulls<'_> {
 }
 
 /// Builder for [`ListExt::list_distinct`].
+///
+/// Created by [`ListExt::list_distinct`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListDistinct<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -206,6 +543,9 @@ impl crate::stream::GpuOp for ListDistinct<'_> {
 }
 
 /// Builder for [`ListExt::list_concatenate_elements`].
+///
+/// Created by [`ListExt::list_concatenate_elements`]. Call `.call()` to
+/// execute, or chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListConcatenateElements<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
@@ -227,6 +567,9 @@ impl crate::stream::GpuOp for ListConcatenateElements<'_> {
 }
 
 /// Builder for [`ListExt::list_contains_scalar`].
+///
+/// Created by [`ListExt::list_contains_scalar`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListContainsScalar<'a> {
     view: &'a ColumnView<'a>,
     search_key: &'a Scalar,
@@ -250,6 +593,9 @@ impl crate::stream::GpuOp for ListContainsScalar<'_> {
 }
 
 /// Builder for [`ListExt::list_contains_column`].
+///
+/// Created by [`ListExt::list_contains_column`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListContainsColumn<'a> {
     view: &'a ColumnView<'a>,
     search_keys: &'a ColumnView<'a>,
@@ -275,6 +621,9 @@ impl crate::stream::GpuOp for ListContainsColumn<'_> {
 }
 
 /// Builder for [`ListExt::list_index_of_scalar`].
+///
+/// Created by [`ListExt::list_index_of_scalar`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListIndexOfScalar<'a> {
     view: &'a ColumnView<'a>,
     search_key: &'a Scalar,
@@ -303,6 +652,9 @@ impl crate::stream::GpuOp for ListIndexOfScalar<'_> {
 }
 
 /// Builder for [`ListExt::list_index_of_column`].
+///
+/// Created by [`ListExt::list_index_of_column`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListIndexOfColumn<'a> {
     view: &'a ColumnView<'a>,
     search_keys: &'a ColumnView<'a>,
@@ -330,6 +682,9 @@ impl crate::stream::GpuOp for ListIndexOfColumn<'_> {
 }
 
 /// Builder for [`ListExt::list_segmented_gather`].
+///
+/// Created by [`ListExt::list_segmented_gather`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListSegmentedGather<'a> {
     view: &'a ColumnView<'a>,
     gather_map: &'a ColumnView<'a>,
@@ -357,6 +712,9 @@ impl crate::stream::GpuOp for ListSegmentedGather<'_> {
 }
 
 /// Builder for [`ListExt::list_format`].
+///
+/// Created by [`ListExt::list_format`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListFormat<'a> {
     view: &'a ColumnView<'a>,
     na_rep: &'a str,
@@ -382,6 +740,9 @@ impl crate::stream::GpuOp for ListFormat<'_> {
 }
 
 /// Builder for [`ListExt::list_extract_element_column`].
+///
+/// Created by [`ListExt::list_extract_element_column`]. Call `.call()` to
+/// execute, or chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListExtractElementColumn<'a> {
     view: &'a ColumnView<'a>,
     indices: &'a ColumnView<'a>,
@@ -407,6 +768,9 @@ impl crate::stream::GpuOp for ListExtractElementColumn<'_> {
 }
 
 /// Builder for [`ListExt::list_stable_sort`].
+///
+/// Created by [`ListExt::list_stable_sort`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListStableSort<'a> {
     view: &'a ColumnView<'a>,
     ascending: bool,
@@ -434,6 +798,9 @@ impl crate::stream::GpuOp for ListStableSort<'_> {
 }
 
 /// Builder for [`ListExt::list_apply_boolean_mask`].
+///
+/// Created by [`ListExt::list_apply_boolean_mask`]. Call `.call()` to execute,
+/// or chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListApplyBooleanMask<'a> {
     view: &'a ColumnView<'a>,
     boolean_mask: &'a ColumnView<'a>,
@@ -463,13 +830,39 @@ impl crate::stream::GpuOp for ListApplyBooleanMask<'_> {
 // ---------------------------------------------------------------------------
 
 /// Builder for [`list_sequences`].
+///
+/// Created by [`list_sequences`]. Call `.call()` to execute, or chain
+/// `.stream(s)` to run on a specific CUDA stream.
 pub struct ListSequences<'a> {
     starts: &'a ColumnView<'a>,
     sizes: &'a ColumnView<'a>,
     stream: Stream,
 }
 
-/// Generate sequences as list column from starts and sizes columns.
+/// Generates integer sequences as a list column from `starts` and `sizes` columns.
+///
+/// For each row, generates a sequence starting at `starts[i]` with `sizes[i]`
+/// elements and a step of `1`. Both columns must be integer types with the
+/// same number of rows.
+///
+/// Returns a `LIST` column where each list contains the generated sequence.
+///
+/// # Errors
+///
+/// Returns an error if the column types are incompatible or sizes are negative.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::lists::list_sequences;
+/// use cudf::stream::GpuOp;
+///
+/// let starts = Column::from_i32(&[0, 10]).call()?;
+/// let sizes = Column::from_i32(&[3, 2]).call()?;
+/// let seqs = list_sequences(&starts.view(), &sizes.view()).call()?;
+/// // [[0, 1, 2], [10, 11]]
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub fn list_sequences<'a>(
     starts: &'a ColumnView<'a>,
     sizes: &'a ColumnView<'a>,
@@ -500,6 +893,9 @@ impl crate::stream::GpuOp for ListSequences<'_> {
 }
 
 /// Builder for [`list_sequences_with_step`].
+///
+/// Created by [`list_sequences_with_step`]. Call `.call()` to execute, or chain
+/// `.stream(s)` to run on a specific CUDA stream.
 pub struct ListSequencesWithStep<'a> {
     starts: &'a ColumnView<'a>,
     steps: &'a ColumnView<'a>,
@@ -507,7 +903,33 @@ pub struct ListSequencesWithStep<'a> {
     stream: Stream,
 }
 
-/// Generate sequences with custom step from starts, steps, and sizes columns.
+/// Generates integer sequences with a custom step from `starts`, `steps`, and `sizes` columns.
+///
+/// For each row, generates a sequence starting at `starts[i]`, incrementing by
+/// `steps[i]`, with `sizes[i]` elements. All three columns must be integer
+/// types with the same number of rows.
+///
+/// Returns a `LIST` column where each list contains the generated sequence.
+///
+/// # Errors
+///
+/// Returns an error if the column types are incompatible.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::lists::list_sequences_with_step;
+/// use cudf::stream::GpuOp;
+///
+/// let starts = Column::from_i32(&[0, 100]).call()?;
+/// let steps = Column::from_i32(&[2, -10]).call()?;
+/// let sizes = Column::from_i32(&[3, 4]).call()?;
+/// let seqs = list_sequences_with_step(
+///     &starts.view(), &steps.view(), &sizes.view(),
+/// ).call()?;
+/// // [[0, 2, 4], [100, 90, 80, 70]]
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub fn list_sequences_with_step<'a>(
     starts: &'a ColumnView<'a>,
     steps: &'a ColumnView<'a>,
@@ -541,12 +963,35 @@ impl crate::stream::GpuOp for ListSequencesWithStep<'_> {
 }
 
 /// Builder for [`lists_concatenate_rows`].
+///
+/// Created by [`lists_concatenate_rows`]. Call `.call()` to execute, or chain
+/// `.stream(s)` to run on a specific CUDA stream.
 pub struct ListsConcatenateRows<'a> {
     tbl: &'a crate::table::Table,
     stream: Stream,
 }
 
-/// Row-wise concatenation of list columns from a table into a single list column.
+/// Concatenates list columns row-wise from a [`Table`](crate::table::Table) into a single list column.
+///
+/// For each row, the lists from all columns in the table are concatenated into
+/// one list. All columns in the table must be `LIST` columns with the same
+/// child type.
+///
+/// Returns a single `LIST` column with the concatenated lists.
+///
+/// # Errors
+///
+/// Returns an error if the table columns have incompatible types.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::lists::lists_concatenate_rows;
+/// use cudf::stream::GpuOp;
+///
+/// let combined = lists_concatenate_rows(&tbl).call()?;
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub fn lists_concatenate_rows(tbl: &crate::table::Table) -> ListsConcatenateRows<'_> {
     ListsConcatenateRows {
         tbl,
@@ -569,13 +1014,36 @@ impl crate::stream::GpuOp for ListsConcatenateRows<'_> {
 }
 
 /// Builder for [`lists_have_overlap`].
+///
+/// Created by [`lists_have_overlap`]. Call `.call()` to execute, or chain
+/// `.stream(s)` to run on a specific CUDA stream.
 pub struct ListsHaveOverlap<'a> {
     lhs: &'a ColumnView<'a>,
     rhs: &'a ColumnView<'a>,
     stream: Stream,
 }
 
-/// Check if two list columns have overlapping elements per row.
+/// Tests whether two list columns share any common elements per row.
+///
+/// For each row, returns `true` if any element in `lhs[i]` is also present in
+/// `rhs[i]`. Both columns must be `LIST` columns with the same child type and
+/// the same number of rows.
+///
+/// Returns a `BOOL8` column.
+///
+/// # Errors
+///
+/// Returns an error if the column types are incompatible.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::lists::lists_have_overlap;
+/// use cudf::stream::GpuOp;
+///
+/// let overlap = lists_have_overlap(&lhs.view(), &rhs.view()).call()?;
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub fn lists_have_overlap<'a>(
     lhs: &'a ColumnView<'a>,
     rhs: &'a ColumnView<'a>,
@@ -603,13 +1071,36 @@ impl crate::stream::GpuOp for ListsHaveOverlap<'_> {
 }
 
 /// Builder for [`lists_intersect_distinct`].
+///
+/// Created by [`lists_intersect_distinct`]. Call `.call()` to execute, or chain
+/// `.stream(s)` to run on a specific CUDA stream.
 pub struct ListsIntersectDistinct<'a> {
     lhs: &'a ColumnView<'a>,
     rhs: &'a ColumnView<'a>,
     stream: Stream,
 }
 
-/// Intersect distinct elements of two list columns per row.
+/// Computes the distinct intersection of two list columns per row.
+///
+/// For each row, returns a list containing only the distinct elements that
+/// appear in both `lhs[i]` and `rhs[i]`. Both columns must be `LIST` columns
+/// with the same child type and the same number of rows.
+///
+/// Returns a `LIST` column.
+///
+/// # Errors
+///
+/// Returns an error if the column types are incompatible.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::lists::lists_intersect_distinct;
+/// use cudf::stream::GpuOp;
+///
+/// let common = lists_intersect_distinct(&lhs.view(), &rhs.view()).call()?;
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub fn lists_intersect_distinct<'a>(
     lhs: &'a ColumnView<'a>,
     rhs: &'a ColumnView<'a>,
@@ -640,13 +1131,36 @@ impl crate::stream::GpuOp for ListsIntersectDistinct<'_> {
 }
 
 /// Builder for [`lists_union_distinct`].
+///
+/// Created by [`lists_union_distinct`]. Call `.call()` to execute, or chain
+/// `.stream(s)` to run on a specific CUDA stream.
 pub struct ListsUnionDistinct<'a> {
     lhs: &'a ColumnView<'a>,
     rhs: &'a ColumnView<'a>,
     stream: Stream,
 }
 
-/// Union distinct elements of two list columns per row.
+/// Computes the distinct union of two list columns per row.
+///
+/// For each row, returns a list containing the distinct elements from either
+/// `lhs[i]` or `rhs[i]` (or both). Both columns must be `LIST` columns with
+/// the same child type and the same number of rows.
+///
+/// Returns a `LIST` column.
+///
+/// # Errors
+///
+/// Returns an error if the column types are incompatible.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::lists::lists_union_distinct;
+/// use cudf::stream::GpuOp;
+///
+/// let merged = lists_union_distinct(&lhs.view(), &rhs.view()).call()?;
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub fn lists_union_distinct<'a>(
     lhs: &'a ColumnView<'a>,
     rhs: &'a ColumnView<'a>,
@@ -677,13 +1191,36 @@ impl crate::stream::GpuOp for ListsUnionDistinct<'_> {
 }
 
 /// Builder for [`lists_difference_distinct`].
+///
+/// Created by [`lists_difference_distinct`]. Call `.call()` to execute, or
+/// chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ListsDifferenceDistinct<'a> {
     lhs: &'a ColumnView<'a>,
     rhs: &'a ColumnView<'a>,
     stream: Stream,
 }
 
-/// Difference distinct elements of two list columns per row.
+/// Computes the distinct set difference of two list columns per row.
+///
+/// For each row, returns a list containing the distinct elements that appear in
+/// `lhs[i]` but not in `rhs[i]`. Both columns must be `LIST` columns with the
+/// same child type and the same number of rows.
+///
+/// Returns a `LIST` column.
+///
+/// # Errors
+///
+/// Returns an error if the column types are incompatible.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::lists::lists_difference_distinct;
+/// use cudf::stream::GpuOp;
+///
+/// let diff = lists_difference_distinct(&lhs.view(), &rhs.view()).call()?;
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub fn lists_difference_distinct<'a>(
     lhs: &'a ColumnView<'a>,
     rhs: &'a ColumnView<'a>,

@@ -2,16 +2,39 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Error types for cudf operations.
+//!
+//! This module defines the [`Error`] enum and the [`Result`] type alias used
+//! throughout the cudf crate. Most errors originate from the underlying
+//! libcudf C++ library and are wrapped as [`Error::Cudf`].
 
 use std::fmt;
 
 /// Error type for cudf operations.
+///
+/// This enum is `#[non_exhaustive]`, so new variants may be added in future
+/// versions without breaking existing match arms.
+///
+/// # Conversion
+///
+/// A [`cxx::Exception`] is automatically converted into `Error::Cudf` via the
+/// [`From`] implementation, so most FFI call sites can use `?` directly.
+///
+/// # Examples
+///
+/// ```
+/// use cudf::error::Error;
+///
+/// let err = Error::OutOfBounds { index: 5, len: 3 };
+/// assert_eq!(err.to_string(), "index 5 out of bounds for length 3");
+/// ```
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error {
-    /// An error from the underlying C++ library.
+    /// An error propagated from the underlying libcudf C++ library.
+    ///
+    /// The inner [`cxx::Exception`] contains the C++ exception message.
     Cudf(cxx::Exception),
-    /// An index was out of bounds.
+    /// An index was out of bounds for the given container.
     OutOfBounds {
         /// The index that was out of bounds.
         index: usize,
@@ -59,4 +82,6 @@ impl From<cxx::Exception> for Error {
 }
 
 /// Result type alias for cudf operations.
+///
+/// Equivalent to `std::result::Result<T, cudf::error::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
