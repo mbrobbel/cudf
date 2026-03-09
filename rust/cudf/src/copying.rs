@@ -16,8 +16,8 @@ mod tests {
 
     #[test]
     fn gather_basic() {
-        let col = Col::from_scalar(&Scalar::from_i32(10), 3);
-        let indices = Col::from_scalar(&Scalar::from_i32(0), 2);
+        let col = Col::from_scalar(&Scalar::from_i32(10), 3).call().unwrap();
+        let indices = Col::from_scalar(&Scalar::from_i32(0), 2).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -27,7 +27,7 @@ mod tests {
 
     #[test]
     fn empty_like_column_test() {
-        let col = Col::from_scalar(&Scalar::from_i32(5), 3);
+        let col = Col::from_scalar(&Scalar::from_i32(5), 3).call().unwrap();
         let empty = col.view().empty_like();
         assert_eq!(empty.len(), 0);
         assert_eq!(empty.type_id(), TypeId::INT32);
@@ -35,8 +35,8 @@ mod tests {
 
     #[test]
     fn empty_like_table_test() {
-        let c1 = Col::from_scalar(&Scalar::from_i32(1), 2);
-        let c2 = Col::from_scalar(&Scalar::from_f64(2.5), 2);
+        let c1 = Col::from_scalar(&Scalar::from_i32(1), 2).call().unwrap();
+        let c2 = Col::from_scalar(&Scalar::from_f64(2.5), 2).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);

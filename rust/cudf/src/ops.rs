@@ -196,77 +196,89 @@ mod tests {
 
     #[test]
     fn add_i32_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(1), 3);
-        let c2 = Column::from_scalar(&Scalar::from_i32(4), 3);
+        let c1 = Column::from_scalar(&Scalar::from_i32(1), 3).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_i32(4), 3).call().unwrap();
         let result = c1.view().add(&c2.view(), TypeId::INT32).call().unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result.type_id(), TypeId::INT32);
-        assert_eq!(result.to_vec_i32(), vec![5, 5, 5]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![5, 5, 5]);
     }
 
     #[test]
     fn sub_i32_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(10), 3);
-        let c2 = Column::from_scalar(&Scalar::from_i32(3), 3);
+        let c1 = Column::from_scalar(&Scalar::from_i32(10), 3)
+            .call()
+            .unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_i32(3), 3).call().unwrap();
         let result = c1.view().sub(&c2.view(), TypeId::INT32).call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![7, 7, 7]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![7, 7, 7]);
     }
 
     #[test]
     fn mul_f64_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_f64(2.0), 3);
-        let c2 = Column::from_scalar(&Scalar::from_f64(3.0), 3);
+        let c1 = Column::from_scalar(&Scalar::from_f64(2.0), 3)
+            .call()
+            .unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_f64(3.0), 3)
+            .call()
+            .unwrap();
         let result = c1.view().mul(&c2.view(), TypeId::FLOAT64).call().unwrap();
-        assert_eq!(result.to_vec_f64(), vec![6.0, 6.0, 6.0]);
+        assert_eq!(result.to_vec_f64().call().unwrap(), vec![6.0, 6.0, 6.0]);
     }
 
     #[test]
     fn div_f64_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_f64(10.0), 2);
-        let c2 = Column::from_scalar(&Scalar::from_f64(4.0), 2);
+        let c1 = Column::from_scalar(&Scalar::from_f64(10.0), 2)
+            .call()
+            .unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_f64(4.0), 2)
+            .call()
+            .unwrap();
         let result = c1.view().div(&c2.view(), TypeId::FLOAT64).call().unwrap();
-        assert_eq!(result.to_vec_f64(), vec![2.5, 2.5]);
+        assert_eq!(result.to_vec_f64().call().unwrap(), vec![2.5, 2.5]);
     }
 
     #[test]
     fn eq_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(5), 3);
-        let c2 = Column::from_scalar(&Scalar::from_i32(5), 3);
+        let c1 = Column::from_scalar(&Scalar::from_i32(5), 3).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_i32(5), 3).call().unwrap();
         let result = c1.view().eq(&c2.view()).call().unwrap();
         assert_eq!(result.type_id(), TypeId::BOOL8);
-        assert_eq!(result.to_vec_bool(), vec![true, true, true]);
+        assert_eq!(result.to_vec_bool().call().unwrap(), vec![true, true, true]);
     }
 
     #[test]
     fn lt_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(3), 2);
-        let c2 = Column::from_scalar(&Scalar::from_i32(5), 2);
+        let c1 = Column::from_scalar(&Scalar::from_i32(3), 2).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_i32(5), 2).call().unwrap();
         let result = c1.view().lt(&c2.view()).call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![true, true]);
+        assert_eq!(result.to_vec_bool().call().unwrap(), vec![true, true]);
     }
 
     #[test]
     fn add_column_scalar() {
-        let col = Column::from_scalar(&Scalar::from_i32(1), 3);
+        let col = Column::from_scalar(&Scalar::from_i32(1), 3).call().unwrap();
         let s = Scalar::from_i32(10);
         let result = col
             .view()
             .binary_op_scalar(&s, BinaryOperator::ADD, TypeId::INT32)
             .call()
             .unwrap();
-        assert_eq!(result.to_vec_i32(), vec![11, 11, 11]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![11, 11, 11]);
     }
 
     #[test]
     fn binary_op_generic() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(2), 2);
-        let c2 = Column::from_scalar(&Scalar::from_i32(10), 2);
+        let c1 = Column::from_scalar(&Scalar::from_i32(2), 2).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_i32(10), 2)
+            .call()
+            .unwrap();
         let result = c1
             .view()
             .binary_op(&c2.view(), BinaryOperator::POW, TypeId::FLOAT64)
             .call()
             .unwrap();
-        let vals = result.to_vec_f64();
+        let vals = result.to_vec_f64().call().unwrap();
         assert!((vals[0] - 1024.0).abs() < 1e-6);
     }
 
@@ -274,95 +286,112 @@ mod tests {
 
     #[test]
     fn cast_i32_to_f64() {
-        let col = Column::from_scalar(&Scalar::from_i32(42), 2);
+        let col = Column::from_scalar(&Scalar::from_i32(42), 2)
+            .call()
+            .unwrap();
         let result = col.view().cast(TypeId::FLOAT64).call().unwrap();
         assert_eq!(result.type_id(), TypeId::FLOAT64);
-        assert_eq!(result.to_vec_f64(), vec![42.0, 42.0]);
+        assert_eq!(result.to_vec_f64().call().unwrap(), vec![42.0, 42.0]);
     }
 
     #[test]
     fn cast_f64_to_i32() {
-        let col = Column::from_scalar(&Scalar::from_f64(3.7), 2);
+        let col = Column::from_scalar(&Scalar::from_f64(3.7), 2)
+            .call()
+            .unwrap();
         let result = col.view().cast(TypeId::INT32).call().unwrap();
         assert_eq!(result.type_id(), TypeId::INT32);
-        assert_eq!(result.to_vec_i32(), vec![3, 3]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![3, 3]);
     }
 
     #[test]
     fn is_null_no_nulls() {
-        let col = Column::from_scalar(&Scalar::from_i32(1), 3);
+        let col = Column::from_scalar(&Scalar::from_i32(1), 3).call().unwrap();
         let result = col.view().is_null().call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![false, false, false]);
+        assert_eq!(
+            result.to_vec_bool().call().unwrap(),
+            vec![false, false, false]
+        );
     }
 
     #[test]
     fn is_valid_no_nulls() {
-        let col = Column::from_scalar(&Scalar::from_i32(1), 3);
+        let col = Column::from_scalar(&Scalar::from_i32(1), 3).call().unwrap();
         let result = col.view().is_valid().call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![true, true, true]);
+        assert_eq!(result.to_vec_bool().call().unwrap(), vec![true, true, true]);
     }
 
     #[test]
     fn negate_i32() {
-        let col = Column::from_scalar(&Scalar::from_i32(5), 2);
+        let col = Column::from_scalar(&Scalar::from_i32(5), 2).call().unwrap();
         let result = col.view().negate().call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![-5, -5]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![-5, -5]);
     }
 
     #[test]
     fn abs_i32() {
-        let col = Column::from_scalar(&Scalar::from_i32(-7), 2);
+        let col = Column::from_scalar(&Scalar::from_i32(-7), 2)
+            .call()
+            .unwrap();
         let result = col.view().abs().call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![7, 7]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![7, 7]);
     }
 
     #[test]
     fn ne_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(5), 3);
-        let c2 = Column::from_scalar(&Scalar::from_i32(5), 3);
+        let c1 = Column::from_scalar(&Scalar::from_i32(5), 3).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_i32(5), 3).call().unwrap();
         let result = c1.view().ne(&c2.view()).call().unwrap();
         assert_eq!(result.type_id(), TypeId::BOOL8);
-        assert_eq!(result.to_vec_bool(), vec![false, false, false]);
+        assert_eq!(
+            result.to_vec_bool().call().unwrap(),
+            vec![false, false, false]
+        );
     }
 
     #[test]
     fn ge_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(5), 2);
-        let c2 = Column::from_scalar(&Scalar::from_i32(5), 2);
+        let c1 = Column::from_scalar(&Scalar::from_i32(5), 2).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_i32(5), 2).call().unwrap();
         let result = c1.view().ge(&c2.view()).call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![true, true]);
+        assert_eq!(result.to_vec_bool().call().unwrap(), vec![true, true]);
     }
 
     #[test]
     fn gt_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(5), 2);
-        let c2 = Column::from_scalar(&Scalar::from_i32(3), 2);
+        let c1 = Column::from_scalar(&Scalar::from_i32(5), 2).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_i32(3), 2).call().unwrap();
         let result = c1.view().gt(&c2.view()).call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![true, true]);
+        assert_eq!(result.to_vec_bool().call().unwrap(), vec![true, true]);
     }
 
     #[test]
     fn le_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(3), 2);
-        let c2 = Column::from_scalar(&Scalar::from_i32(3), 2);
+        let c1 = Column::from_scalar(&Scalar::from_i32(3), 2).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_i32(3), 2).call().unwrap();
         let result = c1.view().le(&c2.view()).call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![true, true]);
+        assert_eq!(result.to_vec_bool().call().unwrap(), vec![true, true]);
     }
 
     #[test]
     fn is_nan_basic() {
-        let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0]);
+        let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0])
+            .call()
+            .unwrap();
         let result = col.view().is_nan().call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![false, true, false]);
+        assert_eq!(
+            result.to_vec_bool().call().unwrap(),
+            vec![false, true, false]
+        );
     }
 
     #[test]
     fn scalar_column_binary_op() {
         let s = Scalar::from_i32(10);
-        let col = Column::from_scalar(&Scalar::from_i32(3), 2);
+        let col = Column::from_scalar(&Scalar::from_i32(3), 2).call().unwrap();
         let result = scalar_binary_op(&s, &col.view(), BinaryOperator::SUB, TypeId::INT32)
             .call()
             .unwrap();
-        assert_eq!(result.to_vec_i32(), vec![7, 7]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![7, 7]);
     }
 }

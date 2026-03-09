@@ -270,7 +270,7 @@ mod tests {
     #[test]
     fn replace_nulls_with_scalar() {
         let null_s = Scalar::null_i32();
-        let null_col = Column::from_scalar(&null_s, 3);
+        let null_col = Column::from_scalar(&null_s, 3).call().unwrap();
         let replacement = Scalar::from_i32(0);
         let result = null_col
             .view()
@@ -279,19 +279,21 @@ mod tests {
             .unwrap();
         assert_eq!(result.len(), 3);
         assert!(!result.has_nulls());
-        assert_eq!(result.to_vec_i32(), vec![0, 0, 0]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![0, 0, 0]);
     }
 
     #[test]
     fn replace_nans_with_scalar() {
-        let nan_col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0]);
+        let nan_col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0])
+            .call()
+            .unwrap();
         let replacement = Scalar::from_f64(0.0);
         let result = nan_col
             .view()
             .replace_nans_scalar(&replacement)
             .call()
             .unwrap();
-        let data = result.to_vec_f64();
+        let data = result.to_vec_f64().call().unwrap();
         assert_eq!(data.len(), 3);
         assert!((data[0] - 1.0).abs() < 1e-9);
         assert!((data[1] - 0.0).abs() < 1e-9);
@@ -300,31 +302,33 @@ mod tests {
 
     #[test]
     fn clamp_values() {
-        let col = Column::from_slice_i32(&[1, 5, 10]);
+        let col = Column::from_slice_i32(&[1, 5, 10]).call().unwrap();
         let lo = Scalar::from_i32(3);
         let hi = Scalar::from_i32(7);
         let result = col.view().clamp(&lo, &hi).call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![3, 5, 7]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![3, 5, 7]);
     }
 
     #[test]
     fn find_and_replace() {
-        let col = Column::from_slice_i32(&[1, 2, 3, 2, 1]);
-        let old_vals = Column::from_slice_i32(&[2]);
-        let new_vals = Column::from_slice_i32(&[99]);
+        let col = Column::from_slice_i32(&[1, 2, 3, 2, 1]).call().unwrap();
+        let old_vals = Column::from_slice_i32(&[2]).call().unwrap();
+        let new_vals = Column::from_slice_i32(&[99]).call().unwrap();
         let result = col
             .view()
             .find_and_replace_all(&old_vals.view(), &new_vals.view())
             .call()
             .unwrap();
-        assert_eq!(result.to_vec_i32(), vec![1, 99, 3, 99, 1]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![1, 99, 3, 99, 1]);
     }
 
     #[test]
     fn replace_nulls_with_column() {
         let null_s = Scalar::null_i32();
-        let null_col = Column::from_scalar(&null_s, 3);
-        let replacement = Column::from_scalar(&Scalar::from_i32(42), 3);
+        let null_col = Column::from_scalar(&null_s, 3).call().unwrap();
+        let replacement = Column::from_scalar(&Scalar::from_i32(42), 3)
+            .call()
+            .unwrap();
         let result = null_col
             .view()
             .replace_nulls_with_column(&replacement.view())
@@ -332,19 +336,21 @@ mod tests {
             .unwrap();
         assert_eq!(result.len(), 3);
         assert!(!result.has_nulls());
-        assert_eq!(result.to_vec_i32(), vec![42, 42, 42]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![42, 42, 42]);
     }
 
     #[test]
     fn replace_nans_with_column() {
-        let nan_col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0]);
-        let replacement = Column::from_slice_f64(&[10.0, 20.0, 30.0]);
+        let nan_col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0])
+            .call()
+            .unwrap();
+        let replacement = Column::from_slice_f64(&[10.0, 20.0, 30.0]).call().unwrap();
         let result = nan_col
             .view()
             .replace_nans(&replacement.view())
             .call()
             .unwrap();
-        let data = result.to_vec_f64();
+        let data = result.to_vec_f64().call().unwrap();
         assert!((data[0] - 1.0).abs() < 1e-9);
         assert!((data[1] - 20.0).abs() < 1e-9);
         assert!((data[2] - 3.0).abs() < 1e-9);

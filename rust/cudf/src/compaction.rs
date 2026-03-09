@@ -21,7 +21,9 @@ mod tests {
 
     #[test]
     fn drop_nans_basic() {
-        let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0, f64::NAN, 5.0]);
+        let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0, f64::NAN, 5.0])
+            .call()
+            .unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -31,7 +33,7 @@ mod tests {
 
     #[test]
     fn unique_basic() {
-        let col = Column::from_slice_i32(&[1, 1, 2, 2, 3]);
+        let col = Column::from_slice_i32(&[1, 1, 2, 2, 3]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -41,7 +43,7 @@ mod tests {
 
     #[test]
     fn distinct_basic() {
-        let col = Column::from_slice_i32(&[3, 1, 2, 1, 3]);
+        let col = Column::from_slice_i32(&[3, 1, 2, 1, 3]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -51,7 +53,7 @@ mod tests {
 
     #[test]
     fn drop_nulls_with_threshold() {
-        let col = Column::from_scalar(&Scalar::null_i32(), 5);
+        let col = Column::from_scalar(&Scalar::null_i32(), 5).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();

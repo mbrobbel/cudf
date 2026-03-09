@@ -177,7 +177,8 @@ pub mod parquet {
         num_rows: i64,
     ) -> crate::Result<TableWithMetadata> {
         let s = path_str(path.as_ref())?;
-        let mut twm = cudf_sys::io::ffi::read_parquet_with_columns(s, columns, skip_rows, num_rows)?;
+        let mut twm =
+            cudf_sys::io::ffi::read_parquet_with_columns(s, columns, skip_rows, num_rows)?;
         let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
         let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
         Ok(TableWithMetadata {
@@ -311,11 +312,16 @@ mod tests {
     use super::*;
     use crate::column::Column;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     fn make_test_table() -> Table {
-        let c1 = Column::from_scalar(&Scalar::from_i32(42), 3);
-        let c2 = Column::from_scalar(&Scalar::from_f64(3.14), 3);
+        let c1 = Column::from_scalar(&Scalar::from_i32(42), 3)
+            .call()
+            .unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_f64(3.14), 3)
+            .call()
+            .unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);

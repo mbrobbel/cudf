@@ -8,12 +8,12 @@
 
 use std::sync::Arc;
 
-use cudf::stream::GpuOp;
 use arrow_array::{
     Array, BooleanArray, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Int64Array,
     RecordBatch, StringArray, UInt8Array, UInt16Array, UInt32Array, UInt64Array,
 };
 use arrow_schema::{DataType as ArrowDataType, Field, Schema};
+use cudf::stream::GpuOp;
 
 use cudf::column::Column;
 use cudf::table::Table;
@@ -27,7 +27,7 @@ fn i32_round_trip() {
     let arrow = Int32Array::from(vec![1, 2, 3, 4, 5]);
     let gpu = Column::from_arrow(&arrow).unwrap();
     assert_eq!(gpu.len(), 5);
-    assert_eq!(gpu.to_vec_i32(), [1, 2, 3, 4, 5]);
+    assert_eq!(gpu.to_vec_i32().call().unwrap(), [1, 2, 3, 4, 5]);
 
     let back = gpu.to_arrow().unwrap();
     let typed = back.as_any().downcast_ref::<Int32Array>().unwrap();
@@ -38,7 +38,7 @@ fn i32_round_trip() {
 fn i8_round_trip() {
     let arrow = Int8Array::from(vec![10i8, -20, 30]);
     let gpu = Column::from_arrow(&arrow).unwrap();
-    assert_eq!(gpu.to_vec_i8(), [10, -20, 30]);
+    assert_eq!(gpu.to_vec_i8().call().unwrap(), [10, -20, 30]);
 
     let back = gpu.to_arrow().unwrap();
     let typed = back.as_any().downcast_ref::<Int8Array>().unwrap();
@@ -125,7 +125,7 @@ fn f64_round_trip() {
 fn bool_round_trip() {
     let arrow = BooleanArray::from(vec![true, false, true, true]);
     let gpu = Column::from_arrow(&arrow).unwrap();
-    assert_eq!(gpu.to_vec_bool(), [true, false, true, true]);
+    assert_eq!(gpu.to_vec_bool().call().unwrap(), [true, false, true, true]);
 
     let back = gpu.to_arrow().unwrap();
     let typed = back.as_any().downcast_ref::<BooleanArray>().unwrap();
@@ -142,7 +142,7 @@ fn bool_round_trip() {
 fn string_round_trip() {
     let arrow = StringArray::from(vec!["hello", "world", "!"]);
     let gpu = Column::from_arrow(&arrow).unwrap();
-    assert_eq!(gpu.to_vec_string(), ["hello", "world", "!"]);
+    assert_eq!(gpu.to_vec_string().call().unwrap(), ["hello", "world", "!"]);
 
     let back = gpu.to_arrow().unwrap();
     let typed = back.as_any().downcast_ref::<StringArray>().unwrap();
@@ -363,7 +363,10 @@ fn timestamp_round_trip() {
     use arrow_array::TimestampSecondArray;
     let arrow = TimestampSecondArray::from(vec![1_710_498_645i64, 1_719_792_000]);
     let gpu = Column::from_arrow(&arrow).unwrap();
-    assert_eq!(gpu.to_vec_i64(), [1_710_498_645, 1_719_792_000]);
+    assert_eq!(
+        gpu.to_vec_i64().call().unwrap(),
+        [1_710_498_645, 1_719_792_000]
+    );
 
     let back = gpu.to_arrow().unwrap();
     let typed = back

@@ -39,6 +39,8 @@ fn table_col_i32(tbl: &Table, idx: usize) -> Vec<i32> {
         .call()
         .unwrap()
         .to_vec_i32()
+        .call()
+        .unwrap()
 }
 
 /// Extract a table column to host as i64.
@@ -49,6 +51,8 @@ fn table_col_i64(tbl: &Table, idx: usize) -> Vec<i64> {
         .call()
         .unwrap()
         .to_vec_i64()
+        .call()
+        .unwrap()
 }
 
 /// Extract a table column to host as f64.
@@ -59,6 +63,8 @@ fn table_col_f64(tbl: &Table, idx: usize) -> Vec<f64> {
         .call()
         .unwrap()
         .to_vec_f64()
+        .call()
+        .unwrap()
 }
 
 /// Sort a table and return it (for deterministic result comparison).
@@ -72,12 +78,14 @@ fn sorted(tbl: &Table) -> Table {
 
 #[test]
 fn column_arithmetic_pipeline() {
-    let a = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
-    let b = Column::from_slice_i32(&[1, 2, 3, 4, 5]);
+    let a = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
+    let b = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call().unwrap();
 
     // Element-wise add
     let sum_col = a.view().add(&b.view(), TypeId::INT32).call().unwrap();
-    assert_eq!(sum_col.to_vec_i32(), [11, 22, 33, 44, 55]);
+    assert_eq!(sum_col.to_vec_i32().call().unwrap(), [11, 22, 33, 44, 55]);
 
     // Reduce to scalar
     let total = sum_col.view().sum(TypeId::INT64).call().unwrap();
@@ -96,12 +104,12 @@ fn column_arithmetic_pipeline() {
 
 #[test]
 fn cast_and_floating_point_math() {
-    let ints = Column::from_slice_i32(&[1, 4, 9, 16, 25]);
+    let ints = Column::from_slice_i32(&[1, 4, 9, 16, 25]).call().unwrap();
 
     // Cast to f64, compute sqrt
     let floats = ints.view().cast(TypeId::FLOAT64).call().unwrap();
     let roots = floats.view().sqrt().call().unwrap();
-    let result = roots.to_vec_f64();
+    let result = roots.to_vec_f64().call().unwrap();
     assert_eq!(result, [1.0, 2.0, 3.0, 4.0, 5.0]);
 
     // Sum of square roots
@@ -115,8 +123,10 @@ fn cast_and_floating_point_math() {
 
 #[test]
 fn sort_and_verify_order() {
-    let ids = Column::from_slice_i32(&[3, 1, 4, 1, 5]);
-    let vals = Column::from_slice_f64(&[30.0, 10.0, 40.0, 11.0, 50.0]);
+    let ids = Column::from_slice_i32(&[3, 1, 4, 1, 5]).call().unwrap();
+    let vals = Column::from_slice_f64(&[30.0, 10.0, 40.0, 11.0, 50.0])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![ids, vals]);
 
     let asc = tbl
@@ -145,11 +155,13 @@ fn sort_and_verify_order() {
 
 #[test]
 fn filter_rows_by_comparison() {
-    let values = Column::from_slice_i32(&[10, 25, 5, 30, 15]);
+    let values = Column::from_slice_i32(&[10, 25, 5, 30, 15]).call().unwrap();
     let tbl = build_table(vec![values]);
 
     // Build mask: values > 12
-    let threshold = Column::from_scalar(&Scalar::from_i32(12), 5);
+    let threshold = Column::from_scalar(&Scalar::from_i32(12), 5)
+        .call()
+        .unwrap();
     let mask = tbl.column(0).unwrap().gt(&threshold.view()).call().unwrap();
 
     let filtered = tbl.filter(&mask.view()).call().unwrap();
@@ -166,8 +178,10 @@ fn filter_rows_by_comparison() {
 #[test]
 fn groupby_aggregate_sum_and_count() {
     // keys: [a, b, a, b, a], values: [10, 20, 30, 40, 50]
-    let keys = Column::from_slice_i32(&[1, 2, 1, 2, 1]);
-    let vals = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let keys = Column::from_slice_i32(&[1, 2, 1, 2, 1]).call().unwrap();
+    let vals = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![keys, vals]);
 
     // SUM by key
@@ -189,8 +203,10 @@ fn groupby_aggregate_sum_and_count() {
 
 #[test]
 fn groupby_multi_aggregation() {
-    let keys = Column::from_slice_i32(&[1, 2, 1, 2, 1]);
-    let vals = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let keys = Column::from_slice_i32(&[1, 2, 1, 2, 1]).call().unwrap();
+    let vals = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![keys, vals]);
 
     let result = tbl
@@ -212,12 +228,16 @@ fn groupby_multi_aggregation() {
 
 #[test]
 fn inner_join_two_tables() {
-    let left_keys = Column::from_slice_i32(&[1, 2, 3, 4]);
-    let left_vals = Column::from_slice_f64(&[10.0, 20.0, 30.0, 40.0]);
+    let left_keys = Column::from_slice_i32(&[1, 2, 3, 4]).call().unwrap();
+    let left_vals = Column::from_slice_f64(&[10.0, 20.0, 30.0, 40.0])
+        .call()
+        .unwrap();
     let left = build_table(vec![left_keys, left_vals]);
 
-    let right_keys = Column::from_slice_i32(&[2, 4, 5]);
-    let right_vals = Column::from_slice_f64(&[200.0, 400.0, 500.0]);
+    let right_keys = Column::from_slice_i32(&[2, 4, 5]).call().unwrap();
+    let right_vals = Column::from_slice_f64(&[200.0, 400.0, 500.0])
+        .call()
+        .unwrap();
     let right = build_table(vec![right_keys, right_vals]);
 
     let joined = left.inner_join(&right, &[0], &[0]).call().unwrap();
@@ -236,12 +256,12 @@ fn inner_join_two_tables() {
 
 #[test]
 fn left_join_preserves_all_left_rows() {
-    let left_keys = Column::from_slice_i32(&[1, 2, 3]);
-    let left_vals = Column::from_slice_i32(&[10, 20, 30]);
+    let left_keys = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
+    let left_vals = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
     let left = build_table(vec![left_keys, left_vals]);
 
-    let right_keys = Column::from_slice_i32(&[2]);
-    let right_vals = Column::from_slice_i32(&[200]);
+    let right_keys = Column::from_slice_i32(&[2]).call().unwrap();
+    let right_vals = Column::from_slice_i32(&[200]).call().unwrap();
     let right = build_table(vec![right_keys, right_vals]);
 
     let joined = left.left_join(&right, &[0], &[0]).call().unwrap();
@@ -259,27 +279,37 @@ fn left_join_preserves_all_left_rows() {
 
 #[test]
 fn string_case_and_contains() {
-    let col = Column::from_strings(&["Hello", "WORLD", "foo Bar"]);
+    let col = Column::from_strings(&["Hello", "WORLD", "foo Bar"])
+        .call()
+        .unwrap();
 
     let lower = col.view().to_lower().call().unwrap();
-    assert_eq!(lower.to_vec_string(), ["hello", "world", "foo bar"]);
+    assert_eq!(
+        lower.to_vec_string().call().unwrap(),
+        ["hello", "world", "foo bar"]
+    );
 
     let upper = col.view().to_upper().call().unwrap();
-    assert_eq!(upper.to_vec_string(), ["HELLO", "WORLD", "FOO BAR"]);
+    assert_eq!(
+        upper.to_vec_string().call().unwrap(),
+        ["HELLO", "WORLD", "FOO BAR"]
+    );
 
     // Check which strings contain "o"
     let target = Scalar::from_string("o");
     let mask = col.view().str_contains(&target).call().unwrap();
-    assert_eq!(mask.to_vec_bool(), [true, false, true]);
+    assert_eq!(mask.to_vec_bool().call().unwrap(), [true, false, true]);
 }
 
 #[test]
 fn string_split_and_length() {
-    let col = Column::from_strings(&["a,b,c", "x,y", "hello"]);
+    let col = Column::from_strings(&["a,b,c", "x,y", "hello"])
+        .call()
+        .unwrap();
 
     // Count characters
     let lengths = col.view().count_characters().call().unwrap();
-    assert_eq!(lengths.to_vec_i32(), [5, 3, 5]);
+    assert_eq!(lengths.to_vec_i32().call().unwrap(), [5, 3, 5]);
 
     // Split by comma
     let delimiter = Scalar::from_string(",");
@@ -289,19 +319,27 @@ fn string_split_and_length() {
 
 #[test]
 fn string_regex_operations() {
-    let col = Column::from_strings(&["abc123", "def", "456ghi", "789"]);
+    let col = Column::from_strings(&["abc123", "def", "456ghi", "789"])
+        .call()
+        .unwrap();
 
     // Check regex contains digits
     let has_digits = col.view().str_contains_re("\\d+").call().unwrap();
-    assert_eq!(has_digits.to_vec_bool(), [true, false, true, true]);
+    assert_eq!(
+        has_digits.to_vec_bool().call().unwrap(),
+        [true, false, true, true]
+    );
 
     // Count digit sequences
     let counts = col.view().str_count_re("\\d+").call().unwrap();
-    assert_eq!(counts.to_vec_i32(), [1, 0, 1, 1]);
+    assert_eq!(counts.to_vec_i32().call().unwrap(), [1, 0, 1, 1]);
 
     // Replace digits with "#"
     let replaced = col.view().str_replace_re("\\d+", "#").call().unwrap();
-    assert_eq!(replaced.to_vec_string(), ["abc#", "def", "#ghi", "#"]);
+    assert_eq!(
+        replaced.to_vec_string().call().unwrap(),
+        ["abc#", "def", "#ghi", "#"]
+    );
 }
 
 // ===========================================================================
@@ -310,10 +348,17 @@ fn string_regex_operations() {
 
 #[test]
 fn create_column_with_nulls_and_filter() {
-    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     // Create validity mask: positions 1 and 3 are null
-    let validity = Column::from_slice_bool(&[true, false, true, false, true]);
-    let with_nulls = col.with_null_mask_from_bools(&validity.view()).unwrap();
+    let validity = Column::from_slice_bool(&[true, false, true, false, true])
+        .call()
+        .unwrap();
+    let with_nulls = col
+        .with_null_mask_from_bools(&validity.view())
+        .call()
+        .unwrap();
 
     assert_eq!(with_nulls.len(), 5);
     assert_eq!(with_nulls.null_count(), 2);
@@ -321,16 +366,21 @@ fn create_column_with_nulls_and_filter() {
 
     // Verify the null mask round-trips
     assert_eq!(
-        with_nulls.null_mask_to_host(),
+        with_nulls.null_mask_to_host().call().unwrap(),
         [true, false, true, false, true]
     );
 }
 
 #[test]
 fn drop_null_rows_from_table() {
-    let col = Column::from_slice_i32(&[10, 20, 30, 40]);
-    let validity = Column::from_slice_bool(&[true, false, true, false]);
-    let with_nulls = col.with_null_mask_from_bools(&validity.view()).unwrap();
+    let col = Column::from_slice_i32(&[10, 20, 30, 40]).call().unwrap();
+    let validity = Column::from_slice_bool(&[true, false, true, false])
+        .call()
+        .unwrap();
+    let with_nulls = col
+        .with_null_mask_from_bools(&validity.view())
+        .call()
+        .unwrap();
     let tbl = build_table(vec![with_nulls]);
 
     let dropped = tbl.drop_nulls().call().unwrap();
@@ -344,8 +394,8 @@ fn drop_null_rows_from_table() {
 
 #[test]
 fn concatenate_two_tables() {
-    let t1 = build_table(vec![Column::from_slice_i32(&[1, 2, 3])]);
-    let t2 = build_table(vec![Column::from_slice_i32(&[4, 5])]);
+    let t1 = build_table(vec![Column::from_slice_i32(&[1, 2, 3]).call().unwrap()]);
+    let t2 = build_table(vec![Column::from_slice_i32(&[4, 5]).call().unwrap()]);
 
     let combined = t1.concatenate(&t2).call().unwrap();
     assert_eq!(combined.len(), 5);
@@ -358,7 +408,9 @@ fn concatenate_two_tables() {
 
 #[test]
 fn hash_partition_and_recombine() {
-    let ids = Column::from_slice_i32(&[1, 2, 3, 4, 5, 6, 7, 8]);
+    let ids = Column::from_slice_i32(&[1, 2, 3, 4, 5, 6, 7, 8])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![ids]);
 
     // Partition into 3 buckets
@@ -376,8 +428,10 @@ fn hash_partition_and_recombine() {
 
 #[test]
 fn distinct_removes_duplicates() {
-    let keys = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]);
-    let vals = Column::from_slice_i32(&[10, 20, 21, 30, 31, 32]);
+    let keys = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]).call().unwrap();
+    let vals = Column::from_slice_i32(&[10, 20, 21, 30, 31, 32])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![keys, vals]);
 
     let result = tbl.distinct(&[0]).call().unwrap();
@@ -394,12 +448,18 @@ fn distinct_removes_duplicates() {
 #[test]
 fn etl_pipeline_filter_sort_aggregate() {
     // Simulate: sales data with region (1=east, 2=west) and amount
-    let regions = Column::from_slice_i32(&[1, 2, 1, 2, 1, 2, 1, 2]);
-    let amounts = Column::from_slice_i32(&[100, 200, 150, 50, 300, 75, 25, 400]);
+    let regions = Column::from_slice_i32(&[1, 2, 1, 2, 1, 2, 1, 2])
+        .call()
+        .unwrap();
+    let amounts = Column::from_slice_i32(&[100, 200, 150, 50, 300, 75, 25, 400])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![regions, amounts]);
 
     // Step 1: Filter to amounts >= 100
-    let threshold = Column::from_scalar(&Scalar::from_i32(100), tbl.len());
+    let threshold = Column::from_scalar(&Scalar::from_i32(100), tbl.len())
+        .call()
+        .unwrap();
     let mask = tbl.column(1).unwrap().ge(&threshold.view()).call().unwrap();
     let filtered = tbl.filter(&mask.view()).call().unwrap();
     assert_eq!(filtered.len(), 5); // 100, 200, 150, 300, 400
@@ -433,7 +493,9 @@ fn etl_pipeline_filter_sort_aggregate() {
 
 #[test]
 fn slice_and_reverse_table() {
-    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![col]);
 
     // Slice rows [1, 4)
@@ -455,7 +517,7 @@ fn fill_sequence_column() {
     let init = Scalar::from_i32(0);
     let step = Scalar::from_i32(10);
     let seq = cudf::fill::sequence(5, &init, &step).call().unwrap();
-    assert_eq!(seq.to_vec_i32(), [0, 10, 20, 30, 40]);
+    assert_eq!(seq.to_vec_i32().call().unwrap(), [0, 10, 20, 30, 40]);
 }
 
 // ===========================================================================
@@ -464,17 +526,23 @@ fn fill_sequence_column() {
 
 #[test]
 fn murmur3_hash_deterministic() {
-    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]);
+    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call().unwrap();
     let tbl = build_table(vec![col]);
 
     // Same input should produce same hash
     let hash1 = tbl.murmur3(42).call().unwrap();
     let hash2 = tbl.murmur3(42).call().unwrap();
-    assert_eq!(hash1.to_vec_u32(), hash2.to_vec_u32());
+    assert_eq!(
+        hash1.to_vec_u32().call().unwrap(),
+        hash2.to_vec_u32().call().unwrap()
+    );
 
     // Different seed should produce different hash
     let hash3 = tbl.murmur3(99).call().unwrap();
-    assert_ne!(hash1.to_vec_u32(), hash3.to_vec_u32());
+    assert_ne!(
+        hash1.to_vec_u32().call().unwrap(),
+        hash3.to_vec_u32().call().unwrap()
+    );
 }
 
 // ===========================================================================
@@ -483,7 +551,7 @@ fn murmur3_hash_deterministic() {
 
 #[test]
 fn repeat_and_tile_table() {
-    let col = Column::from_slice_i32(&[1, 2, 3]);
+    let col = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
     let tbl = build_table(vec![col]);
 
     // repeat duplicates each row N times (row-wise)
@@ -503,7 +571,7 @@ fn repeat_and_tile_table() {
 
 #[test]
 fn csv_write_and_read_back() {
-    let col = Column::from_slice_i32(&[10, 20, 30]);
+    let col = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
     let tbl = build_table(vec![col]);
 
     let path = std::env::temp_dir().join("cudf_integration_test.csv");
@@ -525,9 +593,11 @@ fn csv_write_and_read_back() {
 
 #[test]
 fn scatter_values_into_table() {
-    let target = build_table(vec![Column::from_slice_i32(&[0, 0, 0, 0, 0])]);
-    let source = build_table(vec![Column::from_slice_i32(&[99, 88])]);
-    let indices = Column::from_slice_i32(&[1, 3]);
+    let target = build_table(vec![
+        Column::from_slice_i32(&[0, 0, 0, 0, 0]).call().unwrap(),
+    ]);
+    let source = build_table(vec![Column::from_slice_i32(&[99, 88]).call().unwrap()]);
+    let indices = Column::from_slice_i32(&[1, 3]).call().unwrap();
 
     let result = target.scatter(&source, &indices.view()).call().unwrap();
     assert_eq!(table_col_i32(&result, 0), [0, 99, 0, 88, 0]);
@@ -539,12 +609,15 @@ fn scatter_values_into_table() {
 
 #[test]
 fn interleave_table_columns() {
-    let a = Column::from_slice_i32(&[1, 2, 3]);
-    let b = Column::from_slice_i32(&[10, 20, 30]);
+    let a = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
+    let b = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
     let tbl = build_table(vec![a, b]);
 
     let interleaved = tbl.interleave_columns().call().unwrap();
-    assert_eq!(interleaved.to_vec_i32(), [1, 10, 2, 20, 3, 30]);
+    assert_eq!(
+        interleaved.to_vec_i32().call().unwrap(),
+        [1, 10, 2, 20, 3, 30]
+    );
 }
 
 // ===========================================================================
@@ -554,21 +627,25 @@ fn interleave_table_columns() {
 #[test]
 fn lower_and_upper_bound_search() {
     // Sorted haystack
-    let haystack = build_table(vec![Column::from_slice_i32(&[10, 20, 20, 30, 40])]);
+    let haystack = build_table(vec![
+        Column::from_slice_i32(&[10, 20, 20, 30, 40])
+            .call()
+            .unwrap(),
+    ]);
     // Needles to search for
-    let needles = build_table(vec![Column::from_slice_i32(&[20, 35])]);
+    let needles = build_table(vec![Column::from_slice_i32(&[20, 35]).call().unwrap()]);
 
     let lower = haystack
         .lower_bound(&needles, &[Order::ASCENDING], &[NullOrder::BEFORE])
         .call()
         .unwrap();
-    assert_eq!(lower.to_vec_i32(), [1, 4]); // first 20 at index 1, 35 would go at 4
+    assert_eq!(lower.to_vec_i32().call().unwrap(), [1, 4]); // first 20 at index 1, 35 would go at 4
 
     let upper = haystack
         .upper_bound(&needles, &[Order::ASCENDING], &[NullOrder::BEFORE])
         .call()
         .unwrap();
-    assert_eq!(upper.to_vec_i32(), [3, 4]); // past last 20 at index 3
+    assert_eq!(upper.to_vec_i32().call().unwrap(), [3, 4]); // past last 20 at index 3
 }
 
 // ===========================================================================
@@ -577,11 +654,15 @@ fn lower_and_upper_bound_search() {
 
 #[test]
 fn chained_boolean_comparisons() {
-    let col = Column::from_slice_i32(&[5, 15, 25, 35, 45]);
+    let col = Column::from_slice_i32(&[5, 15, 25, 35, 45]).call().unwrap();
 
     // 10 <= col <= 30
-    let lo = Column::from_scalar(&Scalar::from_i32(10), 5);
-    let hi = Column::from_scalar(&Scalar::from_i32(30), 5);
+    let lo = Column::from_scalar(&Scalar::from_i32(10), 5)
+        .call()
+        .unwrap();
+    let hi = Column::from_scalar(&Scalar::from_i32(30), 5)
+        .call()
+        .unwrap();
 
     let ge_lo = col.view().ge(&lo.view()).call().unwrap();
     let le_hi = col.view().le(&hi.view()).call().unwrap();
@@ -593,7 +674,10 @@ fn chained_boolean_comparisons() {
         .binary_op(&le_hi.view(), BinaryOperator::BITWISE_AND, TypeId::BOOL8)
         .call()
         .unwrap();
-    assert_eq!(in_range.to_vec_bool(), [false, true, true, false, false]);
+    assert_eq!(
+        in_range.to_vec_bool().call().unwrap(),
+        [false, true, true, false, false]
+    );
 }
 
 // ===========================================================================
@@ -602,7 +686,7 @@ fn chained_boolean_comparisons() {
 
 #[test]
 fn string_to_integer_conversion() {
-    let strings = Column::from_strings(&["100", "200", "300"]);
+    let strings = Column::from_strings(&["100", "200", "300"]).call().unwrap();
 
     // Convert to integers
     let ints = strings
@@ -610,11 +694,11 @@ fn string_to_integer_conversion() {
         .str_to_integers(TypeId::INT32)
         .call()
         .unwrap();
-    assert_eq!(ints.to_vec_i32(), [100, 200, 300]);
+    assert_eq!(ints.to_vec_i32().call().unwrap(), [100, 200, 300]);
 
     // Convert back to strings
     let back = ints.view().str_from_integers().call().unwrap();
-    assert_eq!(back.to_vec_string(), ["100", "200", "300"]);
+    assert_eq!(back.to_vec_string().call().unwrap(), ["100", "200", "300"]);
 }
 
 // ===========================================================================
@@ -623,7 +707,9 @@ fn string_to_integer_conversion() {
 
 #[test]
 fn string_replace_literal() {
-    let col = Column::from_strings(&["hello world", "world peace", "no match"]);
+    let col = Column::from_strings(&["hello world", "world peace", "no match"])
+        .call()
+        .unwrap();
 
     let replaced = col
         .view()
@@ -631,7 +717,7 @@ fn string_replace_literal() {
         .call()
         .unwrap();
     assert_eq!(
-        replaced.to_vec_string(),
+        replaced.to_vec_string().call().unwrap(),
         ["hello earth", "earth peace", "no match"]
     );
 }
@@ -642,8 +728,8 @@ fn string_replace_literal() {
 
 #[test]
 fn cross_join_cartesian_product() {
-    let left = build_table(vec![Column::from_slice_i32(&[1, 2])]);
-    let right = build_table(vec![Column::from_slice_i32(&[10, 20, 30])]);
+    let left = build_table(vec![Column::from_slice_i32(&[1, 2]).call().unwrap()]);
+    let right = build_table(vec![Column::from_slice_i32(&[10, 20, 30]).call().unwrap()]);
 
     let result = left.cross_join(&right).call().unwrap();
     assert_eq!(result.len(), 6); // 2 * 3
@@ -656,8 +742,8 @@ fn cross_join_cartesian_product() {
 
 #[test]
 fn merge_two_sorted_tables() {
-    let t1 = build_table(vec![Column::from_slice_i32(&[1, 3, 5])]);
-    let t2 = build_table(vec![Column::from_slice_i32(&[2, 4, 6])]);
+    let t1 = build_table(vec![Column::from_slice_i32(&[1, 3, 5]).call().unwrap()]);
+    let t2 = build_table(vec![Column::from_slice_i32(&[2, 4, 6]).call().unwrap()]);
 
     let merged = t1
         .merge(&t2, &[0], &[Order::ASCENDING], &[NullOrder::BEFORE])
@@ -673,9 +759,11 @@ fn merge_two_sorted_tables() {
 
 #[test]
 fn from_scalar_creates_uniform_column() {
-    let col = Column::from_scalar(&Scalar::from_i32(42), 5);
+    let col = Column::from_scalar(&Scalar::from_i32(42), 5)
+        .call()
+        .unwrap();
     assert_eq!(col.len(), 5);
-    assert_eq!(col.to_vec_i32(), [42, 42, 42, 42, 42]);
+    assert_eq!(col.to_vec_i32().call().unwrap(), [42, 42, 42, 42, 42]);
     assert!(!col.has_nulls());
 }
 
@@ -685,10 +773,12 @@ fn from_scalar_creates_uniform_column() {
 
 #[test]
 fn gather_specific_rows() {
-    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![col]);
 
-    let indices = Column::from_slice_i32(&[4, 2, 0]);
+    let indices = Column::from_slice_i32(&[4, 2, 0]).call().unwrap();
     let gathered = tbl.gather(&indices.view()).call().unwrap();
 
     assert_eq!(gathered.len(), 3);
@@ -701,17 +791,17 @@ fn gather_specific_rows() {
 
 #[test]
 fn column_sub_mul_div() {
-    let a = Column::from_slice_i32(&[100, 200, 300]);
-    let b = Column::from_slice_i32(&[10, 20, 30]);
+    let a = Column::from_slice_i32(&[100, 200, 300]).call().unwrap();
+    let b = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
 
     let diff = a.view().sub(&b.view(), TypeId::INT32).call().unwrap();
-    assert_eq!(diff.to_vec_i32(), [90, 180, 270]);
+    assert_eq!(diff.to_vec_i32().call().unwrap(), [90, 180, 270]);
 
     let prod = a.view().mul(&b.view(), TypeId::INT32).call().unwrap();
-    assert_eq!(prod.to_vec_i32(), [1000, 4000, 9000]);
+    assert_eq!(prod.to_vec_i32().call().unwrap(), [1000, 4000, 9000]);
 
     let quot = a.view().div(&b.view(), TypeId::INT32).call().unwrap();
-    assert_eq!(quot.to_vec_i32(), [10, 10, 10]);
+    assert_eq!(quot.to_vec_i32().call().unwrap(), [10, 10, 10]);
 }
 
 // ===========================================================================
@@ -720,17 +810,19 @@ fn column_sub_mul_div() {
 
 #[test]
 fn unary_negate_abs_round() {
-    let col = Column::from_slice_i32(&[-5, 0, 7]);
+    let col = Column::from_slice_i32(&[-5, 0, 7]).call().unwrap();
 
     let neg = col.view().negate().call().unwrap();
-    assert_eq!(neg.to_vec_i32(), [5, 0, -7]);
+    assert_eq!(neg.to_vec_i32().call().unwrap(), [5, 0, -7]);
 
     let a = col.view().abs().call().unwrap();
-    assert_eq!(a.to_vec_i32(), [5, 0, 7]);
+    assert_eq!(a.to_vec_i32().call().unwrap(), [5, 0, 7]);
 
-    let floats = Column::from_slice_f64(&[1.456, 2.789, 3.123]);
+    let floats = Column::from_slice_f64(&[1.456, 2.789, 3.123])
+        .call()
+        .unwrap();
     let rounded = floats.view().round(1).call().unwrap();
-    let result = rounded.to_vec_f64();
+    let result = rounded.to_vec_f64().call().unwrap();
     assert!((result[0] - 1.5).abs() < 1e-9);
     assert!((result[1] - 2.8).abs() < 1e-9);
     assert!((result[2] - 3.1).abs() < 1e-9);
@@ -742,23 +834,47 @@ fn unary_negate_abs_round() {
 
 #[test]
 fn comparison_operators() {
-    let a = Column::from_slice_i32(&[1, 2, 3, 4, 5]);
-    let b = Column::from_slice_i32(&[3, 3, 3, 3, 3]);
+    let a = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call().unwrap();
+    let b = Column::from_slice_i32(&[3, 3, 3, 3, 3]).call().unwrap();
 
     assert_eq!(
-        a.view().eq(&b.view()).call().unwrap().to_vec_bool(),
+        a.view()
+            .eq(&b.view())
+            .call()
+            .unwrap()
+            .to_vec_bool()
+            .call()
+            .unwrap(),
         [false, false, true, false, false]
     );
     assert_eq!(
-        a.view().ne(&b.view()).call().unwrap().to_vec_bool(),
+        a.view()
+            .ne(&b.view())
+            .call()
+            .unwrap()
+            .to_vec_bool()
+            .call()
+            .unwrap(),
         [true, true, false, true, true]
     );
     assert_eq!(
-        a.view().lt(&b.view()).call().unwrap().to_vec_bool(),
+        a.view()
+            .lt(&b.view())
+            .call()
+            .unwrap()
+            .to_vec_bool()
+            .call()
+            .unwrap(),
         [true, true, false, false, false]
     );
     assert_eq!(
-        a.view().le(&b.view()).call().unwrap().to_vec_bool(),
+        a.view()
+            .le(&b.view())
+            .call()
+            .unwrap()
+            .to_vec_bool()
+            .call()
+            .unwrap(),
         [true, true, true, false, false]
     );
 }
@@ -769,22 +885,26 @@ fn comparison_operators() {
 
 #[test]
 fn reduction_product() {
-    let col = Column::from_slice_i32(&[2, 3, 4]);
+    let col = Column::from_slice_i32(&[2, 3, 4]).call().unwrap();
     let prod = col.view().product(TypeId::INT64).call().unwrap();
     assert_eq!(prod.as_i64(), Some(24));
 }
 
 #[test]
 fn reduction_any_all() {
-    let all_true = Column::from_slice_bool(&[true, true, true]);
+    let all_true = Column::from_slice_bool(&[true, true, true]).call().unwrap();
     assert_eq!(all_true.view().any().call().unwrap().as_bool(), Some(true));
     assert_eq!(all_true.view().all().call().unwrap().as_bool(), Some(true));
 
-    let mixed = Column::from_slice_bool(&[true, false, true]);
+    let mixed = Column::from_slice_bool(&[true, false, true])
+        .call()
+        .unwrap();
     assert_eq!(mixed.view().any().call().unwrap().as_bool(), Some(true));
     assert_eq!(mixed.view().all().call().unwrap().as_bool(), Some(false));
 
-    let all_false = Column::from_slice_bool(&[false, false, false]);
+    let all_false = Column::from_slice_bool(&[false, false, false])
+        .call()
+        .unwrap();
     assert_eq!(
         all_false.view().any().call().unwrap().as_bool(),
         Some(false)
@@ -793,7 +913,9 @@ fn reduction_any_all() {
 
 #[test]
 fn reduction_mean_median_std_var() {
-    let col = Column::from_slice_f64(&[10.0, 20.0, 30.0, 40.0, 50.0]);
+    let col = Column::from_slice_f64(&[10.0, 20.0, 30.0, 40.0, 50.0])
+        .call()
+        .unwrap();
 
     let mean = col.view().mean(TypeId::FLOAT64).call().unwrap();
     assert_eq!(mean.as_f64(), Some(30.0));
@@ -812,7 +934,7 @@ fn reduction_mean_median_std_var() {
 
 #[test]
 fn reduction_nunique() {
-    let col = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]);
+    let col = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]).call().unwrap();
     let n = col.view().nunique().call().unwrap();
     assert_eq!(n.as_i64(), Some(3)); // nunique returns INT64
 }
@@ -823,9 +945,11 @@ fn reduction_nunique() {
 
 #[test]
 fn quantile_column() {
-    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     let q = col.view().quantile(&[0.0, 0.5, 1.0]).call().unwrap();
-    let data = q.to_vec_f64();
+    let data = q.to_vec_f64().call().unwrap();
     assert!((data[0] - 10.0).abs() < 1e-9);
     assert!((data[1] - 30.0).abs() < 1e-9);
     assert!((data[2] - 50.0).abs() < 1e-9);
@@ -837,9 +961,9 @@ fn quantile_column() {
 
 #[test]
 fn scan_cumulative_sum() {
-    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]);
+    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call().unwrap();
     let cumsum = col.view().scan(AggregationKind::SUM, true).call().unwrap();
-    assert_eq!(cumsum.to_vec_i32(), [1, 3, 6, 10, 15]);
+    assert_eq!(cumsum.to_vec_i32().call().unwrap(), [1, 3, 6, 10, 15]);
 }
 
 // ===========================================================================
@@ -848,14 +972,22 @@ fn scan_cumulative_sum() {
 
 #[test]
 fn shift_column_with_fill() {
-    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     let fill = Scalar::from_i32(0);
 
     let shifted_right = col.view().shift(2, &fill).call().unwrap();
-    assert_eq!(shifted_right.to_vec_i32(), [0, 0, 10, 20, 30]);
+    assert_eq!(
+        shifted_right.to_vec_i32().call().unwrap(),
+        [0, 0, 10, 20, 30]
+    );
 
     let shifted_left = col.view().shift(-1, &fill).call().unwrap();
-    assert_eq!(shifted_left.to_vec_i32(), [20, 30, 40, 50, 0]);
+    assert_eq!(
+        shifted_left.to_vec_i32().call().unwrap(),
+        [20, 30, 40, 50, 0]
+    );
 }
 
 // ===========================================================================
@@ -864,7 +996,9 @@ fn shift_column_with_fill() {
 
 #[test]
 fn contains_scalar_check() {
-    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     let yes = Scalar::from_i32(30);
     let no = Scalar::from_i32(99);
     assert!(col.view().contains_scalar(&yes).call().unwrap());
@@ -873,14 +1007,16 @@ fn contains_scalar_check() {
 
 #[test]
 fn contains_column_check() {
-    let haystack = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
-    let needles = Column::from_slice_i32(&[20, 99, 40]);
+    let haystack = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
+    let needles = Column::from_slice_i32(&[20, 99, 40]).call().unwrap();
     let result = haystack
         .view()
         .contains_column(&needles.view())
         .call()
         .unwrap();
-    assert_eq!(result.to_vec_bool(), [true, false, true]);
+    assert_eq!(result.to_vec_bool().call().unwrap(), [true, false, true]);
 }
 
 // ===========================================================================
@@ -889,9 +1025,16 @@ fn contains_column_check() {
 
 #[test]
 fn replace_nulls_with_scalar_and_column() {
-    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
-    let validity = Column::from_slice_bool(&[true, false, true, false, true]);
-    let with_nulls = col.with_null_mask_from_bools(&validity.view()).unwrap();
+    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
+    let validity = Column::from_slice_bool(&[true, false, true, false, true])
+        .call()
+        .unwrap();
+    let with_nulls = col
+        .with_null_mask_from_bools(&validity.view())
+        .call()
+        .unwrap();
 
     // Replace with scalar
     let fill = Scalar::from_i32(-1);
@@ -900,17 +1043,17 @@ fn replace_nulls_with_scalar_and_column() {
         .replace_nulls_with_scalar(&fill)
         .call()
         .unwrap();
-    assert_eq!(filled.to_vec_i32(), [10, -1, 30, -1, 50]);
+    assert_eq!(filled.to_vec_i32().call().unwrap(), [10, -1, 30, -1, 50]);
     assert!(!filled.has_nulls());
 
     // Replace with column
-    let replacement = Column::from_slice_i32(&[0, 0, 0, 0, 0]);
+    let replacement = Column::from_slice_i32(&[0, 0, 0, 0, 0]).call().unwrap();
     let filled2 = with_nulls
         .view()
         .replace_nulls_with_column(&replacement.view())
         .call()
         .unwrap();
-    assert_eq!(filled2.to_vec_i32(), [10, 0, 30, 0, 50]);
+    assert_eq!(filled2.to_vec_i32().call().unwrap(), [10, 0, 30, 0, 50]);
 }
 
 // ===========================================================================
@@ -919,10 +1062,15 @@ fn replace_nulls_with_scalar_and_column() {
 
 #[test]
 fn replace_nans_with_scalar() {
-    let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0, f64::NAN, 5.0]);
+    let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0, f64::NAN, 5.0])
+        .call()
+        .unwrap();
     let fill = Scalar::from_f64(0.0);
     let result = col.view().replace_nans_scalar(&fill).call().unwrap();
-    assert_eq!(result.to_vec_f64(), [1.0, 0.0, 3.0, 0.0, 5.0]);
+    assert_eq!(
+        result.to_vec_f64().call().unwrap(),
+        [1.0, 0.0, 3.0, 0.0, 5.0]
+    );
 }
 
 // ===========================================================================
@@ -931,11 +1079,11 @@ fn replace_nans_with_scalar() {
 
 #[test]
 fn clamp_column_values() {
-    let col = Column::from_slice_i32(&[1, 5, 10, 15, 20]);
+    let col = Column::from_slice_i32(&[1, 5, 10, 15, 20]).call().unwrap();
     let lo = Scalar::from_i32(5);
     let hi = Scalar::from_i32(15);
     let clamped = col.view().clamp(&lo, &hi).call().unwrap();
-    assert_eq!(clamped.to_vec_i32(), [5, 5, 10, 15, 15]);
+    assert_eq!(clamped.to_vec_i32().call().unwrap(), [5, 5, 10, 15, 15]);
 }
 
 // ===========================================================================
@@ -944,15 +1092,15 @@ fn clamp_column_values() {
 
 #[test]
 fn find_and_replace_all_values() {
-    let col = Column::from_slice_i32(&[1, 2, 3, 2, 1]);
-    let old_vals = Column::from_slice_i32(&[1, 2]);
-    let new_vals = Column::from_slice_i32(&[10, 20]);
+    let col = Column::from_slice_i32(&[1, 2, 3, 2, 1]).call().unwrap();
+    let old_vals = Column::from_slice_i32(&[1, 2]).call().unwrap();
+    let new_vals = Column::from_slice_i32(&[10, 20]).call().unwrap();
     let result = col
         .view()
         .find_and_replace_all(&old_vals.view(), &new_vals.view())
         .call()
         .unwrap();
-    assert_eq!(result.to_vec_i32(), [10, 20, 3, 20, 10]);
+    assert_eq!(result.to_vec_i32().call().unwrap(), [10, 20, 3, 20, 10]);
 }
 
 // ===========================================================================
@@ -961,15 +1109,26 @@ fn find_and_replace_all_values() {
 
 #[test]
 fn is_null_and_is_valid_masks() {
-    let col = Column::from_slice_i32(&[10, 20, 30]);
-    let validity = Column::from_slice_bool(&[true, false, true]);
-    let with_nulls = col.with_null_mask_from_bools(&validity.view()).unwrap();
+    let col = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
+    let validity = Column::from_slice_bool(&[true, false, true])
+        .call()
+        .unwrap();
+    let with_nulls = col
+        .with_null_mask_from_bools(&validity.view())
+        .call()
+        .unwrap();
 
     let null_mask = with_nulls.view().is_null().call().unwrap();
-    assert_eq!(null_mask.to_vec_bool(), [false, true, false]);
+    assert_eq!(
+        null_mask.to_vec_bool().call().unwrap(),
+        [false, true, false]
+    );
 
     let valid_mask = with_nulls.view().is_valid().call().unwrap();
-    assert_eq!(valid_mask.to_vec_bool(), [true, false, true]);
+    assert_eq!(
+        valid_mask.to_vec_bool().call().unwrap(),
+        [true, false, true]
+    );
 }
 
 // ===========================================================================
@@ -978,17 +1137,24 @@ fn is_null_and_is_valid_masks() {
 
 #[test]
 fn is_nan_detection() {
-    let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0, f64::NAN]);
+    let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0, f64::NAN])
+        .call()
+        .unwrap();
     let mask = col.view().is_nan().call().unwrap();
-    assert_eq!(mask.to_vec_bool(), [false, true, false, true]);
+    assert_eq!(
+        mask.to_vec_bool().call().unwrap(),
+        [false, true, false, true]
+    );
 }
 
 #[test]
 fn normalize_nans_and_zeros_col() {
     // Negative zero becomes positive zero, NaN stays NaN
-    let col = Column::from_slice_f64(&[-0.0, 0.0, f64::NAN, 1.0]);
+    let col = Column::from_slice_f64(&[-0.0, 0.0, f64::NAN, 1.0])
+        .call()
+        .unwrap();
     let normed = col.view().normalize_nans_and_zeros().call().unwrap();
-    let data = normed.to_vec_f64();
+    let data = normed.to_vec_f64().call().unwrap();
     // Both zeros should now be +0.0 (bit-identical)
     assert!(data[0].to_bits() == 0u64); // +0.0
     assert!(data[1].to_bits() == 0u64); // +0.0
@@ -1002,16 +1168,20 @@ fn normalize_nans_and_zeros_col() {
 
 #[test]
 fn copy_if_else_by_mask() {
-    let lhs = Column::from_slice_i32(&[1, 2, 3, 4, 5]);
-    let rhs = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
-    let mask = Column::from_slice_bool(&[true, false, true, false, true]);
+    let lhs = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call().unwrap();
+    let rhs = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
+    let mask = Column::from_slice_bool(&[true, false, true, false, true])
+        .call()
+        .unwrap();
 
     let result = lhs
         .view()
         .copy_if_else(&rhs.view(), &mask.view())
         .call()
         .unwrap();
-    assert_eq!(result.to_vec_i32(), [1, 20, 3, 40, 5]);
+    assert_eq!(result.to_vec_i32().call().unwrap(), [1, 20, 3, 40, 5]);
 }
 
 // ===========================================================================
@@ -1020,7 +1190,9 @@ fn copy_if_else_by_mask() {
 
 #[test]
 fn get_element_from_column() {
-    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let col = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     let elem = col.view().get_element(2).call().unwrap();
     assert_eq!(elem.as_i32(), Some(30));
 
@@ -1035,7 +1207,9 @@ fn get_element_from_column() {
 #[test]
 fn rank_column() {
     use cudf::compaction::NullPolicy;
-    let col = Column::from_slice_i32(&[30, 10, 20, 10, 30]);
+    let col = Column::from_slice_i32(&[30, 10, 20, 10, 30])
+        .call()
+        .unwrap();
     let ranked = col
         .view()
         .rank(
@@ -1048,7 +1222,7 @@ fn rank_column() {
         .call()
         .unwrap();
     // Dense ranking: 10→1, 20→2, 30→3
-    let data = ranked.to_vec_i32();
+    let data = ranked.to_vec_i32().call().unwrap();
     assert_eq!(data, [3, 1, 2, 1, 3]);
 }
 
@@ -1058,11 +1232,13 @@ fn rank_column() {
 
 #[test]
 fn top_k_largest() {
-    let col = Column::from_slice_i32(&[10, 50, 30, 40, 20]);
+    let col = Column::from_slice_i32(&[10, 50, 30, 40, 20])
+        .call()
+        .unwrap();
     let top3 = col.view().top_k(3, Order::DESCENDING).call().unwrap();
     // Top 3 in descending order
     assert_eq!(top3.len(), 3);
-    assert_eq!(top3.to_vec_i32(), [50, 40, 30]);
+    assert_eq!(top3.to_vec_i32().call().unwrap(), [50, 40, 30]);
 }
 
 // ===========================================================================
@@ -1071,7 +1247,7 @@ fn top_k_largest() {
 
 #[test]
 fn column_distinct_count() {
-    let col = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]);
+    let col = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]).call().unwrap();
     let count = col.view().distinct_count(false, false).call().unwrap();
     assert_eq!(count, 3);
 }
@@ -1083,12 +1259,12 @@ fn column_distinct_count() {
 #[test]
 fn full_join_all_rows_present() {
     let left = build_table(vec![
-        Column::from_slice_i32(&[1, 2]),
-        Column::from_slice_i32(&[10, 20]),
+        Column::from_slice_i32(&[1, 2]).call().unwrap(),
+        Column::from_slice_i32(&[10, 20]).call().unwrap(),
     ]);
     let right = build_table(vec![
-        Column::from_slice_i32(&[2, 3]),
-        Column::from_slice_i32(&[200, 300]),
+        Column::from_slice_i32(&[2, 3]).call().unwrap(),
+        Column::from_slice_i32(&[200, 300]).call().unwrap(),
     ]);
 
     let result = left.full_join(&right, &[0], &[0]).call().unwrap();
@@ -1103,10 +1279,10 @@ fn full_join_all_rows_present() {
 #[test]
 fn semi_join_filters_to_matching() {
     let left = build_table(vec![
-        Column::from_slice_i32(&[1, 2, 3, 4]),
-        Column::from_slice_i32(&[10, 20, 30, 40]),
+        Column::from_slice_i32(&[1, 2, 3, 4]).call().unwrap(),
+        Column::from_slice_i32(&[10, 20, 30, 40]).call().unwrap(),
     ]);
-    let right = build_table(vec![Column::from_slice_i32(&[2, 4])]);
+    let right = build_table(vec![Column::from_slice_i32(&[2, 4]).call().unwrap()]);
 
     let semi = left.left_semi_join(&right, &[0], &[0]).call().unwrap();
     let semi = sorted(&semi);
@@ -1118,10 +1294,10 @@ fn semi_join_filters_to_matching() {
 #[test]
 fn anti_join_filters_to_non_matching() {
     let left = build_table(vec![
-        Column::from_slice_i32(&[1, 2, 3, 4]),
-        Column::from_slice_i32(&[10, 20, 30, 40]),
+        Column::from_slice_i32(&[1, 2, 3, 4]).call().unwrap(),
+        Column::from_slice_i32(&[10, 20, 30, 40]).call().unwrap(),
     ]);
-    let right = build_table(vec![Column::from_slice_i32(&[2, 4])]);
+    let right = build_table(vec![Column::from_slice_i32(&[2, 4]).call().unwrap()]);
 
     let anti = left.left_anti_join(&right, &[0], &[0]).call().unwrap();
     let anti = sorted(&anti);
@@ -1136,8 +1312,10 @@ fn anti_join_filters_to_non_matching() {
 
 #[test]
 fn unique_keeps_first_and_last() {
-    let keys = Column::from_slice_i32(&[1, 1, 2, 2, 3]);
-    let vals = Column::from_slice_i32(&[10, 11, 20, 21, 30]);
+    let keys = Column::from_slice_i32(&[1, 1, 2, 2, 3]).call().unwrap();
+    let vals = Column::from_slice_i32(&[10, 11, 20, 21, 30])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![keys, vals]);
 
     let result = tbl.unique(&[0]).call().unwrap();
@@ -1153,7 +1331,7 @@ fn unique_keeps_first_and_last() {
 
 #[test]
 fn stable_distinct_preserves_insertion_order() {
-    let keys = Column::from_slice_i32(&[3, 1, 2, 1, 3]);
+    let keys = Column::from_slice_i32(&[3, 1, 2, 1, 3]).call().unwrap();
     let tbl = build_table(vec![keys]);
 
     let result = tbl.stable_distinct(&[0]).call().unwrap();
@@ -1168,13 +1346,15 @@ fn stable_distinct_preserves_insertion_order() {
 
 #[test]
 fn encode_table_returns_indices() {
-    let col = Column::from_slice_i32(&[10, 20, 10, 30, 20]);
+    let col = Column::from_slice_i32(&[10, 20, 10, 30, 20])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![col]);
 
     let indices = tbl.encode().call().unwrap();
     assert_eq!(indices.len(), 5);
     // Same input rows should produce same indices
-    let idx = indices.to_vec_i32();
+    let idx = indices.to_vec_i32().call().unwrap();
     assert_eq!(idx[0], idx[2]); // rows 0 and 2 are both [10]
     assert_eq!(idx[1], idx[4]); // rows 1 and 4 are both [20]
 }
@@ -1185,8 +1365,8 @@ fn encode_table_returns_indices() {
 
 #[test]
 fn transpose_table() {
-    let c0 = Column::from_slice_i32(&[1, 2, 3]);
-    let c1 = Column::from_slice_i32(&[4, 5, 6]);
+    let c0 = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
+    let c1 = Column::from_slice_i32(&[4, 5, 6]).call().unwrap();
     let tbl = build_table(vec![c0, c1]);
 
     let transposed = tbl.transpose().call().unwrap();
@@ -1204,14 +1384,18 @@ fn transpose_table() {
 
 #[test]
 fn is_sorted_check() {
-    let asc = build_table(vec![Column::from_slice_i32(&[1, 2, 3, 4, 5])]);
+    let asc = build_table(vec![
+        Column::from_slice_i32(&[1, 2, 3, 4, 5]).call().unwrap(),
+    ]);
     assert!(
         asc.is_sorted(&[Order::ASCENDING], &[NullOrder::BEFORE])
             .call()
             .unwrap()
     );
 
-    let desc = build_table(vec![Column::from_slice_i32(&[5, 4, 3, 2, 1])]);
+    let desc = build_table(vec![
+        Column::from_slice_i32(&[5, 4, 3, 2, 1]).call().unwrap(),
+    ]);
     assert!(
         !desc
             .is_sorted(&[Order::ASCENDING], &[NullOrder::BEFORE])
@@ -1231,8 +1415,10 @@ fn is_sorted_check() {
 
 #[test]
 fn stable_sort_preserves_equal_order() {
-    let keys = Column::from_slice_i32(&[2, 1, 2, 1, 2]);
-    let vals = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
+    let keys = Column::from_slice_i32(&[2, 1, 2, 1, 2]).call().unwrap();
+    let vals = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![keys, vals]);
 
     let result = tbl
@@ -1254,9 +1440,13 @@ fn stable_sort_preserves_equal_order() {
 
 #[test]
 fn boolean_mask_scatter_rows() {
-    let target = build_table(vec![Column::from_slice_i32(&[0, 0, 0, 0, 0])]);
-    let source = build_table(vec![Column::from_slice_i32(&[99, 88])]);
-    let mask = Column::from_slice_bool(&[false, true, false, true, false]);
+    let target = build_table(vec![
+        Column::from_slice_i32(&[0, 0, 0, 0, 0]).call().unwrap(),
+    ]);
+    let source = build_table(vec![Column::from_slice_i32(&[99, 88]).call().unwrap()]);
+    let mask = Column::from_slice_bool(&[false, true, false, true, false])
+        .call()
+        .unwrap();
 
     let result = target
         .boolean_mask_scatter(&source, &mask.view())
@@ -1271,9 +1461,9 @@ fn boolean_mask_scatter_rows() {
 
 #[test]
 fn repeat_by_column_variable_counts() {
-    let col = Column::from_slice_i32(&[10, 20, 30]);
+    let col = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
     let tbl = build_table(vec![col]);
-    let counts = Column::from_slice_i32(&[1, 3, 2]);
+    let counts = Column::from_slice_i32(&[1, 3, 2]).call().unwrap();
 
     let result = tbl.repeat_by_column(&counts.view()).call().unwrap();
     assert_eq!(result.len(), 6); // 1+3+2
@@ -1286,7 +1476,9 @@ fn repeat_by_column_variable_counts() {
 
 #[test]
 fn sample_rows_from_table() {
-    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![col]);
 
     let sampled = tbl.sample(3, false, 42).call().unwrap();
@@ -1300,7 +1492,9 @@ fn sample_rows_from_table() {
 
 #[test]
 fn drop_nans_from_table() {
-    let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0, f64::NAN, 5.0]);
+    let col = Column::from_slice_f64(&[1.0, f64::NAN, 3.0, f64::NAN, 5.0])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![col]);
 
     let cleaned = tbl.drop_nans(&[0]).call().unwrap();
@@ -1314,15 +1508,21 @@ fn drop_nans_from_table() {
 
 #[test]
 fn xxhash64_hashing() {
-    let col = Column::from_slice_i32(&[1, 2, 3]);
+    let col = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
     let tbl = build_table(vec![col]);
 
     let h1 = tbl.xxhash64(42).call().unwrap();
     let h2 = tbl.xxhash64(42).call().unwrap();
-    assert_eq!(h1.to_vec_i64(), h2.to_vec_i64()); // deterministic
+    assert_eq!(
+        h1.to_vec_i64().call().unwrap(),
+        h2.to_vec_i64().call().unwrap()
+    ); // deterministic
 
     let h3 = tbl.xxhash64(99).call().unwrap();
-    assert_ne!(h1.to_vec_i64(), h3.to_vec_i64()); // different seed
+    assert_ne!(
+        h1.to_vec_i64().call().unwrap(),
+        h3.to_vec_i64().call().unwrap()
+    ); // different seed
 }
 
 // ===========================================================================
@@ -1331,13 +1531,13 @@ fn xxhash64_hashing() {
 
 #[test]
 fn md5_and_sha256_hashing() {
-    let col = Column::from_slice_i32(&[1, 2, 3]);
+    let col = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
     let tbl = build_table(vec![col]);
 
     let md5 = tbl.md5().call().unwrap();
     assert_eq!(md5.len(), 3);
     // MD5 outputs strings
-    let hashes = md5.to_vec_string();
+    let hashes = md5.to_vec_string().call().unwrap();
     assert_eq!(hashes.len(), 3);
     // Each hash is a 32-char hex string
     assert_eq!(hashes[0].len(), 32);
@@ -1345,7 +1545,7 @@ fn md5_and_sha256_hashing() {
 
     let sha = tbl.sha256().call().unwrap();
     assert_eq!(sha.len(), 3);
-    let sha_hashes = sha.to_vec_string();
+    let sha_hashes = sha.to_vec_string().call().unwrap();
     // SHA-256 is 64 hex chars
     assert_eq!(sha_hashes[0].len(), 64);
 }
@@ -1356,7 +1556,7 @@ fn md5_and_sha256_hashing() {
 
 #[test]
 fn round_robin_partition() {
-    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
+    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5, 6]).call().unwrap();
     let tbl = build_table(vec![col]);
 
     let offsets = tbl.round_robin_offsets(3, 0).call().unwrap();
@@ -1370,13 +1570,13 @@ fn round_robin_partition() {
 
 #[test]
 fn row_bit_count_table() {
-    let col = Column::from_slice_i32(&[1, 2, 3]);
+    let col = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
     let tbl = build_table(vec![col]);
 
     let bits = tbl.row_bit_count().call().unwrap();
     assert_eq!(bits.len(), 3);
     // Each i32 row is 32 bits + 1 validity bit = 33 bits
-    let counts = bits.to_vec_i32();
+    let counts = bits.to_vec_i32().call().unwrap();
     assert!(counts.iter().all(|&c| c > 0));
 }
 
@@ -1386,7 +1586,7 @@ fn row_bit_count_table() {
 
 #[test]
 fn table_distinct_and_unique_count() {
-    let col = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]);
+    let col = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]).call().unwrap();
     let tbl = build_table(vec![col]);
 
     let dc = tbl.distinct_count(true).call().unwrap();
@@ -1403,15 +1603,15 @@ fn table_distinct_and_unique_count() {
 
 #[test]
 fn concatenate_columns_function() {
-    let a = Column::from_slice_i32(&[1, 2, 3]);
-    let b = Column::from_slice_i32(&[4, 5]);
-    let c = Column::from_slice_i32(&[6]);
+    let a = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
+    let b = Column::from_slice_i32(&[4, 5]).call().unwrap();
+    let c = Column::from_slice_i32(&[6]).call().unwrap();
 
     let result = cudf::concatenate::concatenate_columns(&[&a.view(), &b.view(), &c.view()])
         .call()
         .unwrap();
     assert_eq!(result.len(), 6);
-    assert_eq!(result.to_vec_i32(), [1, 2, 3, 4, 5, 6]);
+    assert_eq!(result.to_vec_i32().call().unwrap(), [1, 2, 3, 4, 5, 6]);
 }
 
 // ===========================================================================
@@ -1420,9 +1620,9 @@ fn concatenate_columns_function() {
 
 #[test]
 fn concatenate_tables_function() {
-    let t1 = build_table(vec![Column::from_slice_i32(&[1, 2])]);
-    let t2 = build_table(vec![Column::from_slice_i32(&[3, 4])]);
-    let t3 = build_table(vec![Column::from_slice_i32(&[5])]);
+    let t1 = build_table(vec![Column::from_slice_i32(&[1, 2]).call().unwrap()]);
+    let t2 = build_table(vec![Column::from_slice_i32(&[3, 4]).call().unwrap()]);
+    let t3 = build_table(vec![Column::from_slice_i32(&[5]).call().unwrap()]);
 
     let result = cudf::concatenate::concatenate_tables(&[&t1, &t2, &t3])
         .call()
@@ -1437,14 +1637,16 @@ fn concatenate_tables_function() {
 
 #[test]
 fn copy_if_else_with_scalars() {
-    let mask = Column::from_slice_bool(&[true, false, true, false]);
+    let mask = Column::from_slice_bool(&[true, false, true, false])
+        .call()
+        .unwrap();
     let lhs = Scalar::from_i32(1);
     let rhs = Scalar::from_i32(0);
 
     let result = cudf::copy_if_else_scalars(&lhs, &rhs, &mask.view())
         .call()
         .unwrap();
-    assert_eq!(result.to_vec_i32(), [1, 0, 1, 0]);
+    assert_eq!(result.to_vec_i32().call().unwrap(), [1, 0, 1, 0]);
 }
 
 // ===========================================================================
@@ -1453,8 +1655,8 @@ fn copy_if_else_with_scalars() {
 
 #[test]
 fn one_hot_encode_categories() {
-    let input = Column::from_slice_i32(&[0, 1, 2, 1, 0]);
-    let categories = Column::from_slice_i32(&[0, 1, 2]);
+    let input = Column::from_slice_i32(&[0, 1, 2, 1, 0]).call().unwrap();
+    let categories = Column::from_slice_i32(&[0, 1, 2]).call().unwrap();
 
     let result = cudf::reshape::one_hot_encode(&input.view(), &categories.view())
         .call()
@@ -1470,9 +1672,9 @@ fn one_hot_encode_categories() {
 #[test]
 fn label_bins_column() {
     use cudf::labeling::Inclusive;
-    let col = Column::from_slice_i32(&[5, 15, 25]);
-    let left_edges = Column::from_slice_i32(&[0, 10, 20]);
-    let right_edges = Column::from_slice_i32(&[10, 20, 30]);
+    let col = Column::from_slice_i32(&[5, 15, 25]).call().unwrap();
+    let left_edges = Column::from_slice_i32(&[0, 10, 20]).call().unwrap();
+    let right_edges = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
 
     let labels = col
         .view()
@@ -1485,7 +1687,7 @@ fn label_bins_column() {
         .call()
         .unwrap();
     assert_eq!(labels.len(), 3);
-    assert_eq!(labels.to_vec_i32(), [0, 1, 2]);
+    assert_eq!(labels.to_vec_i32().call().unwrap(), [0, 1, 2]);
 }
 
 // ===========================================================================
@@ -1494,16 +1696,27 @@ fn label_bins_column() {
 
 #[test]
 fn string_capitalize_title_swapcase() {
-    let col = Column::from_strings(&["hello world", "fOO bAR"]);
+    let col = Column::from_strings(&["hello world", "fOO bAR"])
+        .call()
+        .unwrap();
 
     let capitalized = col.view().capitalize().call().unwrap();
-    assert_eq!(capitalized.to_vec_string(), ["Hello world", "Foo bar"]);
+    assert_eq!(
+        capitalized.to_vec_string().call().unwrap(),
+        ["Hello world", "Foo bar"]
+    );
 
     let titled = col.view().title().call().unwrap();
-    assert_eq!(titled.to_vec_string(), ["Hello World", "Foo Bar"]);
+    assert_eq!(
+        titled.to_vec_string().call().unwrap(),
+        ["Hello World", "Foo Bar"]
+    );
 
     let swapped = col.view().swapcase().call().unwrap();
-    assert_eq!(swapped.to_vec_string(), ["HELLO WORLD", "Foo Bar"]);
+    assert_eq!(
+        swapped.to_vec_string().call().unwrap(),
+        ["HELLO WORLD", "Foo Bar"]
+    );
 }
 
 // ===========================================================================
@@ -1512,16 +1725,27 @@ fn string_capitalize_title_swapcase() {
 
 #[test]
 fn string_strip_whitespace() {
-    let col = Column::from_strings(&["  hello  ", "  world", "foo  "]);
+    let col = Column::from_strings(&["  hello  ", "  world", "foo  "])
+        .call()
+        .unwrap();
 
     let stripped = col.view().str_strip().call().unwrap();
-    assert_eq!(stripped.to_vec_string(), ["hello", "world", "foo"]);
+    assert_eq!(
+        stripped.to_vec_string().call().unwrap(),
+        ["hello", "world", "foo"]
+    );
 
     let lstripped = col.view().str_lstrip().call().unwrap();
-    assert_eq!(lstripped.to_vec_string(), ["hello  ", "world", "foo  "]);
+    assert_eq!(
+        lstripped.to_vec_string().call().unwrap(),
+        ["hello  ", "world", "foo  "]
+    );
 
     let rstripped = col.view().str_rstrip().call().unwrap();
-    assert_eq!(rstripped.to_vec_string(), ["  hello", "  world", "foo"]);
+    assert_eq!(
+        rstripped.to_vec_string().call().unwrap(),
+        ["  hello", "  world", "foo"]
+    );
 }
 
 // ===========================================================================
@@ -1530,13 +1754,15 @@ fn string_strip_whitespace() {
 
 #[test]
 fn string_strip_chars() {
-    let col = Column::from_strings(&["##hello##", "##world##"]);
+    let col = Column::from_strings(&["##hello##", "##world##"])
+        .call()
+        .unwrap();
     let stripped = col
         .view()
         .str_strip_chars(SideType::BOTH, "#")
         .call()
         .unwrap();
-    assert_eq!(stripped.to_vec_string(), ["hello", "world"]);
+    assert_eq!(stripped.to_vec_string().call().unwrap(), ["hello", "world"]);
 }
 
 // ===========================================================================
@@ -1545,13 +1771,19 @@ fn string_strip_chars() {
 
 #[test]
 fn string_pad_and_zfill() {
-    let col = Column::from_strings(&["1", "42", "100"]);
+    let col = Column::from_strings(&["1", "42", "100"]).call().unwrap();
 
     let zfilled = col.view().str_zfill(5).call().unwrap();
-    assert_eq!(zfilled.to_vec_string(), ["00001", "00042", "00100"]);
+    assert_eq!(
+        zfilled.to_vec_string().call().unwrap(),
+        ["00001", "00042", "00100"]
+    );
 
     let padded = col.view().str_pad(5, SideType::LEFT, " ").call().unwrap();
-    assert_eq!(padded.to_vec_string(), ["    1", "   42", "  100"]);
+    assert_eq!(
+        padded.to_vec_string().call().unwrap(),
+        ["    1", "   42", "  100"]
+    );
 }
 
 // ===========================================================================
@@ -1560,13 +1792,15 @@ fn string_pad_and_zfill() {
 
 #[test]
 fn string_starts_with_ends_with() {
-    let col = Column::from_strings(&["hello world", "help me", "world hello"]);
+    let col = Column::from_strings(&["hello world", "help me", "world hello"])
+        .call()
+        .unwrap();
 
     let starts = col.view().str_starts_with_str("hel").call().unwrap();
-    assert_eq!(starts.to_vec_bool(), [true, true, false]);
+    assert_eq!(starts.to_vec_bool().call().unwrap(), [true, true, false]);
 
     let ends = col.view().str_ends_with_str("llo").call().unwrap();
-    assert_eq!(ends.to_vec_bool(), [false, false, true]);
+    assert_eq!(ends.to_vec_bool().call().unwrap(), [false, false, true]);
 }
 
 // ===========================================================================
@@ -1575,10 +1809,15 @@ fn string_starts_with_ends_with() {
 
 #[test]
 fn string_like_pattern() {
-    let col = Column::from_strings(&["apple", "application", "banana", "appetite"]);
+    let col = Column::from_strings(&["apple", "application", "banana", "appetite"])
+        .call()
+        .unwrap();
     // SQL LIKE: "app%" matches anything starting with "app"
     let result = col.view().str_like("app%", "").call().unwrap();
-    assert_eq!(result.to_vec_bool(), [true, true, false, true]);
+    assert_eq!(
+        result.to_vec_bool().call().unwrap(),
+        [true, true, false, true]
+    );
 }
 
 // ===========================================================================
@@ -1587,9 +1826,14 @@ fn string_like_pattern() {
 
 #[test]
 fn string_slice_chars() {
-    let col = Column::from_strings(&["hello", "world", "test"]);
+    let col = Column::from_strings(&["hello", "world", "test"])
+        .call()
+        .unwrap();
     let sliced = col.view().str_slice(0, 3, 1).call().unwrap();
-    assert_eq!(sliced.to_vec_string(), ["hel", "wor", "tes"]);
+    assert_eq!(
+        sliced.to_vec_string().call().unwrap(),
+        ["hel", "wor", "tes"]
+    );
 }
 
 // ===========================================================================
@@ -1598,9 +1842,12 @@ fn string_slice_chars() {
 
 #[test]
 fn string_repeat_times() {
-    let col = Column::from_strings(&["ab", "cd"]);
+    let col = Column::from_strings(&["ab", "cd"]).call().unwrap();
     let repeated = col.view().str_repeat(3).call().unwrap();
-    assert_eq!(repeated.to_vec_string(), ["ababab", "cdcdcd"]);
+    assert_eq!(
+        repeated.to_vec_string().call().unwrap(),
+        ["ababab", "cdcdcd"]
+    );
 }
 
 // ===========================================================================
@@ -1609,9 +1856,9 @@ fn string_repeat_times() {
 
 #[test]
 fn string_reverse_chars() {
-    let col = Column::from_strings(&["hello", "world"]);
+    let col = Column::from_strings(&["hello", "world"]).call().unwrap();
     let reversed = col.view().str_reverse().call().unwrap();
-    assert_eq!(reversed.to_vec_string(), ["olleh", "dlrow"]);
+    assert_eq!(reversed.to_vec_string().call().unwrap(), ["olleh", "dlrow"]);
 }
 
 // ===========================================================================
@@ -1620,16 +1867,18 @@ fn string_reverse_chars() {
 
 #[test]
 fn string_to_and_from_floats() {
-    let strings = Column::from_strings(&["1.5", "2.75", "3.0"]);
+    let strings = Column::from_strings(&["1.5", "2.75", "3.0"])
+        .call()
+        .unwrap();
     let floats = strings
         .view()
         .str_to_floats(TypeId::FLOAT64)
         .call()
         .unwrap();
-    assert_eq!(floats.to_vec_f64(), [1.5, 2.75, 3.0]);
+    assert_eq!(floats.to_vec_f64().call().unwrap(), [1.5, 2.75, 3.0]);
 
     let back = floats.view().str_from_floats().call().unwrap();
-    let strs = back.to_vec_string();
+    let strs = back.to_vec_string().call().unwrap();
     // May have trailing zeros, just verify round-trip values
     assert!(strs[0].parse::<f64>().unwrap() - 1.5 < 1e-9);
     assert!(strs[1].parse::<f64>().unwrap() - 2.75 < 1e-9);
@@ -1649,25 +1898,27 @@ fn datetime_extract_components() {
     let timestamps = Column::from_timestamps_s(&[
         1_710_498_645, // 2024-03-15 10:30:45
         1_719_792_000, // 2024-07-01 00:00:00
-    ]);
+    ])
+    .call()
+    .unwrap();
 
     let years = timestamps.view().extract_year().call().unwrap();
-    assert_eq!(years.to_vec_i16(), [2024, 2024]);
+    assert_eq!(years.to_vec_i16().call().unwrap(), [2024, 2024]);
 
     let months = timestamps.view().extract_month().call().unwrap();
-    assert_eq!(months.to_vec_i16(), [3, 7]);
+    assert_eq!(months.to_vec_i16().call().unwrap(), [3, 7]);
 
     let days = timestamps.view().extract_day().call().unwrap();
-    assert_eq!(days.to_vec_i16(), [15, 1]);
+    assert_eq!(days.to_vec_i16().call().unwrap(), [15, 1]);
 
     let hours = timestamps.view().extract_hour().call().unwrap();
-    assert_eq!(hours.to_vec_i16(), [10, 0]);
+    assert_eq!(hours.to_vec_i16().call().unwrap(), [10, 0]);
 
     let minutes = timestamps.view().extract_minute().call().unwrap();
-    assert_eq!(minutes.to_vec_i16(), [30, 0]);
+    assert_eq!(minutes.to_vec_i16().call().unwrap(), [30, 0]);
 
     let seconds = timestamps.view().extract_second().call().unwrap();
-    assert_eq!(seconds.to_vec_i16(), [45, 0]);
+    assert_eq!(seconds.to_vec_i16().call().unwrap(), [45, 0]);
 }
 
 #[test]
@@ -1675,13 +1926,15 @@ fn datetime_day_of_year_and_leap_year() {
     let timestamps = Column::from_timestamps_s(&[
         1_710_498_645, // 2024-03-15 (leap year, day 75)
         1_672_531_200, // 2023-01-01 (not leap year, day 1)
-    ]);
+    ])
+    .call()
+    .unwrap();
 
     let doy = timestamps.view().day_of_year().call().unwrap();
-    assert_eq!(doy.to_vec_i16(), [75, 1]);
+    assert_eq!(doy.to_vec_i16().call().unwrap(), [75, 1]);
 
     let leap = timestamps.view().is_leap_year().call().unwrap();
-    assert_eq!(leap.to_vec_bool(), [true, false]);
+    assert_eq!(leap.to_vec_bool().call().unwrap(), [true, false]);
 }
 
 #[test]
@@ -1691,23 +1944,25 @@ fn datetime_quarter() {
         1_712_016_000, // 2024-04-02 → Q2
         1_719_792_000, // 2024-07-01 → Q3
         1_727_740_800, // 2024-10-01 → Q4
-    ]);
+    ])
+    .call()
+    .unwrap();
 
     let quarters = timestamps.view().extract_quarter().call().unwrap();
-    assert_eq!(quarters.to_vec_i16(), [1, 2, 3, 4]);
+    assert_eq!(quarters.to_vec_i16().call().unwrap(), [1, 2, 3, 4]);
 }
 
 #[test]
 fn datetime_floor_to_day() {
     // 2024-03-15 10:30:45 UTC
-    let timestamps = Column::from_timestamps_s(&[1_710_498_645]);
+    let timestamps = Column::from_timestamps_s(&[1_710_498_645]).call().unwrap();
     let floored = timestamps
         .view()
         .dt_floor(RoundingFrequency::Day)
         .call()
         .unwrap();
     // Floor to day: 2024-03-15 00:00:00 = 1710460800
-    assert_eq!(floored.to_vec_i64(), [1_710_460_800]);
+    assert_eq!(floored.to_vec_i64().call().unwrap(), [1_710_460_800]);
 }
 
 // ===========================================================================
@@ -1716,8 +1971,10 @@ fn datetime_floor_to_day() {
 
 #[test]
 fn groupby_scan_cumulative_sum() {
-    let keys = Column::from_slice_i32(&[1, 1, 1, 2, 2]);
-    let vals = Column::from_slice_i32(&[10, 20, 30, 100, 200]);
+    let keys = Column::from_slice_i32(&[1, 1, 1, 2, 2]).call().unwrap();
+    let vals = Column::from_slice_i32(&[10, 20, 30, 100, 200])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![keys, vals]);
 
     let result = tbl
@@ -1736,8 +1993,10 @@ fn groupby_scan_cumulative_sum() {
 
 #[test]
 fn groupby_shift_values() {
-    let keys = Column::from_slice_i32(&[1, 1, 1, 2, 2]);
-    let vals = Column::from_slice_i32(&[10, 20, 30, 100, 200]);
+    let keys = Column::from_slice_i32(&[1, 1, 1, 2, 2]).call().unwrap();
+    let vals = Column::from_slice_i32(&[10, 20, 30, 100, 200])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![keys, vals]);
 
     let fill = Scalar::from_i32(0);
@@ -1755,7 +2014,7 @@ fn groupby_shift_values() {
 
 #[test]
 fn empty_table_operations() {
-    let empty = build_table(vec![Column::from_slice_i32(&[])]);
+    let empty = build_table(vec![Column::from_slice_i32(&[]).call().unwrap()]);
     assert_eq!(empty.len(), 0);
     assert_eq!(empty.columns_len(), 1); // has 1 column, 0 rows
 
@@ -1790,14 +2049,16 @@ fn rmm_device_queries() {
 #[test]
 fn multi_column_join_then_aggregate() {
     // Orders table: (customer_id, product_id, quantity)
-    let customers = Column::from_slice_i32(&[1, 1, 2, 2, 3]);
-    let products = Column::from_slice_i32(&[10, 20, 10, 30, 20]);
-    let quantities = Column::from_slice_i32(&[5, 3, 2, 7, 1]);
+    let customers = Column::from_slice_i32(&[1, 1, 2, 2, 3]).call().unwrap();
+    let products = Column::from_slice_i32(&[10, 20, 10, 30, 20])
+        .call()
+        .unwrap();
+    let quantities = Column::from_slice_i32(&[5, 3, 2, 7, 1]).call().unwrap();
     let orders = build_table(vec![customers, products, quantities]);
 
     // Price lookup: (product_id, unit_price)
-    let prod_ids = Column::from_slice_i32(&[10, 20, 30]);
-    let prices = Column::from_slice_i32(&[100, 200, 300]);
+    let prod_ids = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
+    let prices = Column::from_slice_i32(&[100, 200, 300]).call().unwrap();
     let price_table = build_table(vec![prod_ids, prices]);
 
     // Join orders with prices on product_id
@@ -1837,7 +2098,9 @@ fn multi_column_join_then_aggregate() {
 
 #[test]
 fn approx_distinct_count_estimate() {
-    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5, 1, 2, 3]);
+    let col = Column::from_slice_i32(&[1, 2, 3, 4, 5, 1, 2, 3])
+        .call()
+        .unwrap();
     let tbl = build_table(vec![col]);
 
     let approx = tbl.approx_distinct_count(10).call().unwrap();
@@ -1852,10 +2115,12 @@ fn approx_distinct_count_estimate() {
 #[test]
 fn explode_list_column() {
     // Build a table with a list column using from_lists
-    let offsets = Column::from_slice_i32(&[0, 2, 3, 5]);
-    let child = Column::from_slice_i32(&[10, 20, 30, 40, 50]);
-    let list_col = Column::from_lists(3, offsets, child).unwrap();
-    let keys = Column::from_slice_i32(&[1, 2, 3]);
+    let offsets = Column::from_slice_i32(&[0, 2, 3, 5]).call().unwrap();
+    let child = Column::from_slice_i32(&[10, 20, 30, 40, 50])
+        .call()
+        .unwrap();
+    let list_col = Column::from_lists(3, offsets, child).call().unwrap();
+    let keys = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
     let tbl = build_table(vec![keys, list_col]);
 
     let exploded = tbl.explode(1).call().unwrap();

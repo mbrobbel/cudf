@@ -16,19 +16,19 @@ mod tests {
 
     #[test]
     fn median_of_column() {
-        let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]);
+        let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call().unwrap();
         let result = col.view().quantile(&[0.5]).call().unwrap();
         assert_eq!(result.len(), 1);
-        let data = result.to_vec_f64();
+        let data = result.to_vec_f64().call().unwrap();
         assert!((data[0] - 3.0).abs() < 1e-9);
     }
 
     #[test]
     fn quartiles() {
-        let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]);
+        let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call().unwrap();
         let result = col.view().quantile(&[0.25, 0.5, 0.75]).call().unwrap();
         assert_eq!(result.len(), 3);
-        let data = result.to_vec_f64();
+        let data = result.to_vec_f64().call().unwrap();
         assert!((data[0] - 2.0).abs() < 1e-9);
         assert!((data[1] - 3.0).abs() < 1e-9);
         assert!((data[2] - 4.0).abs() < 1e-9);
@@ -37,26 +37,26 @@ mod tests {
     #[test]
     fn quantile_with_interp_lower() {
         use crate::quantile::Interpolation;
-        let col = Column::from_slice_i32(&[1, 2, 3, 4]);
+        let col = Column::from_slice_i32(&[1, 2, 3, 4]).call().unwrap();
         let result = col
             .view()
             .quantile_with_interp(&[0.5], Interpolation::LOWER)
             .call()
             .unwrap();
-        let data = result.to_vec_f64();
+        let data = result.to_vec_f64().call().unwrap();
         assert!((data[0] - 2.0).abs() < 1e-9);
     }
 
     #[test]
     fn quantile_with_interp_higher() {
         use crate::quantile::Interpolation;
-        let col = Column::from_slice_i32(&[1, 2, 3, 4]);
+        let col = Column::from_slice_i32(&[1, 2, 3, 4]).call().unwrap();
         let result = col
             .view()
             .quantile_with_interp(&[0.5], Interpolation::HIGHER)
             .call()
             .unwrap();
-        let data = result.to_vec_f64();
+        let data = result.to_vec_f64().call().unwrap();
         assert!((data[0] - 3.0).abs() < 1e-9);
     }
 }

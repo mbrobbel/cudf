@@ -2167,9 +2167,7 @@ impl crate::stream::GpuOp for ToDlpack<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        Ok({
-            cudf_sys::io::ffi::to_dlpack(&self.table.0, self.stream.as_raw())
-        })
+        Ok(cudf_sys::io::ffi::to_dlpack(&self.table.0, self.stream.as_raw()))
     }
 }
 
@@ -3396,6 +3394,7 @@ mod tests {
     use super::*;
     use crate::data_type::TypeId;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
 
     #[test]
     fn empty_table_default() {
@@ -3421,8 +3420,10 @@ mod tests {
 
     #[test]
     fn table_from_columns() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(1), 3);
-        let c2 = Column::from_scalar(&Scalar::from_f64(2.5), 3);
+        let c1 = Column::from_scalar(&Scalar::from_i32(1), 3).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_f64(2.5), 3)
+            .call()
+            .unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);
@@ -3433,7 +3434,9 @@ mod tests {
 
     #[test]
     fn table_column_views() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(10), 4);
+        let c1 = Column::from_scalar(&Scalar::from_i32(10), 4)
+            .call()
+            .unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
@@ -3445,9 +3448,13 @@ mod tests {
 
     #[test]
     fn table_columns_iterator_with_data() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(1), 2);
-        let c2 = Column::from_scalar(&Scalar::from_f64(3.0), 2);
-        let c3 = Column::from_scalar(&Scalar::from_bool(true), 2);
+        let c1 = Column::from_scalar(&Scalar::from_i32(1), 2).call().unwrap();
+        let c2 = Column::from_scalar(&Scalar::from_f64(3.0), 2)
+            .call()
+            .unwrap();
+        let c3 = Column::from_scalar(&Scalar::from_bool(true), 2)
+            .call()
+            .unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);
@@ -3463,7 +3470,9 @@ mod tests {
 
     #[test]
     fn table_alloc_bytes() {
-        let c1 = Column::from_scalar(&Scalar::from_i32(1), 100);
+        let c1 = Column::from_scalar(&Scalar::from_i32(1), 100)
+            .call()
+            .unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();

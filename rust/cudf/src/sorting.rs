@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn sort_single_column_ascending() {
-        let col = Col::from_scalar(&Scalar::from_i32(5), 4);
+        let col = Col::from_scalar(&Scalar::from_i32(5), 4).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn sort_descending() {
-        let col = Col::from_scalar(&Scalar::from_i32(5), 3);
+        let col = Col::from_scalar(&Scalar::from_i32(5), 3).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn sorted_order_basic() {
-        let col = Col::from_scalar(&Scalar::from_i32(1), 3);
+        let col = Col::from_scalar(&Scalar::from_i32(1), 3).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -83,7 +83,7 @@ mod tests {
 
     #[test]
     fn is_sorted_true_for_constant() {
-        let col = Col::from_scalar(&Scalar::from_i32(7), 4);
+        let col = Col::from_scalar(&Scalar::from_i32(7), 4).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn is_sorted_descending_constant() {
-        let col = Col::from_scalar(&Scalar::from_i32(7), 4);
+        let col = Col::from_scalar(&Scalar::from_i32(7), 4).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();

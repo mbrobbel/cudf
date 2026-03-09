@@ -81,10 +81,7 @@ impl crate::stream::GpuOp for Pack<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let p = cudf_sys::contiguous_split::ffi::pack_table(
-            &self.table.0,
-            self.stream.as_raw(),
-        )?;
+        let p = cudf_sys::contiguous_split::ffi::pack_table(&self.table.0, self.stream.as_raw())?;
         Ok(PackedColumns(p))
     }
 }
@@ -104,10 +101,8 @@ impl crate::stream::GpuOp for PackedSize<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let n = cudf_sys::contiguous_split::ffi::packed_size_of(
-            &self.table.0,
-            self.stream.as_raw(),
-        )?;
+        let n =
+            cudf_sys::contiguous_split::ffi::packed_size_of(&self.table.0, self.stream.as_raw())?;
         Ok(n)
     }
 }

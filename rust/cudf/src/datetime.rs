@@ -676,7 +676,7 @@ mod tests {
 
     /// Helper: create a timestamp column from epoch seconds.
     fn make_timestamp_seconds(epochs: &[i64]) -> Column {
-        Column::from_timestamps_s(epochs)
+        Column::from_timestamps_s(epochs).call().unwrap()
     }
 
     const EPOCH_2024_06_15_10_30_45: i64 = 1718443845;
@@ -692,7 +692,7 @@ mod tests {
         ]);
         let result = ts.view().extract_year().call().unwrap();
         assert_eq!(result.type_id(), TypeId::INT16);
-        assert_eq!(result.to_vec_i16(), vec![2024, 2024, 2021]);
+        assert_eq!(result.to_vec_i16().call().unwrap(), vec![2024, 2024, 2021]);
     }
 
     #[test]
@@ -703,7 +703,7 @@ mod tests {
             EPOCH_2021_01_01_00_00_00,
         ]);
         let result = ts.view().extract_month().call().unwrap();
-        assert_eq!(result.to_vec_i16(), vec![6, 1, 1]);
+        assert_eq!(result.to_vec_i16().call().unwrap(), vec![6, 1, 1]);
     }
 
     #[test]
@@ -714,14 +714,14 @@ mod tests {
             EPOCH_2021_01_01_00_00_00,
         ]);
         let result = ts.view().extract_day().call().unwrap();
-        assert_eq!(result.to_vec_i16(), vec![15, 1, 1]);
+        assert_eq!(result.to_vec_i16().call().unwrap(), vec![15, 1, 1]);
     }
 
     #[test]
     fn extract_hour_basic() {
         let ts = make_timestamp_seconds(&[EPOCH_2024_06_15_10_30_45, EPOCH_2024_01_01_00_00_00]);
         let result = ts.view().extract_hour().call().unwrap();
-        assert_eq!(result.to_vec_i16(), vec![9, 0]);
+        assert_eq!(result.to_vec_i16().call().unwrap(), vec![9, 0]);
     }
 
     #[test]
@@ -729,15 +729,15 @@ mod tests {
         let ts = make_timestamp_seconds(&[EPOCH_2024_06_15_10_30_45]);
         let minutes = ts.view().extract_minute().call().unwrap();
         let seconds = ts.view().extract_second().call().unwrap();
-        assert_eq!(minutes.to_vec_i16(), vec![30]);
-        assert_eq!(seconds.to_vec_i16(), vec![45]);
+        assert_eq!(minutes.to_vec_i16().call().unwrap(), vec![30]);
+        assert_eq!(seconds.to_vec_i16().call().unwrap(), vec![45]);
     }
 
     #[test]
     fn day_of_year_basic() {
         let ts = make_timestamp_seconds(&[EPOCH_2024_01_01_00_00_00, EPOCH_2024_06_15_10_30_45]);
         let result = ts.view().day_of_year().call().unwrap();
-        let vals = result.to_vec_i16();
+        let vals = result.to_vec_i16().call().unwrap();
         assert_eq!(vals[0], 1);
         assert_eq!(vals[1], 167);
     }
@@ -747,21 +747,21 @@ mod tests {
         let ts = make_timestamp_seconds(&[EPOCH_2024_01_01_00_00_00, EPOCH_2021_01_01_00_00_00]);
         let result = ts.view().is_leap_year().call().unwrap();
         assert_eq!(result.type_id(), TypeId::BOOL8);
-        assert_eq!(result.to_vec_bool(), vec![true, false]);
+        assert_eq!(result.to_vec_bool().call().unwrap(), vec![true, false]);
     }
 
     #[test]
     fn days_in_month_basic() {
         let ts = make_timestamp_seconds(&[EPOCH_2024_01_01_00_00_00, EPOCH_2024_06_15_10_30_45]);
         let result = ts.view().days_in_month().call().unwrap();
-        assert_eq!(result.to_vec_i16(), vec![31, 30]);
+        assert_eq!(result.to_vec_i16().call().unwrap(), vec![31, 30]);
     }
 
     #[test]
     fn extract_quarter_basic() {
         let ts = make_timestamp_seconds(&[EPOCH_2024_01_01_00_00_00, EPOCH_2024_06_15_10_30_45]);
         let result = ts.view().extract_quarter().call().unwrap();
-        assert_eq!(result.to_vec_i16(), vec![1, 2]);
+        assert_eq!(result.to_vec_i16().call().unwrap(), vec![1, 2]);
     }
 
     #[test]

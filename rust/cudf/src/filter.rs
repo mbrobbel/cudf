@@ -15,8 +15,10 @@ mod tests {
 
     #[test]
     fn filter_basic() {
-        let col = Column::from_scalar(&Scalar::from_i32(1), 4);
-        let mask = Column::from_scalar(&Scalar::from_bool(true), 4);
+        let col = Column::from_scalar(&Scalar::from_i32(1), 4).call().unwrap();
+        let mask = Column::from_scalar(&Scalar::from_bool(true), 4)
+            .call()
+            .unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -26,7 +28,7 @@ mod tests {
 
     #[test]
     fn drop_nulls_no_nulls() {
-        let col = Column::from_scalar(&Scalar::from_i32(5), 3);
+        let col = Column::from_scalar(&Scalar::from_i32(5), 3).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();

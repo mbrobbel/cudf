@@ -35,6 +35,7 @@ use arrow_schema::{DataType as ArrowDataType, Field, Schema};
 use crate::column::Column;
 use crate::data_type::TypeId;
 use crate::error::{Error, Result};
+use crate::stream::GpuOp;
 use crate::table::Table;
 
 /// Maps a cudf [`TypeId`] to an Arrow [`DataType`](ArrowDataType).
@@ -134,7 +135,7 @@ macro_rules! primitive_to_gpu {
             .downcast_ref::<arrow_array::PrimitiveArray<$arrow_ty>>()
             .ok_or_else(|| Error::UnsupportedArrowType("type mismatch".into()))?;
         let values = typed.values();
-        let col = Column::$from_fn(values);
+        let col = Column::$from_fn(values).call()?;
         apply_arrow_nulls(col, $array)
     }};
 }
@@ -147,8 +148,8 @@ fn apply_arrow_nulls(col: Column, array: &dyn Array) -> Result<Column> {
     // Use the NullBuffer's iterator to bulk-extract validity bits
     // instead of calling is_valid(i) per element.
     let validity: Vec<bool> = null_buf.iter().collect();
-    let mask_col = Column::from_slice_bool(&validity);
-    col.with_null_mask_from_bools(&mask_col.view())
+    let mask_col = Column::from_slice_bool(&validity).call()?;
+    col.with_null_mask_from_bools(&mask_col.view()).call()
 }
 
 impl Column {
@@ -174,7 +175,7 @@ impl Column {
                     .downcast_ref::<BooleanArray>()
                     .ok_or_else(|| Error::UnsupportedArrowType("BooleanArray mismatch".into()))?;
                 let bools: Vec<bool> = typed.iter().map(|v| v.unwrap_or(false)).collect();
-                let col = Column::from_slice_bool(&bools);
+                let col = Column::from_slice_bool(&bools).call()?;
                 apply_arrow_nulls(col, array)
             }
             ArrowDataType::Utf8 => {
@@ -183,7 +184,7 @@ impl Column {
                     .downcast_ref::<StringArray>()
                     .ok_or_else(|| Error::UnsupportedArrowType("StringArray mismatch".into()))?;
                 let strings: Vec<&str> = typed.iter().map(|v| v.unwrap_or("")).collect();
-                let col = Column::from_strings(&strings);
+                let col = Column::from_strings(&strings).call()?;
                 apply_arrow_nulls(col, array)
             }
             ArrowDataType::Timestamp(arrow_schema::TimeUnit::Second, _) => {
@@ -270,7 +271,9 @@ impl ColumnView<'_> {
 
     fn arrow_nulls(&self) -> Option<arrow_buffer::NullBuffer> {
         if self.has_nulls() {
-            Some(arrow_buffer::NullBuffer::from(self.null_mask_to_host()))
+            Some(arrow_buffer::NullBuffer::from(
+                self.null_mask_to_host().call().unwrap(),
+            ))
         } else {
             None
         }
@@ -280,7 +283,7 @@ impl ColumnView<'_> {
 /// Helper to convert a primitive GPU column to Arrow.
 macro_rules! gpu_to_primitive {
     ($col:expr, $to_fn:ident, $arrow_array:ty, $nulls:expr) => {{
-        let values = $col.$to_fn();
+        let values = $col.$to_fn().call()?;
         Ok(Arc::new(<$arrow_array>::new(values.into(), $nulls)))
     }};
 }
@@ -359,7 +362,7 @@ fn to_arrow_inner(
 
 /// Convert a BOOL8 GPU column to Arrow `BooleanArray`.
 fn bool_to_arrow(col: &ColumnView<'_>, nulls: Option<arrow_buffer::NullBuffer>) -> ArrayRef {
-    let values = col.to_vec_bool();
+    let values = col.to_vec_bool().call().unwrap();
     // Build the values buffer directly, then attach the null buffer separately
     // to avoid an intermediate Vec<Option<bool>> allocation.
     let values_buf = arrow_buffer::BooleanBuffer::from(values);
@@ -368,9 +371,9 @@ fn bool_to_arrow(col: &ColumnView<'_>, nulls: Option<arrow_buffer::NullBuffer>) 
 
 /// Convert a STRING GPU column to Arrow `StringArray`.
 fn string_to_arrow(col: &ColumnView<'_>) -> ArrayRef {
-    let values = col.to_vec_string();
+    let values = col.to_vec_string().call().unwrap();
     if col.has_nulls() {
-        let validity = col.null_mask_to_host();
+        let validity = col.null_mask_to_host().call().unwrap();
         let arr: StringArray = values
             .into_iter()
             .zip(validity)

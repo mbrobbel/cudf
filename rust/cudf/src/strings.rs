@@ -2315,21 +2315,27 @@ mod tests {
     use crate::stream::GpuOp;
 
     fn make_string_col(values: &[&str]) -> Column {
-        Column::from_strings(values)
+        Column::from_strings(values).call().unwrap()
     }
 
     #[test]
     fn to_lower_basic() {
         let col = make_string_col(&["HELLO", "World", "foo"]);
         let result = col.view().to_lower().call().unwrap();
-        assert_eq!(result.to_vec_string(), vec!["hello", "world", "foo"]);
+        assert_eq!(
+            result.to_vec_string().call().unwrap(),
+            vec!["hello", "world", "foo"]
+        );
     }
 
     #[test]
     fn to_upper_basic() {
         let col = make_string_col(&["hello", "World", "FOO"]);
         let result = col.view().to_upper().call().unwrap();
-        assert_eq!(result.to_vec_string(), vec!["HELLO", "WORLD", "FOO"]);
+        assert_eq!(
+            result.to_vec_string().call().unwrap(),
+            vec!["HELLO", "WORLD", "FOO"]
+        );
     }
 
     #[test]
@@ -2337,7 +2343,10 @@ mod tests {
         let col = make_string_col(&["abc", "def", "abcdef"]);
         let target = Scalar::from_string("abc");
         let result = col.view().str_contains(&target).call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![true, false, true]);
+        assert_eq!(
+            result.to_vec_bool().call().unwrap(),
+            vec![true, false, true]
+        );
     }
 
     #[test]
@@ -2345,7 +2354,10 @@ mod tests {
         let col = make_string_col(&["abc", "def", "abcdef"]);
         let target = Scalar::from_string("ab");
         let result = col.view().str_starts_with(&target).call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![true, false, true]);
+        assert_eq!(
+            result.to_vec_bool().call().unwrap(),
+            vec![true, false, true]
+        );
     }
 
     #[test]
@@ -2353,7 +2365,10 @@ mod tests {
         let col = make_string_col(&["abc", "def", "abcdef"]);
         let target = Scalar::from_string("ef");
         let result = col.view().str_ends_with(&target).call().unwrap();
-        assert_eq!(result.to_vec_bool(), vec![false, true, true]);
+        assert_eq!(
+            result.to_vec_bool().call().unwrap(),
+            vec![false, true, true]
+        );
     }
 
     #[test]
@@ -2361,7 +2376,7 @@ mod tests {
         let col = make_string_col(&["hello world", "goodbye", "hello"]);
         let target = Scalar::from_string("lo");
         let result = col.view().str_find(&target).call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![3, -1, 3]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![3, -1, 3]);
     }
 
     #[test]
@@ -2374,68 +2389,80 @@ mod tests {
             .str_replace(&target, &replacement)
             .call()
             .unwrap();
-        assert_eq!(result.to_vec_string(), vec!["hell0", "w0rld"]);
+        assert_eq!(
+            result.to_vec_string().call().unwrap(),
+            vec!["hell0", "w0rld"]
+        );
     }
 
     #[test]
     fn strip_basic() {
         let col = make_string_col(&["  hello  ", " world", "foo "]);
         let result = col.view().str_strip().call().unwrap();
-        assert_eq!(result.to_vec_string(), vec!["hello", "world", "foo"]);
+        assert_eq!(
+            result.to_vec_string().call().unwrap(),
+            vec!["hello", "world", "foo"]
+        );
     }
 
     #[test]
     fn lstrip_basic() {
         let col = make_string_col(&["  hello  ", " world"]);
         let result = col.view().str_lstrip().call().unwrap();
-        assert_eq!(result.to_vec_string(), vec!["hello  ", "world"]);
+        assert_eq!(
+            result.to_vec_string().call().unwrap(),
+            vec!["hello  ", "world"]
+        );
     }
 
     #[test]
     fn rstrip_basic() {
         let col = make_string_col(&["  hello  ", "world "]);
         let result = col.view().str_rstrip().call().unwrap();
-        assert_eq!(result.to_vec_string(), vec!["  hello", "world"]);
+        assert_eq!(
+            result.to_vec_string().call().unwrap(),
+            vec!["  hello", "world"]
+        );
     }
 
     #[test]
     fn count_characters_basic() {
         let col = make_string_col(&["hello", "ab", ""]);
         let result = col.view().count_characters().call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![5, 2, 0]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![5, 2, 0]);
     }
 
     #[test]
     fn count_bytes_basic() {
         let col = make_string_col(&["hello", "ab", ""]);
         let result = col.view().count_bytes().call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![5, 2, 0]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![5, 2, 0]);
     }
 
     #[test]
     fn strings_from_integers_basic() {
-        let col = Column::from_strings(&["1", "2", "3"]);
+        let col = Column::from_strings(&["1", "2", "3"]).call().unwrap();
         let int_col = col.view().str_to_integers(TypeId::INT32).call().unwrap();
-        assert_eq!(int_col.to_vec_i32(), vec![1, 2, 3]);
+        assert_eq!(int_col.to_vec_i32().call().unwrap(), vec![1, 2, 3]);
 
         let back = int_col.view().str_from_integers().call().unwrap();
-        assert_eq!(back.to_vec_string(), vec!["1", "2", "3"]);
+        assert_eq!(back.to_vec_string().call().unwrap(), vec!["1", "2", "3"]);
     }
 
     #[test]
     fn strings_to_integers_basic() {
         let col = make_string_col(&["10", "20", "30"]);
         let result = col.view().str_to_integers(TypeId::INT32).call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![10, 20, 30]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![10, 20, 30]);
     }
 
     #[test]
     fn strings_from_floats_basic() {
         let col = Scalar::from_f64(1.5);
-        let float_col = Column::from_scalar(&col, 2);
+        let float_col = Column::from_scalar(&col, 2).call().unwrap();
         let result = float_col.view().str_from_floats().call().unwrap();
         assert_eq!(result.len(), 2);
-        let strs = result.to_vec_string();
+        let strs = result.to_vec_string().call().unwrap();
         assert!(strs.iter().all(|s| !s.is_empty()));
     }
 
@@ -2443,7 +2470,7 @@ mod tests {
     fn strings_to_floats_basic() {
         let col = make_string_col(&["1.5", "2.5", "3.0"]);
         let result = col.view().str_to_floats(TypeId::FLOAT64).call().unwrap();
-        let vals = result.to_vec_f64();
+        let vals = result.to_vec_f64().call().unwrap();
         assert!((vals[0] - 1.5).abs() < 1e-9);
         assert!((vals[1] - 2.5).abs() < 1e-9);
         assert!((vals[2] - 3.0).abs() < 1e-9);

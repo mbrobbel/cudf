@@ -71,15 +71,15 @@ mod tests {
 
     #[test]
     fn fill_range() {
-        let col = Column::from_scalar(&Scalar::from_i32(1), 5);
+        let col = Column::from_scalar(&Scalar::from_i32(1), 5).call().unwrap();
         let value = Scalar::from_i32(99);
         let result = col.view().fill(1, 3, &value).call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![1, 99, 99, 1, 1]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![1, 99, 99, 1, 1]);
     }
 
     #[test]
     fn repeat_table_test() {
-        let col = Column::from_slice_i32(&[10, 20, 30]);
+        let col = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(col);
         let table = builder.build().unwrap();
@@ -92,7 +92,7 @@ mod tests {
         let init = Scalar::from_i32(0);
         let step = Scalar::from_i32(2);
         let result = sequence(5, &init, &step).call().unwrap();
-        assert_eq!(result.to_vec_i32(), vec![0, 2, 4, 6, 8]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![0, 2, 4, 6, 8]);
     }
 
     #[test]
@@ -100,7 +100,7 @@ mod tests {
         let init = Scalar::from_f64(1.0);
         let step = Scalar::from_f64(0.5);
         let result = sequence(3, &init, &step).call().unwrap();
-        let data = result.to_vec_f64();
+        let data = result.to_vec_f64().call().unwrap();
         assert!((data[0] - 1.0).abs() < 1e-9);
         assert!((data[1] - 1.5).abs() < 1e-9);
         assert!((data[2] - 2.0).abs() < 1e-9);
@@ -115,6 +115,6 @@ mod tests {
             .stream(Stream::default_stream())
             .call()
             .unwrap();
-        assert_eq!(result.to_vec_i32(), vec![10, 15, 20]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![10, 15, 20]);
     }
 }

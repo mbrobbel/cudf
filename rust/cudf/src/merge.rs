@@ -14,12 +14,12 @@ mod tests {
 
     #[test]
     fn merge_sorted_tables() {
-        let c1 = Col::from_slice_i32(&[1, 3, 5]);
+        let c1 = Col::from_slice_i32(&[1, 3, 5]).call().unwrap();
         let mut b1 = TableBuilder::new();
         b1.push_column(c1);
         let left = b1.build().unwrap();
 
-        let c2 = Col::from_slice_i32(&[2, 4, 6]);
+        let c2 = Col::from_slice_i32(&[2, 4, 6]).call().unwrap();
         let mut b2 = TableBuilder::new();
         b2.push_column(c2);
         let right = b2.build().unwrap();

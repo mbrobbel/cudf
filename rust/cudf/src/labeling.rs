@@ -13,9 +13,9 @@ mod tests {
 
     #[test]
     fn label_bins_basic() {
-        let col = Column::from_slice_i32(&[1, 5, 10, 15, 20]);
-        let left_edges = Column::from_slice_i32(&[0, 10]);
-        let right_edges = Column::from_slice_i32(&[10, 20]);
+        let col = Column::from_slice_i32(&[1, 5, 10, 15, 20]).call().unwrap();
+        let left_edges = Column::from_slice_i32(&[0, 10]).call().unwrap();
+        let right_edges = Column::from_slice_i32(&[10, 20]).call().unwrap();
         let result = col
             .view()
             .label_bins(

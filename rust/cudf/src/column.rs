@@ -11,11 +11,6 @@ use crate::scalar::{Scalar, scalar_from_ffi};
 use crate::stream::Stream;
 use crate::{i32_to_usize, usize_to_i32};
 
-/// Default stream shorthand for internal use.
-fn ds() -> usize {
-    Stream::default_stream().as_raw()
-}
-
 #[doc(alias = "mask_state")]
 /// Null mask allocation state for column factories.
 #[repr(i32)]
@@ -38,6 +33,544 @@ impl From<MaskState> for i32 {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Macro-generated builders for host readback and host-to-GPU constructors
+// ---------------------------------------------------------------------------
+
+macro_rules! to_host_builder {
+    ($name:ident, $elem:ty, $ffi_fn:path, $doc:expr) => {
+        #[doc = $doc]
+        pub struct $name<'a> {
+            view: &'a cudf_sys::ffi::column_view,
+            stream: Stream,
+        }
+        impl crate::stream::GpuOp for $name<'_> {
+            type Output = Vec<$elem>;
+            fn stream(mut self, stream: Stream) -> Self {
+                self.stream = stream;
+                self
+            }
+            fn call(self) -> Result<Self::Output> {
+                Ok($ffi_fn(self.view, self.stream.as_raw()))
+            }
+        }
+    };
+}
+
+to_host_builder!(
+    ToVecI8,
+    i8,
+    cudf_sys::ffi::view_to_host_i8,
+    "Builder for copying GPU data to host as `Vec<i8>`."
+);
+to_host_builder!(
+    ToVecI16,
+    i16,
+    cudf_sys::ffi::view_to_host_i16,
+    "Builder for copying GPU data to host as `Vec<i16>`."
+);
+to_host_builder!(
+    ToVecI32,
+    i32,
+    cudf_sys::ffi::view_to_host_i32,
+    "Builder for copying GPU data to host as `Vec<i32>`."
+);
+to_host_builder!(
+    ToVecI64,
+    i64,
+    cudf_sys::ffi::view_to_host_i64,
+    "Builder for copying GPU data to host as `Vec<i64>`."
+);
+to_host_builder!(
+    ToVecF32,
+    f32,
+    cudf_sys::ffi::view_to_host_f32,
+    "Builder for copying GPU data to host as `Vec<f32>`."
+);
+to_host_builder!(
+    ToVecF64,
+    f64,
+    cudf_sys::ffi::view_to_host_f64,
+    "Builder for copying GPU data to host as `Vec<f64>`."
+);
+to_host_builder!(
+    ToVecU8,
+    u8,
+    cudf_sys::ffi::view_to_host_u8,
+    "Builder for copying GPU data to host as `Vec<u8>`."
+);
+to_host_builder!(
+    ToVecU16,
+    u16,
+    cudf_sys::ffi::view_to_host_u16,
+    "Builder for copying GPU data to host as `Vec<u16>`."
+);
+to_host_builder!(
+    ToVecU32,
+    u32,
+    cudf_sys::ffi::view_to_host_u32,
+    "Builder for copying GPU data to host as `Vec<u32>`."
+);
+to_host_builder!(
+    ToVecU64,
+    u64,
+    cudf_sys::ffi::view_to_host_u64,
+    "Builder for copying GPU data to host as `Vec<u64>`."
+);
+to_host_builder!(
+    ToVecBool,
+    bool,
+    cudf_sys::ffi::view_to_host_bool,
+    "Builder for copying GPU data to host as `Vec<bool>`."
+);
+to_host_builder!(
+    NullMaskToHost,
+    bool,
+    cudf_sys::ffi::view_null_mask_to_host,
+    "Builder for copying the null mask to host as `Vec<bool>`."
+);
+to_host_builder!(
+    ToVecString,
+    String,
+    cudf_sys::strings::ffi::view_to_host_strings,
+    "Builder for copying string GPU data to host as `Vec<String>`."
+);
+
+macro_rules! from_host_builder {
+    ($name:ident, $elem:ty, $ffi_fn:path, $doc:expr) => {
+        #[doc = $doc]
+        pub struct $name<'a> {
+            data: &'a [$elem],
+            stream: Stream,
+        }
+        impl crate::stream::GpuOp for $name<'_> {
+            type Output = Column;
+            fn stream(mut self, stream: Stream) -> Self {
+                self.stream = stream;
+                self
+            }
+            fn call(self) -> Result<Self::Output> {
+                Ok(Column($ffi_fn(self.data, self.stream.as_raw())))
+            }
+        }
+    };
+}
+
+from_host_builder!(
+    FromSliceI8,
+    i8,
+    cudf_sys::ffi::make_column_from_host_i8,
+    "Builder for creating an `INT8` column from a host slice."
+);
+from_host_builder!(
+    FromSliceI16,
+    i16,
+    cudf_sys::ffi::make_column_from_host_i16,
+    "Builder for creating an `INT16` column from a host slice."
+);
+from_host_builder!(
+    FromSliceI32,
+    i32,
+    cudf_sys::ffi::make_column_from_host_i32,
+    "Builder for creating an `INT32` column from a host slice."
+);
+from_host_builder!(
+    FromSliceI64,
+    i64,
+    cudf_sys::ffi::make_column_from_host_i64,
+    "Builder for creating an `INT64` column from a host slice."
+);
+from_host_builder!(
+    FromSliceF32,
+    f32,
+    cudf_sys::ffi::make_column_from_host_f32,
+    "Builder for creating a `FLOAT32` column from a host slice."
+);
+from_host_builder!(
+    FromSliceF64,
+    f64,
+    cudf_sys::ffi::make_column_from_host_f64,
+    "Builder for creating a `FLOAT64` column from a host slice."
+);
+from_host_builder!(
+    FromSliceU8,
+    u8,
+    cudf_sys::ffi::make_column_from_host_u8,
+    "Builder for creating a `UINT8` column from a host slice."
+);
+from_host_builder!(
+    FromSliceU16,
+    u16,
+    cudf_sys::ffi::make_column_from_host_u16,
+    "Builder for creating a `UINT16` column from a host slice."
+);
+from_host_builder!(
+    FromSliceU32,
+    u32,
+    cudf_sys::ffi::make_column_from_host_u32,
+    "Builder for creating a `UINT32` column from a host slice."
+);
+from_host_builder!(
+    FromSliceU64,
+    u64,
+    cudf_sys::ffi::make_column_from_host_u64,
+    "Builder for creating a `UINT64` column from a host slice."
+);
+from_host_builder!(
+    FromSliceBool,
+    bool,
+    cudf_sys::ffi::make_column_from_host_bool,
+    "Builder for creating a `BOOL8` column from a host slice."
+);
+from_host_builder!(
+    FromTimestampsS,
+    i64,
+    cudf_sys::ffi::make_column_from_host_timestamp_s,
+    "Builder for creating a `TIMESTAMP_SECONDS` column."
+);
+from_host_builder!(
+    FromTimestampsMs,
+    i64,
+    cudf_sys::ffi::make_column_from_host_timestamp_ms,
+    "Builder for creating a `TIMESTAMP_MILLISECONDS` column."
+);
+from_host_builder!(
+    FromTimestampsUs,
+    i64,
+    cudf_sys::ffi::make_column_from_host_timestamp_us,
+    "Builder for creating a `TIMESTAMP_MICROSECONDS` column."
+);
+from_host_builder!(
+    FromTimestampsNs,
+    i64,
+    cudf_sys::ffi::make_column_from_host_timestamp_ns,
+    "Builder for creating a `TIMESTAMP_NANOSECONDS` column."
+);
+from_host_builder!(
+    FromDurationsS,
+    i64,
+    cudf_sys::ffi::make_column_from_host_duration_s,
+    "Builder for creating a `DURATION_SECONDS` column."
+);
+from_host_builder!(
+    FromDurationsMs,
+    i64,
+    cudf_sys::ffi::make_column_from_host_duration_ms,
+    "Builder for creating a `DURATION_MILLISECONDS` column."
+);
+from_host_builder!(
+    FromDurationsUs,
+    i64,
+    cudf_sys::ffi::make_column_from_host_duration_us,
+    "Builder for creating a `DURATION_MICROSECONDS` column."
+);
+from_host_builder!(
+    FromDurationsNs,
+    i64,
+    cudf_sys::ffi::make_column_from_host_duration_ns,
+    "Builder for creating a `DURATION_NANOSECONDS` column."
+);
+
+// ---------------------------------------------------------------------------
+// Hand-written builders for unique constructors
+// ---------------------------------------------------------------------------
+
+/// Builder for [`Column::from_scalar`].
+pub struct FromScalar<'a> {
+    scalar: &'a Scalar,
+    count: usize,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for FromScalar<'_> {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let ffi = crate::scalar::scalar_to_ffi(self.scalar);
+        Ok(Column(cudf_sys::ffi::make_column_from_scalar(
+            &ffi,
+            usize_to_i32(self.count),
+            self.stream.as_raw(),
+        )))
+    }
+}
+
+/// Builder for [`Column::fixed_width`].
+pub struct FixedWidth {
+    type_id: TypeId,
+    scale: i32,
+    num_rows: usize,
+    mask_state: MaskState,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for FixedWidth {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let c = cudf_sys::ffi::make_fixed_width_column(
+            self.type_id.repr,
+            self.scale,
+            usize_to_i32(self.num_rows),
+            i32::from(self.mask_state),
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`Column::empty_lists`].
+pub struct EmptyLists {
+    child_type: TypeId,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for EmptyLists {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let c = cudf_sys::ffi::make_empty_lists_column(self.child_type.repr, self.stream.as_raw())?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`Column::dictionary_from_scalar`].
+pub struct DictionaryFromScalar<'a> {
+    scalar: &'a Scalar,
+    count: usize,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for DictionaryFromScalar<'_> {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let ffi = crate::scalar::scalar_to_ffi(self.scalar);
+        let c = cudf_sys::ffi::make_dictionary_from_scalar(
+            &ffi,
+            usize_to_i32(self.count),
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`Column::from_lists`].
+pub struct FromLists {
+    num_rows: usize,
+    offsets: Column,
+    child: Column,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for FromLists {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let c = cudf_sys::ffi::make_lists_column(
+            usize_to_i32(self.num_rows),
+            self.offsets.0,
+            self.child.0,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`Column::from_structs`].
+pub struct FromStructs {
+    num_rows: usize,
+    children: Vec<Column>,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for FromStructs {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let mut builder = cudf_sys::ffi::new_struct_column_builder();
+        for child in self.children {
+            cudf_sys::ffi::struct_column_builder_add(builder.pin_mut(), child.0);
+        }
+        let c = cudf_sys::ffi::struct_column_builder_build(
+            builder.pin_mut(),
+            usize_to_i32(self.num_rows),
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`Column::from_strings`].
+pub struct FromStrings<'a> {
+    values: &'a [&'a str],
+    stream: Stream,
+}
+impl crate::stream::GpuOp for FromStrings<'_> {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let strings: Vec<String> = self
+            .values
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
+        Ok(Column(cudf_sys::strings::ffi::make_string_column(
+            strings,
+            self.stream.as_raw(),
+        )))
+    }
+}
+
+/// Builder for [`Column::fill_in_place`].
+pub struct FillInPlace<'a> {
+    col: &'a mut Column,
+    begin: usize,
+    end: usize,
+    value: &'a Scalar,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for FillInPlace<'_> {
+    type Output = ();
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let ffi = crate::scalar::scalar_to_ffi(self.value);
+        cudf_sys::copying::ffi::fill_in_place(
+            self.col.0.pin_mut(),
+            usize_to_i32(self.begin),
+            usize_to_i32(self.end),
+            &ffi,
+            self.stream.as_raw(),
+        )?;
+        Ok(())
+    }
+}
+
+/// Builder for [`Column::copy_range_in_place`].
+pub struct CopyRangeInPlace<'a> {
+    col: &'a mut Column,
+    source: &'a ColumnView<'a>,
+    source_begin: usize,
+    source_end: usize,
+    dest_begin: usize,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for CopyRangeInPlace<'_> {
+    type Output = ();
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        cudf_sys::copying::ffi::copy_range_in_place(
+            self.col.0.pin_mut(),
+            self.source.0,
+            usize_to_i32(self.source_begin),
+            usize_to_i32(self.source_end),
+            usize_to_i32(self.dest_begin),
+            self.stream.as_raw(),
+        )?;
+        Ok(())
+    }
+}
+
+/// Builder for [`Column::null_mask_to_bools`].
+pub struct NullMaskToBools<'a> {
+    col: &'a Column,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for NullMaskToBools<'_> {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let v = self.col.view();
+        let c = cudf_sys::ffi::null_mask_to_bools(v.0, self.stream.as_raw())?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`Column::set_null_mask_from_bools`].
+pub struct SetNullMaskFromBools<'a> {
+    col: &'a mut Column,
+    bools: &'a ColumnView<'a>,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for SetNullMaskFromBools<'_> {
+    type Output = ();
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        cudf_sys::ffi::set_null_mask_from_bools(
+            self.col.0.pin_mut(),
+            self.bools.0,
+            self.stream.as_raw(),
+        )?;
+        Ok(())
+    }
+}
+
+/// Builder for [`Column::with_null_mask_from_bools`].
+pub struct WithNullMaskFromBools<'a> {
+    col: &'a Column,
+    validity: &'a ColumnView<'a>,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for WithNullMaskFromBools<'_> {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let c = cudf_sys::ffi::column_with_null_mask_from_bools(
+            &self.col.0,
+            self.validity.0,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`ColumnView::to_owned_column`].
+pub struct ToOwnedColumn<'a> {
+    view: &'a ColumnView<'a>,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for ToOwnedColumn<'_> {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let c = cudf_sys::copying::ffi::copy_column(self.view.0, self.stream.as_raw())?;
+        Ok(Column(c))
+    }
+}
+
 #[doc(alias = "column")]
 /// An owning GPU column.
 ///
@@ -48,13 +581,12 @@ pub struct Column(pub(crate) UniquePtr<cudf_sys::ffi::Column>);
 impl Column {
     #[doc(alias = "make_column_from_scalar")]
     /// Creates a column by repeating a scalar value `count` times.
-    pub fn from_scalar(scalar: &Scalar, count: usize) -> Self {
-        let ffi = crate::scalar::scalar_to_ffi(scalar);
-        Self(cudf_sys::ffi::make_column_from_scalar(
-            &ffi,
-            usize_to_i32(count),
-            ds(),
-        ))
+    pub fn from_scalar(scalar: &Scalar, count: usize) -> FromScalar<'_> {
+        FromScalar {
+            scalar,
+            count,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_empty_column")]
@@ -75,30 +607,33 @@ impl Column {
         scale: i32,
         num_rows: usize,
         mask_state: MaskState,
-    ) -> Result<Self> {
-        let c = cudf_sys::ffi::make_fixed_width_column(
-            type_id.repr,
+    ) -> FixedWidth {
+        FixedWidth {
+            type_id,
             scale,
-            usize_to_i32(num_rows),
-            i32::from(mask_state),
-            ds(),
-        )?;
-        Ok(Self(c))
+            num_rows,
+            mask_state,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_empty_lists_column")]
     /// Creates an empty lists column with the given child element type.
-    pub fn empty_lists(child_type: TypeId) -> Result<Self> {
-        let c = cudf_sys::ffi::make_empty_lists_column(child_type.repr, ds())?;
-        Ok(Self(c))
+    pub fn empty_lists(child_type: TypeId) -> EmptyLists {
+        EmptyLists {
+            child_type,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_dictionary_from_scalar")]
     /// Creates a dictionary column filled with a single scalar value.
-    pub fn dictionary_from_scalar(scalar: &Scalar, count: usize) -> Result<Self> {
-        let ffi = crate::scalar::scalar_to_ffi(scalar);
-        let c = cudf_sys::ffi::make_dictionary_from_scalar(&ffi, usize_to_i32(count), ds())?;
-        Ok(Self(c))
+    pub fn dictionary_from_scalar(scalar: &Scalar, count: usize) -> DictionaryFromScalar<'_> {
+        DictionaryFromScalar {
+            scalar,
+            count,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_lists_column")]
@@ -106,24 +641,23 @@ impl Column {
     ///
     /// `offsets` must be an INT32 column of length `num_rows + 1`.
     /// `child` contains the flattened list elements.
-    pub fn from_lists(num_rows: usize, offsets: Column, child: Column) -> Result<Self> {
-        let c = cudf_sys::ffi::make_lists_column(usize_to_i32(num_rows), offsets.0, child.0, ds())?;
-        Ok(Self(c))
+    pub fn from_lists(num_rows: usize, offsets: Column, child: Column) -> FromLists {
+        FromLists {
+            num_rows,
+            offsets,
+            child,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_structs_column")]
     /// Creates a STRUCT column from child columns (no null mask).
-    pub fn from_structs(num_rows: usize, children: Vec<Column>) -> Result<Self> {
-        let mut builder = cudf_sys::ffi::new_struct_column_builder();
-        for child in children {
-            cudf_sys::ffi::struct_column_builder_add(builder.pin_mut(), child.0);
+    pub fn from_structs(num_rows: usize, children: Vec<Column>) -> FromStructs {
+        FromStructs {
+            num_rows,
+            children,
+            stream: Stream::default_stream(),
         }
-        let c = cudf_sys::ffi::struct_column_builder_build(
-            builder.pin_mut(),
-            usize_to_i32(num_rows),
-            ds(),
-        )?;
-        Ok(Self(c))
     }
 
     #[doc(alias = "size")]
@@ -162,257 +696,358 @@ impl Column {
     }
 
     /// Copies the column data to host as `Vec<i8>`.
-    pub fn to_vec_i8(&self) -> Vec<i8> {
-        cudf_sys::ffi::column_to_host_i8(&self.0, ds())
+    pub fn to_vec_i8(&self) -> ToVecI8<'_> {
+        ToVecI8 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<i16>`.
-    pub fn to_vec_i16(&self) -> Vec<i16> {
-        cudf_sys::ffi::column_to_host_i16(&self.0, ds())
+    pub fn to_vec_i16(&self) -> ToVecI16<'_> {
+        ToVecI16 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<i32>`.
-    pub fn to_vec_i32(&self) -> Vec<i32> {
-        cudf_sys::ffi::column_to_host_i32(&self.0, ds())
+    pub fn to_vec_i32(&self) -> ToVecI32<'_> {
+        ToVecI32 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<i64>`.
-    pub fn to_vec_i64(&self) -> Vec<i64> {
-        cudf_sys::ffi::column_to_host_i64(&self.0, ds())
+    pub fn to_vec_i64(&self) -> ToVecI64<'_> {
+        ToVecI64 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<f32>`.
-    pub fn to_vec_f32(&self) -> Vec<f32> {
-        cudf_sys::ffi::column_to_host_f32(&self.0, ds())
+    pub fn to_vec_f32(&self) -> ToVecF32<'_> {
+        ToVecF32 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<f64>`.
-    pub fn to_vec_f64(&self) -> Vec<f64> {
-        cudf_sys::ffi::column_to_host_f64(&self.0, ds())
+    pub fn to_vec_f64(&self) -> ToVecF64<'_> {
+        ToVecF64 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<u8>`.
-    pub fn to_vec_u8(&self) -> Vec<u8> {
-        cudf_sys::ffi::column_to_host_u8(&self.0, ds())
+    pub fn to_vec_u8(&self) -> ToVecU8<'_> {
+        ToVecU8 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<u16>`.
-    pub fn to_vec_u16(&self) -> Vec<u16> {
-        cudf_sys::ffi::column_to_host_u16(&self.0, ds())
+    pub fn to_vec_u16(&self) -> ToVecU16<'_> {
+        ToVecU16 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<u32>`.
-    pub fn to_vec_u32(&self) -> Vec<u32> {
-        cudf_sys::ffi::column_to_host_u32(&self.0, ds())
+    pub fn to_vec_u32(&self) -> ToVecU32<'_> {
+        ToVecU32 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<u64>`.
-    pub fn to_vec_u64(&self) -> Vec<u64> {
-        cudf_sys::ffi::column_to_host_u64(&self.0, ds())
+    pub fn to_vec_u64(&self) -> ToVecU64<'_> {
+        ToVecU64 {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies the column data to host as `Vec<bool>`.
-    pub fn to_vec_bool(&self) -> Vec<bool> {
-        cudf_sys::ffi::column_to_host_bool(&self.0, ds())
+    pub fn to_vec_bool(&self) -> ToVecBool<'_> {
+        ToVecBool {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Returns per-element validity as a host vector of bools.
-    pub fn null_mask_to_host(&self) -> Vec<bool> {
-        cudf_sys::ffi::column_null_mask_to_host(&self.0, ds())
+    pub fn null_mask_to_host(&self) -> NullMaskToHost<'_> {
+        NullMaskToHost {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies string column data to a host vector of strings.
-    pub fn to_vec_string(&self) -> Vec<String> {
-        cudf_sys::strings::ffi::column_to_host_strings(&self.0, ds())
+    pub fn to_vec_string(&self) -> ToVecString<'_> {
+        ToVecString {
+            view: cudf_sys::ffi::column_view_of(&self.0),
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_i8")]
     /// Creates an INT8 column from a host slice.
-    pub fn from_slice_i8(data: &[i8]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_i8(data, ds()))
+    pub fn from_slice_i8(data: &[i8]) -> FromSliceI8<'_> {
+        FromSliceI8 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_i16")]
     /// Creates an INT16 column from a host slice.
-    pub fn from_slice_i16(data: &[i16]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_i16(data, ds()))
+    pub fn from_slice_i16(data: &[i16]) -> FromSliceI16<'_> {
+        FromSliceI16 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_i32")]
     /// Creates an INT32 column from a host slice.
-    pub fn from_slice_i32(data: &[i32]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_i32(data, ds()))
+    pub fn from_slice_i32(data: &[i32]) -> FromSliceI32<'_> {
+        FromSliceI32 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_i64")]
     /// Creates an INT64 column from a host slice.
-    pub fn from_slice_i64(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_i64(data, ds()))
+    pub fn from_slice_i64(data: &[i64]) -> FromSliceI64<'_> {
+        FromSliceI64 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_f64")]
     /// Creates a FLOAT64 column from a host slice.
-    pub fn from_slice_f64(data: &[f64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_f64(data, ds()))
+    pub fn from_slice_f64(data: &[f64]) -> FromSliceF64<'_> {
+        FromSliceF64 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_f32")]
     /// Creates a FLOAT32 column from a host slice.
-    pub fn from_slice_f32(data: &[f32]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_f32(data, ds()))
+    pub fn from_slice_f32(data: &[f32]) -> FromSliceF32<'_> {
+        FromSliceF32 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_u8")]
     /// Creates a UINT8 column from a host slice.
-    pub fn from_slice_u8(data: &[u8]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_u8(data, ds()))
+    pub fn from_slice_u8(data: &[u8]) -> FromSliceU8<'_> {
+        FromSliceU8 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_u16")]
     /// Creates a UINT16 column from a host slice.
-    pub fn from_slice_u16(data: &[u16]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_u16(data, ds()))
+    pub fn from_slice_u16(data: &[u16]) -> FromSliceU16<'_> {
+        FromSliceU16 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_u32")]
     /// Creates a UINT32 column from a host slice.
-    pub fn from_slice_u32(data: &[u32]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_u32(data, ds()))
+    pub fn from_slice_u32(data: &[u32]) -> FromSliceU32<'_> {
+        FromSliceU32 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_u64")]
     /// Creates a UINT64 column from a host slice.
-    pub fn from_slice_u64(data: &[u64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_u64(data, ds()))
+    pub fn from_slice_u64(data: &[u64]) -> FromSliceU64<'_> {
+        FromSliceU64 {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_bool")]
     /// Creates a BOOL8 column from a host slice.
-    pub fn from_slice_bool(data: &[bool]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_bool(data, ds()))
+    pub fn from_slice_bool(data: &[bool]) -> FromSliceBool<'_> {
+        FromSliceBool {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_timestamp_s")]
     /// Creates a `TIMESTAMP_SECONDS` column from epoch-second values.
-    pub fn from_timestamps_s(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_timestamp_s(data, ds()))
+    pub fn from_timestamps_s(data: &[i64]) -> FromTimestampsS<'_> {
+        FromTimestampsS {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_timestamp_ms")]
     /// Creates a `TIMESTAMP_MILLISECONDS` column from epoch-millisecond values.
-    pub fn from_timestamps_ms(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_timestamp_ms(
+    pub fn from_timestamps_ms(data: &[i64]) -> FromTimestampsMs<'_> {
+        FromTimestampsMs {
             data,
-            ds(),
-        ))
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_timestamp_us")]
     /// Creates a `TIMESTAMP_MICROSECONDS` column from epoch-microsecond values.
-    pub fn from_timestamps_us(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_timestamp_us(
+    pub fn from_timestamps_us(data: &[i64]) -> FromTimestampsUs<'_> {
+        FromTimestampsUs {
             data,
-            ds(),
-        ))
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_timestamp_ns")]
     /// Creates a `TIMESTAMP_NANOSECONDS` column from epoch-nanosecond values.
-    pub fn from_timestamps_ns(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_timestamp_ns(
+    pub fn from_timestamps_ns(data: &[i64]) -> FromTimestampsNs<'_> {
+        FromTimestampsNs {
             data,
-            ds(),
-        ))
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_duration_s")]
     /// Creates a `DURATION_SECONDS` column from host data.
-    pub fn from_durations_s(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_duration_s(data, ds()))
+    pub fn from_durations_s(data: &[i64]) -> FromDurationsS<'_> {
+        FromDurationsS {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_duration_ms")]
     /// Creates a `DURATION_MILLISECONDS` column from host data.
-    pub fn from_durations_ms(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_duration_ms(data, ds()))
+    pub fn from_durations_ms(data: &[i64]) -> FromDurationsMs<'_> {
+        FromDurationsMs {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_duration_us")]
     /// Creates a `DURATION_MICROSECONDS` column from host data.
-    pub fn from_durations_us(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_duration_us(data, ds()))
+    pub fn from_durations_us(data: &[i64]) -> FromDurationsUs<'_> {
+        FromDurationsUs {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_column_from_host_duration_ns")]
     /// Creates a `DURATION_NANOSECONDS` column from host data.
-    pub fn from_durations_ns(data: &[i64]) -> Self {
-        Self(cudf_sys::ffi::make_column_from_host_duration_ns(data, ds()))
+    pub fn from_durations_ns(data: &[i64]) -> FromDurationsNs<'_> {
+        FromDurationsNs {
+            data,
+            stream: Stream::default_stream(),
+        }
     }
 
     #[doc(alias = "make_string_column")]
     /// Creates a string column from a slice of strings.
-    pub fn from_strings(values: &[&str]) -> Self {
-        let strings: Vec<String> = values
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect();
-        Self(cudf_sys::strings::ffi::make_string_column(strings, ds()))
+    pub fn from_strings<'a>(values: &'a [&'a str]) -> FromStrings<'a> {
+        FromStrings {
+            values,
+            stream: Stream::default_stream(),
+        }
     }
 
     // -- In-place mutations --
 
     /// Fills the range `[begin, end)` with a scalar value in-place.
-    pub fn fill_in_place(&mut self, begin: usize, end: usize, value: &Scalar) -> Result<()> {
-        let ffi = crate::scalar::scalar_to_ffi(value);
-        cudf_sys::copying::ffi::fill_in_place(
-            self.0.pin_mut(),
-            usize_to_i32(begin),
-            usize_to_i32(end),
-            &ffi,
-            ds(),
-        )?;
-        Ok(())
+    pub fn fill_in_place<'a>(
+        &'a mut self,
+        begin: usize,
+        end: usize,
+        value: &'a Scalar,
+    ) -> FillInPlace<'a> {
+        FillInPlace {
+            col: self,
+            begin,
+            end,
+            value,
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Copies elements from `source[source_begin..source_end]` into `self`
     /// starting at `dest_begin`, in-place.
-    pub fn copy_range_in_place(
-        &mut self,
-        source: &ColumnView<'_>,
+    pub fn copy_range_in_place<'a>(
+        &'a mut self,
+        source: &'a ColumnView<'a>,
         source_begin: usize,
         source_end: usize,
         dest_begin: usize,
-    ) -> Result<()> {
-        cudf_sys::copying::ffi::copy_range_in_place(
-            self.0.pin_mut(),
-            source.0,
-            usize_to_i32(source_begin),
-            usize_to_i32(source_end),
-            usize_to_i32(dest_begin),
-            ds(),
-        )?;
-        Ok(())
+    ) -> CopyRangeInPlace<'a> {
+        CopyRangeInPlace {
+            col: self,
+            source,
+            source_begin,
+            source_end,
+            dest_begin,
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Converts this column's null mask to a BOOL8 column
     /// (true = valid, false = null). If no mask is present, returns all-true.
-    pub fn null_mask_to_bools(&self) -> Result<Column> {
-        let v = self.view();
-        let c = cudf_sys::ffi::null_mask_to_bools(v.0, ds())?;
-        Ok(Column(c))
+    pub fn null_mask_to_bools(&self) -> NullMaskToBools<'_> {
+        NullMaskToBools {
+            col: self,
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Sets this column's null mask from a BOOL8 column
     /// (true = valid, false = null).
-    pub fn set_null_mask_from_bools(&mut self, bools: &ColumnView<'_>) -> Result<()> {
-        cudf_sys::ffi::set_null_mask_from_bools(self.0.pin_mut(), bools.0, ds())?;
-        Ok(())
+    pub fn set_null_mask_from_bools<'a>(
+        &'a mut self,
+        bools: &'a ColumnView<'a>,
+    ) -> SetNullMaskFromBools<'a> {
+        SetNullMaskFromBools {
+            col: self,
+            bools,
+            stream: Stream::default_stream(),
+        }
     }
 
     /// Returns a copy of this column with a null mask from a BOOL8 validity column.
-    pub fn with_null_mask_from_bools(&self, validity: &ColumnView<'_>) -> Result<Column> {
-        let c = cudf_sys::ffi::column_with_null_mask_from_bools(&self.0, validity.0, ds())?;
-        Ok(Column(c))
+    pub fn with_null_mask_from_bools<'a>(
+        &'a self,
+        validity: &'a ColumnView<'a>,
+    ) -> WithNullMaskFromBools<'a> {
+        WithNullMaskFromBools {
+            col: self,
+            validity,
+            stream: Stream::default_stream(),
+        }
     }
 }
 
@@ -2044,12 +2679,14 @@ impl crate::stream::GpuOp for ColumnDistinctCount<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let null_policy = i32::from(self.include_nulls);
-        Ok(i32_to_usize(cudf_sys::compaction::ffi::distinct_count_column(
-            self.view.0,
-            null_policy,
-            self.nan_is_null,
-            self.stream.as_raw(),
-        )))
+        Ok(i32_to_usize(
+            cudf_sys::compaction::ffi::distinct_count_column(
+                self.view.0,
+                null_policy,
+                self.nan_is_null,
+                self.stream.as_raw(),
+            ),
+        ))
     }
 }
 
@@ -2071,12 +2708,14 @@ impl crate::stream::GpuOp for ColumnUniqueCount<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let null_policy = i32::from(self.include_nulls);
-        Ok(i32_to_usize(cudf_sys::compaction::ffi::unique_count_column(
-            self.view.0,
-            null_policy,
-            self.nan_is_null,
-            self.stream.as_raw(),
-        )))
+        Ok(i32_to_usize(
+            cudf_sys::compaction::ffi::unique_count_column(
+                self.view.0,
+                null_policy,
+                self.nan_is_null,
+                self.stream.as_raw(),
+            ),
+        ))
     }
 }
 
@@ -2309,64 +2948,105 @@ impl ColumnView<'_> {
     ///
     /// This copies all device data (values, null mask, child columns)
     /// into a new independently-owned [`Column`].
-    pub fn to_owned_column(&self) -> Result<Column> {
-        let c = cudf_sys::copying::ffi::copy_column(self.0, Stream::default_stream().as_raw())?;
-        Ok(Column(c))
+    pub fn to_owned_column(&self) -> ToOwnedColumn<'_> {
+        ToOwnedColumn {
+            view: self,
+            stream: Stream::default_stream(),
+        }
     }
 
     // -- Host data extraction (operates directly on view, no deep copy) --
 
     /// Copies the view data to host as `Vec<i8>`.
-    pub fn to_vec_i8(&self) -> Vec<i8> {
-        cudf_sys::ffi::view_to_host_i8(self.0, ds())
+    pub fn to_vec_i8(&self) -> ToVecI8<'_> {
+        ToVecI8 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<i16>`.
-    pub fn to_vec_i16(&self) -> Vec<i16> {
-        cudf_sys::ffi::view_to_host_i16(self.0, ds())
+    pub fn to_vec_i16(&self) -> ToVecI16<'_> {
+        ToVecI16 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<i32>`.
-    pub fn to_vec_i32(&self) -> Vec<i32> {
-        cudf_sys::ffi::view_to_host_i32(self.0, ds())
+    pub fn to_vec_i32(&self) -> ToVecI32<'_> {
+        ToVecI32 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<i64>`.
-    pub fn to_vec_i64(&self) -> Vec<i64> {
-        cudf_sys::ffi::view_to_host_i64(self.0, ds())
+    pub fn to_vec_i64(&self) -> ToVecI64<'_> {
+        ToVecI64 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<f32>`.
-    pub fn to_vec_f32(&self) -> Vec<f32> {
-        cudf_sys::ffi::view_to_host_f32(self.0, ds())
+    pub fn to_vec_f32(&self) -> ToVecF32<'_> {
+        ToVecF32 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<f64>`.
-    pub fn to_vec_f64(&self) -> Vec<f64> {
-        cudf_sys::ffi::view_to_host_f64(self.0, ds())
+    pub fn to_vec_f64(&self) -> ToVecF64<'_> {
+        ToVecF64 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<u8>`.
-    pub fn to_vec_u8(&self) -> Vec<u8> {
-        cudf_sys::ffi::view_to_host_u8(self.0, ds())
+    pub fn to_vec_u8(&self) -> ToVecU8<'_> {
+        ToVecU8 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<u16>`.
-    pub fn to_vec_u16(&self) -> Vec<u16> {
-        cudf_sys::ffi::view_to_host_u16(self.0, ds())
+    pub fn to_vec_u16(&self) -> ToVecU16<'_> {
+        ToVecU16 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<u32>`.
-    pub fn to_vec_u32(&self) -> Vec<u32> {
-        cudf_sys::ffi::view_to_host_u32(self.0, ds())
+    pub fn to_vec_u32(&self) -> ToVecU32<'_> {
+        ToVecU32 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<u64>`.
-    pub fn to_vec_u64(&self) -> Vec<u64> {
-        cudf_sys::ffi::view_to_host_u64(self.0, ds())
+    pub fn to_vec_u64(&self) -> ToVecU64<'_> {
+        ToVecU64 {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies the view data to host as `Vec<bool>`.
-    pub fn to_vec_bool(&self) -> Vec<bool> {
-        cudf_sys::ffi::view_to_host_bool(self.0, ds())
+    pub fn to_vec_bool(&self) -> ToVecBool<'_> {
+        ToVecBool {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Returns per-element validity as a host vector of bools.
-    pub fn null_mask_to_host(&self) -> Vec<bool> {
-        cudf_sys::ffi::view_null_mask_to_host(self.0, ds())
+    pub fn null_mask_to_host(&self) -> NullMaskToHost<'_> {
+        NullMaskToHost {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
     /// Copies string view data to a host vector of strings.
-    pub fn to_vec_string(&self) -> Vec<String> {
-        cudf_sys::strings::ffi::view_to_host_strings(self.0, ds())
+    pub fn to_vec_string(&self) -> ToVecString<'_> {
+        ToVecString {
+            view: self.0,
+            stream: Stream::default_stream(),
+        }
     }
 
     // -- Transform --
@@ -3075,31 +3755,35 @@ impl ColumnView<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stream::GpuOp;
 
     #[test]
     fn column_from_scalar_i32() {
         let s = Scalar::from_i32(7);
-        let col = Column::from_scalar(&s, 5);
+        let col = Column::from_scalar(&s, 5).call().unwrap();
         assert_eq!(col.len(), 5);
         assert_eq!(col.type_id(), TypeId::INT32);
         assert!(!col.has_nulls());
-        assert_eq!(col.to_vec_i32(), vec![7, 7, 7, 7, 7]);
+        assert_eq!(col.to_vec_i32().call().unwrap(), vec![7, 7, 7, 7, 7]);
     }
 
     #[test]
     fn column_from_scalar_f64() {
         let s = Scalar::from_f64(2.5);
-        let col = Column::from_scalar(&s, 3);
+        let col = Column::from_scalar(&s, 3).call().unwrap();
         assert_eq!(col.len(), 3);
-        assert_eq!(col.to_vec_f64(), vec![2.5, 2.5, 2.5]);
+        assert_eq!(col.to_vec_f64().call().unwrap(), vec![2.5, 2.5, 2.5]);
     }
 
     #[test]
     fn column_from_scalar_bool() {
         let s = Scalar::from_bool(true);
-        let col = Column::from_scalar(&s, 4);
+        let col = Column::from_scalar(&s, 4).call().unwrap();
         assert_eq!(col.len(), 4);
-        assert_eq!(col.to_vec_bool(), vec![true, true, true, true]);
+        assert_eq!(
+            col.to_vec_bool().call().unwrap(),
+            vec![true, true, true, true]
+        );
     }
 
     #[test]
@@ -3113,7 +3797,7 @@ mod tests {
     #[test]
     fn column_view_matches() {
         let s = Scalar::from_i32(10);
-        let col = Column::from_scalar(&s, 3);
+        let col = Column::from_scalar(&s, 3).call().unwrap();
         let view = col.view();
         assert_eq!(view.len(), 3);
         assert_eq!(view.type_id(), TypeId::INT32);
@@ -3123,63 +3807,70 @@ mod tests {
     #[test]
     fn column_null_mask() {
         let s = Scalar::from_i32(42);
-        let col = Column::from_scalar(&s, 3);
-        let mask = col.null_mask_to_host();
+        let col = Column::from_scalar(&s, 3).call().unwrap();
+        let mask = col.null_mask_to_host().call().unwrap();
         assert_eq!(mask, vec![true, true, true]);
     }
 
     #[test]
     fn column_from_slice_i32() {
-        let col = Column::from_slice_i32(&[10, 20, 30]);
+        let col = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
         assert_eq!(col.len(), 3);
         assert_eq!(col.type_id(), TypeId::INT32);
-        assert_eq!(col.to_vec_i32(), vec![10, 20, 30]);
+        assert_eq!(col.to_vec_i32().call().unwrap(), vec![10, 20, 30]);
     }
 
     #[test]
     fn column_from_slice_i64() {
-        let col = Column::from_slice_i64(&[100, 200, 300]);
+        let col = Column::from_slice_i64(&[100, 200, 300]).call().unwrap();
         assert_eq!(col.len(), 3);
         assert_eq!(col.type_id(), TypeId::INT64);
-        assert_eq!(col.to_vec_i64(), vec![100, 200, 300]);
+        assert_eq!(col.to_vec_i64().call().unwrap(), vec![100, 200, 300]);
     }
 
     #[test]
     fn column_from_slice_f64() {
-        let col = Column::from_slice_f64(&[1.5, 2.5, 3.5]);
+        let col = Column::from_slice_f64(&[1.5, 2.5, 3.5]).call().unwrap();
         assert_eq!(col.len(), 3);
         assert_eq!(col.type_id(), TypeId::FLOAT64);
-        assert_eq!(col.to_vec_f64(), vec![1.5, 2.5, 3.5]);
+        assert_eq!(col.to_vec_f64().call().unwrap(), vec![1.5, 2.5, 3.5]);
     }
 
     #[test]
     fn column_from_slice_bool() {
-        let col = Column::from_slice_bool(&[true, false, true]);
+        let col = Column::from_slice_bool(&[true, false, true])
+            .call()
+            .unwrap();
         assert_eq!(col.len(), 3);
         assert_eq!(col.type_id(), TypeId::BOOL8);
-        assert_eq!(col.to_vec_bool(), vec![true, false, true]);
+        assert_eq!(col.to_vec_bool().call().unwrap(), vec![true, false, true]);
     }
 
     #[test]
     fn column_from_strings() {
-        let col = Column::from_strings(&["hello", "world"]);
+        let col = Column::from_strings(&["hello", "world"]).call().unwrap();
         assert_eq!(col.len(), 2);
         assert_eq!(col.type_id(), TypeId::STRING);
-        assert_eq!(col.to_vec_string(), vec!["hello", "world"]);
+        assert_eq!(col.to_vec_string().call().unwrap(), vec!["hello", "world"]);
     }
 
     #[test]
     fn column_from_timestamps_s() {
-        let col = Column::from_timestamps_s(&[1704067200, 1718443845]);
+        let col = Column::from_timestamps_s(&[1704067200, 1718443845])
+            .call()
+            .unwrap();
         assert_eq!(col.len(), 2);
         assert_eq!(col.type_id(), TypeId::TIMESTAMP_SECONDS);
-        assert_eq!(col.to_vec_i64(), vec![1704067200, 1718443845]);
+        assert_eq!(
+            col.to_vec_i64().call().unwrap(),
+            vec![1704067200, 1718443845]
+        );
     }
 
     #[test]
     fn column_null_scalar() {
         let s = Scalar::null_i32();
-        let col = Column::from_scalar(&s, 3);
+        let col = Column::from_scalar(&s, 3).call().unwrap();
         assert_eq!(col.len(), 3);
         assert!(col.has_nulls());
         assert_eq!(col.null_count(), 3);
@@ -3187,21 +3878,21 @@ mod tests {
 
     #[test]
     fn column_nullable() {
-        let col = Column::from_slice_i32(&[1, 2, 3]);
+        let col = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
         // from_slice creates non-nullable columns
         assert!(!col.has_nulls());
     }
 
     #[test]
     fn column_view_offset() {
-        let col = Column::from_slice_i32(&[1, 2, 3]);
+        let col = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
         assert_eq!(col.view().offset(), 0);
     }
 
     #[test]
     fn column_to_vec_f32() {
         let s = Scalar::from_f32(1.5);
-        let col = Column::from_scalar(&s, 2);
-        assert_eq!(col.to_vec_f32(), vec![1.5, 1.5]);
+        let col = Column::from_scalar(&s, 2).call().unwrap();
+        assert_eq!(col.to_vec_f32().call().unwrap(), vec![1.5, 1.5]);
     }
 }

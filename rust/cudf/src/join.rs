@@ -14,8 +14,8 @@ mod tests {
 
     /// Helper to build a two-column table from i32 slices.
     fn make_two_col_table(keys: &[i32], vals: &[i32]) -> Table {
-        let key_col = Column::from_slice_i32(keys);
-        let val_col = Column::from_slice_i32(vals);
+        let key_col = Column::from_slice_i32(keys).call().unwrap();
+        let val_col = Column::from_slice_i32(vals).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(key_col);
         builder.push_column(val_col);
@@ -156,10 +156,10 @@ mod tests {
 
     #[test]
     fn inner_join_with_f64_values() {
-        let key_left = Column::from_slice_i32(&[1, 2, 3]);
-        let val_left = Column::from_slice_f64(&[1.1, 2.2, 3.3]);
-        let key_right = Column::from_slice_i32(&[2, 3, 4]);
-        let val_right = Column::from_slice_f64(&[20.0, 30.0, 40.0]);
+        let key_left = Column::from_slice_i32(&[1, 2, 3]).call().unwrap();
+        let val_left = Column::from_slice_f64(&[1.1, 2.2, 3.3]).call().unwrap();
+        let key_right = Column::from_slice_i32(&[2, 3, 4]).call().unwrap();
+        let val_right = Column::from_slice_f64(&[20.0, 30.0, 40.0]).call().unwrap();
 
         let mut lb = TableBuilder::new();
         lb.push_column(key_left);

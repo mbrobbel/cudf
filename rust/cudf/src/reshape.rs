@@ -60,20 +60,20 @@ mod tests {
 
     #[test]
     fn interleave_basic() {
-        let c1 = Col::from_slice_i32(&[1, 2, 3]);
-        let c2 = Col::from_slice_i32(&[4, 5, 6]);
+        let c1 = Col::from_slice_i32(&[1, 2, 3]).call().unwrap();
+        let c2 = Col::from_slice_i32(&[4, 5, 6]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);
         let table = builder.build().unwrap();
         let result = table.interleave_columns().call().unwrap();
         assert_eq!(result.len(), 6);
-        assert_eq!(result.to_vec_i32(), vec![1, 4, 2, 5, 3, 6]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![1, 4, 2, 5, 3, 6]);
     }
 
     #[test]
     fn tile_basic() {
-        let c1 = Col::from_slice_i32(&[1, 2, 3]);
+        let c1 = Col::from_slice_i32(&[1, 2, 3]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();

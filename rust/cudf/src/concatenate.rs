@@ -93,20 +93,20 @@ mod tests {
 
     #[test]
     fn concat_two_columns() {
-        let c1 = Col::from_scalar(&Scalar::from_i32(1), 2);
-        let c2 = Col::from_scalar(&Scalar::from_i32(3), 2);
+        let c1 = Col::from_scalar(&Scalar::from_i32(1), 2).call().unwrap();
+        let c2 = Col::from_scalar(&Scalar::from_i32(3), 2).call().unwrap();
         let result = concatenate_columns(&[&c1.view(), &c2.view()])
             .call()
             .unwrap();
         assert_eq!(result.len(), 4);
         assert_eq!(result.type_id(), TypeId::INT32);
-        assert_eq!(result.to_vec_i32(), vec![1, 1, 3, 3]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![1, 1, 3, 3]);
     }
 
     #[test]
     fn concat_two_tables() {
-        let c1 = Col::from_scalar(&Scalar::from_i32(1), 2);
-        let c2 = Col::from_scalar(&Scalar::from_i32(3), 2);
+        let c1 = Col::from_scalar(&Scalar::from_i32(1), 2).call().unwrap();
+        let c2 = Col::from_scalar(&Scalar::from_i32(3), 2).call().unwrap();
         let mut b1 = TableBuilder::new();
         b1.push_column(c1);
         let t1 = b1.build().unwrap();
@@ -120,12 +120,12 @@ mod tests {
 
     #[test]
     fn concat_empty_column() {
-        let c1 = Col::from_scalar(&Scalar::from_i32(1), 3);
+        let c1 = Col::from_scalar(&Scalar::from_i32(1), 3).call().unwrap();
         let c2 = Col::empty(TypeId::INT32);
         let result = concatenate_columns(&[&c1.view(), &c2.view()])
             .call()
             .unwrap();
         assert_eq!(result.len(), 3);
-        assert_eq!(result.to_vec_i32(), vec![1, 1, 1]);
+        assert_eq!(result.to_vec_i32().call().unwrap(), vec![1, 1, 1]);
     }
 }

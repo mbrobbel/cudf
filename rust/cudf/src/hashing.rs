@@ -15,8 +15,8 @@ mod tests {
     use crate::table::{Table, TableBuilder};
 
     fn make_test_table() -> Table {
-        let c1 = Col::from_slice_i32(&[1, 2, 3]);
-        let c2 = Col::from_slice_i32(&[4, 5, 6]);
+        let c1 = Col::from_slice_i32(&[1, 2, 3]).call().unwrap();
+        let c2 = Col::from_slice_i32(&[4, 5, 6]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         builder.push_column(c2);
@@ -46,33 +46,36 @@ mod tests {
         let table = make_test_table();
         let h1 = table.murmur3(42).call().unwrap();
         let h2 = table.murmur3(42).call().unwrap();
-        assert_eq!(h1.to_vec_i32(), h2.to_vec_i32());
+        assert_eq!(
+            h1.to_vec_i32().call().unwrap(),
+            h2.to_vec_i32().call().unwrap()
+        );
     }
 
     #[test]
     fn md5_basic() {
-        let c = Col::from_scalar(&Scalar::from_i32(42), 2);
+        let c = Col::from_scalar(&Scalar::from_i32(42), 2).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c);
         let table = builder.build().unwrap();
         let hashes = table.md5().call().unwrap();
         assert_eq!(hashes.len(), 2);
         assert_eq!(hashes.type_id(), TypeId::STRING);
-        let strings = hashes.to_vec_string();
+        let strings = hashes.to_vec_string().call().unwrap();
         assert_eq!(strings[0].len(), 32);
         assert_eq!(strings[0], strings[1]);
     }
 
     #[test]
     fn sha256_basic() {
-        let c = Col::from_scalar(&Scalar::from_i32(1), 2);
+        let c = Col::from_scalar(&Scalar::from_i32(1), 2).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c);
         let table = builder.build().unwrap();
         let hashes = table.sha256().call().unwrap();
         assert_eq!(hashes.len(), 2);
         assert_eq!(hashes.type_id(), TypeId::STRING);
-        let strings = hashes.to_vec_string();
+        let strings = hashes.to_vec_string().call().unwrap();
         assert_eq!(strings[0].len(), 64);
         assert_eq!(strings[0], strings[1]);
     }

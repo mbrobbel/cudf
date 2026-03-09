@@ -14,7 +14,7 @@ mod tests {
 
     #[test]
     fn hash_partition_basic() {
-        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
+        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
@@ -25,7 +25,7 @@ mod tests {
 
     #[test]
     fn hash_partition_offsets_basic() {
-        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
+        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
@@ -35,7 +35,7 @@ mod tests {
 
     #[test]
     fn round_robin_basic() {
-        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
+        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();
@@ -46,7 +46,7 @@ mod tests {
 
     #[test]
     fn round_robin_offsets_basic() {
-        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]);
+        let c1 = Col::from_slice_i32(&[1, 2, 3, 4, 5, 6]).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c1);
         let table = builder.build().unwrap();

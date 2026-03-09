@@ -20,8 +20,8 @@ mod tests {
 
     /// Helper to build a two-column table: keys (i32) and values (i32).
     fn make_kv_table(keys: &[i32], values: &[i32]) -> Table {
-        let key_col = Column::from_slice_i32(keys);
-        let val_col = Column::from_slice_i32(values);
+        let key_col = Column::from_slice_i32(keys).call().unwrap();
+        let val_col = Column::from_slice_i32(values).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(key_col);
         builder.push_column(val_col);
@@ -30,17 +30,32 @@ mod tests {
 
     fn col_to_host_i32(tbl: &Table, col_idx: usize) -> Vec<i32> {
         let view = tbl.column(col_idx).unwrap();
-        view.cast(TypeId::INT32).call().unwrap().to_vec_i32()
+        view.cast(TypeId::INT32)
+            .call()
+            .unwrap()
+            .to_vec_i32()
+            .call()
+            .unwrap()
     }
 
     fn col_to_host_i64(tbl: &Table, col_idx: usize) -> Vec<i64> {
         let view = tbl.column(col_idx).unwrap();
-        view.cast(TypeId::INT64).call().unwrap().to_vec_i64()
+        view.cast(TypeId::INT64)
+            .call()
+            .unwrap()
+            .to_vec_i64()
+            .call()
+            .unwrap()
     }
 
     fn col_to_host_f64(tbl: &Table, col_idx: usize) -> Vec<f64> {
         let view = tbl.column(col_idx).unwrap();
-        view.cast(TypeId::FLOAT64).call().unwrap().to_vec_f64()
+        view.cast(TypeId::FLOAT64)
+            .call()
+            .unwrap()
+            .to_vec_f64()
+            .call()
+            .unwrap()
     }
 
     fn sorted_kv_i32(result: &Table) -> (Vec<i32>, Vec<i32>) {
