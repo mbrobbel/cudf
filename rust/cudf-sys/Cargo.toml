@@ -15,6 +15,7 @@ cxx = { workspace = true }
 rmm-sys = { path = "../rmm-sys" }
 
 [build-dependencies]
+cc = { version = "1.2", features = ["parallel"] }
 cxx-build = { workspace = true }
 cmake = { workspace = true, optional = true }
 
