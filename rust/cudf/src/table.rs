@@ -2229,7 +2229,10 @@ impl crate::stream::GpuOp for ToDlpack<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        Ok(cudf_sys::io::ffi::to_dlpack(&self.table.0, self.stream.as_raw()))
+        Ok(cudf_sys::io::ffi::to_dlpack(
+            &self.table.0,
+            self.stream.as_raw(),
+        ))
     }
 }
 
@@ -4165,7 +4168,12 @@ impl Table {
         }
     }
 
-    /// Segmented sort by key.
+    /// Sorts this (values) table by a separate `keys` table within each
+    /// segment defined by `segment_offsets`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn segmented_sort_by_key<'a>(
         &'a self,
         keys: &'a Table,
@@ -4183,7 +4191,12 @@ impl Table {
         }
     }
 
-    /// Stable segmented sort by key.
+    /// Stable version of [`segmented_sort_by_key`](Self::segmented_sort_by_key),
+    /// preserving the relative order of equal elements within each segment.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn stable_segmented_sort_by_key<'a>(
         &'a self,
         keys: &'a Table,
@@ -4333,6 +4346,18 @@ impl Table {
     // -- Explode --
 
     /// Explodes a list column, expanding each list element into its own row.
+    ///
+    /// `column_idx` is the zero-based index of a `LIST`-type column. Each
+    /// list element becomes a separate row, with all other columns
+    /// duplicated accordingly. Empty lists produce no output rows.
+    ///
+    /// See also [`explode_outer`](Self::explode_outer) to keep empty/null
+    /// list rows as null rows.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `column_idx` is out of bounds, the column is
+    /// not a list type, or a GPU error occurs.
     pub fn explode(&self, column_idx: usize) -> Explode<'_> {
         Explode {
             table: self,
@@ -4341,7 +4366,14 @@ impl Table {
         }
     }
 
-    /// Explodes a list column with a position column added.
+    /// Explodes a list column like [`explode`](Self::explode), and adds an
+    /// extra `INT32` column at the front containing the zero-based position
+    /// of each element within its original list.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `column_idx` is out of bounds, the column is
+    /// not a list type, or a GPU error occurs.
     pub fn explode_position(&self, column_idx: usize) -> ExplodePosition<'_> {
         ExplodePosition {
             table: self,
@@ -4350,7 +4382,13 @@ impl Table {
         }
     }
 
-    /// Explodes a list column, keeping null/empty list rows as null rows.
+    /// Explodes a list column like [`explode`](Self::explode), but preserves
+    /// rows with null or empty lists by emitting a single null row for each.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `column_idx` is out of bounds, the column is
+    /// not a list type, or a GPU error occurs.
     pub fn explode_outer(&self, column_idx: usize) -> ExplodeOuter<'_> {
         ExplodeOuter {
             table: self,
@@ -4359,7 +4397,14 @@ impl Table {
         }
     }
 
-    /// Explode outer with position column.
+    /// Combines [`explode_outer`](Self::explode_outer) and
+    /// [`explode_position`](Self::explode_position): keeps null/empty list
+    /// rows and adds an element-position column.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `column_idx` is out of bounds, the column is
+    /// not a list type, or a GPU error occurs.
     pub fn explode_outer_position(&self, column_idx: usize) -> ExplodeOuterPosition<'_> {
         ExplodeOuterPosition {
             table: self,
@@ -4396,7 +4441,16 @@ impl Table {
         }
     }
 
-    /// Compute the cross join (Cartesian product) with another table.
+    /// Computes the cross join (Cartesian product) of this table with
+    /// `right`.
+    ///
+    /// The output table has `self.len() * right.len()` rows and
+    /// `self.columns_len() + right.columns_len()` columns (all left
+    /// columns followed by all right columns).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn cross_join<'a>(&'a self, right: &'a Table) -> CrossJoin<'a> {
         CrossJoin {
             table: self,
@@ -4405,7 +4459,16 @@ impl Table {
         }
     }
 
-    /// Partitions the table by a map column that assigns each row to a partition.
+    /// Partitions the table using a `partition_map` column that assigns each
+    /// row to a partition.
+    ///
+    /// `partition_map` is an integer column with values in
+    /// `[0, num_partitions)`. The output table has rows reordered so that
+    /// each partition's rows are contiguous.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn partition_by_map<'a>(
         &'a self,
         partition_map: &'a ColumnView<'a>,
@@ -4419,7 +4482,15 @@ impl Table {
         }
     }
 
-    /// Returns partition offsets for partition-by-map.
+    /// Returns partition boundary offsets for
+    /// [`partition_by_map`](Self::partition_by_map).
+    ///
+    /// The returned `Vec<usize>` has `num_partitions` elements. Element `i`
+    /// is the starting row index of partition `i` in the reordered table.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn partition_by_map_offsets<'a>(
         &'a self,
         partition_map: &'a ColumnView<'a>,
@@ -4435,7 +4506,13 @@ impl Table {
 
     /// Counts the number of distinct rows in this table.
     ///
-    /// `nulls_equal`: if true, all nulls are considered equal (count as one distinct value).
+    /// If `nulls_equal` is `true`, all null rows are considered equal and
+    /// count as a single distinct value. If `false`, each null row is
+    /// treated as unique.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn distinct_count(&self, nulls_equal: bool) -> DistinctCount<'_> {
         DistinctCount {
             table: self,
@@ -4446,8 +4523,14 @@ impl Table {
 
     // -- Bitmask combining --
 
-    /// Bitwise AND of all column null masks. Returns a BOOL8 column where
-    /// `true` means the row is valid in ALL columns.
+    /// Computes the bitwise AND of all column null masks.
+    ///
+    /// Returns a `BOOL8` [`Column`] where `true` means the row is valid
+    /// (non-null) in **all** columns.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn bitmask_and_to_bools(&self) -> BitmaskAndToBools<'_> {
         BitmaskAndToBools {
             table: self,
@@ -4455,8 +4538,14 @@ impl Table {
         }
     }
 
-    /// Bitwise OR of all column null masks. Returns a BOOL8 column where
-    /// `true` means the row is valid in ANY column.
+    /// Computes the bitwise OR of all column null masks.
+    ///
+    /// Returns a `BOOL8` [`Column`] where `true` means the row is valid
+    /// (non-null) in **at least one** column.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn bitmask_or_to_bools(&self) -> BitmaskOrToBools<'_> {
         BitmaskOrToBools {
             table: self,
@@ -4467,6 +4556,18 @@ impl Table {
     // -- Groupby scan/shift/replace_nulls --
 
     /// Performs cumulative (scan) aggregation within groups.
+    ///
+    /// Groups are defined by `key_columns`. For each group, a running
+    /// aggregation is computed over the `value_columns` using the
+    /// corresponding `aggs`. The output table has the same number of rows
+    /// as the input, with key columns followed by the scan result columns.
+    ///
+    /// `value_columns` and `aggs` must have the same length.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `value_columns` and `aggs` differ in length, or
+    /// a GPU error occurs.
     pub fn groupby_scan<'a>(
         &'a self,
         key_columns: &'a [i32],
@@ -4482,7 +4583,21 @@ impl Table {
         }
     }
 
-    /// Shifts values within groups by specified offsets, filling with scalars.
+    /// Shifts values within groups by specified offsets, filling vacated
+    /// positions with scalars.
+    ///
+    /// Groups are defined by `key_columns`. For each `value_columns[i]`,
+    /// values are shifted by `offsets[i]` positions within each group.
+    /// Positive offsets shift forward (creating fill values at the start);
+    /// negative offsets shift backward. `fill_values[i]` provides the
+    /// fill scalar for the vacated positions in `value_columns[i]`.
+    ///
+    /// All four slices (`value_columns`, `offsets`, `fill_values`) must
+    /// have the same length.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn groupby_shift<'a>(
         &'a self,
         key_columns: &'a [i32],
@@ -4502,8 +4617,37 @@ impl Table {
 
     /// Replaces null values within groups using forward or backward fill.
     ///
-    /// `policies` should be 0 (PRECEDING/forward) or 1 (FOLLOWING/backward)
-    /// for each value column.
+    /// Groups are defined by `key_columns`. For each column index in
+    /// `value_columns`, the corresponding entry in `policies` determines
+    /// the fill direction: `0` fills forward (PRECEDING -- propagates the
+    /// last non-null value), `1` fills backward (FOLLOWING -- propagates
+    /// the next non-null value).
+    ///
+    /// The output table contains the key columns followed by the
+    /// null-replaced value columns.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::column::Column;
+    /// use cudf::stream::GpuOp;
+    /// use cudf::table::TableBuilder;
+    ///
+    /// let keys = Column::from_slice_i32(&[1, 1, 1, 2, 2]).call()?;
+    /// let vals = Column::from_slice_i32(&[10, 0, 30, 0, 50]).call()?;
+    /// let mut b = TableBuilder::new();
+    /// b.push_column(keys);
+    /// b.push_column(vals);
+    /// let tbl = b.build()?;
+    ///
+    /// // Forward-fill nulls within each group
+    /// let result = tbl.groupby_replace_nulls(&[0], &[1], &[0]).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
     pub fn groupby_replace_nulls<'a>(
         &'a self,
         key_columns: &'a [i32],
@@ -4576,10 +4720,34 @@ impl Table {
 
     // -- Approximate distinct count --
 
-    /// Estimates the approximate number of distinct rows using `HyperLogLog`.
+    /// Estimates the approximate number of distinct rows using the
+    /// `HyperLogLog++` algorithm.
     ///
-    /// `precision` controls accuracy vs memory (4-18, default 12).
-    /// Standard error ≈ 1.04 / sqrt(2^precision).
+    /// `precision` controls accuracy versus memory usage and must be in
+    /// the range 4..=18 (a typical default is 12). The standard error is
+    /// approximately `1.04 / sqrt(2^precision)`, so higher precision
+    /// gives a more accurate estimate at the cost of more memory.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::column::Column;
+    /// use cudf::stream::GpuOp;
+    /// use cudf::table::TableBuilder;
+    ///
+    /// let col = Column::from_slice_i32(&[1, 2, 3, 1, 2]).call()?;
+    /// let mut b = TableBuilder::new();
+    /// b.push_column(col);
+    /// let tbl = b.build()?;
+    ///
+    /// let approx = tbl.approx_distinct_count(12).call()?;
+    /// assert!(approx >= 2); // at least close to 3 distinct values
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the libcudf call fails.
     pub fn approx_distinct_count(&self, precision: i32) -> ApproxDistinctCount<'_> {
         ApproxDistinctCount {
             table: self,
@@ -4588,24 +4756,45 @@ impl Table {
         }
     }
 
-    /// Returns true if this table contains any nested columns (LIST, STRUCT).
+    /// Returns `true` if any column in this table has a nested data type
+    /// ([`LIST`](crate::data_type::TypeId::LIST) or
+    /// [`STRUCT`](crate::data_type::TypeId::STRUCT)).
+    ///
+    /// This is a metadata check and does not launch GPU work.
     pub fn has_nested_columns(&self) -> bool {
         cudf_sys::ffi::table_has_nested_columns(&self.0)
     }
 
-    /// Returns true if any nested column in this table has null values.
+    /// Returns `true` if any nested (child) column within this table
+    /// contains null values.
+    ///
+    /// Only inspects children of `LIST` and `STRUCT` columns; top-level
+    /// nulls are not considered. This is a metadata check and does not
+    /// launch GPU work.
     pub fn has_nested_nulls(&self) -> bool {
         cudf_sys::ffi::table_has_nested_nulls(&self.0)
     }
 
-    /// Returns true if any nested column in this table is nullable.
+    /// Returns `true` if any nested (child) column within this table has
+    /// a null mask allocated (i.e., is nullable), regardless of whether it
+    /// actually contains null values.
+    ///
+    /// This is a metadata check and does not launch GPU work.
     pub fn has_nested_nullable_columns(&self) -> bool {
         cudf_sys::ffi::table_has_nested_nullable_columns(&self.0)
     }
 
     /// Creates a table from a `DLPack` `DLManagedTensor` pointer.
     ///
-    /// The `managed_tensor_ptr` must point to a valid `DLManagedTensor`.
+    /// `managed_tensor_ptr` is a raw pointer (passed as `usize`) to a
+    /// valid `DLManagedTensor`. The tensor's data must reside on a CUDA
+    /// device. Ownership of the tensor is transferred to libcudf, which
+    /// will call the tensor's deleter when it is no longer needed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the tensor format is unsupported or if a GPU
+    /// error occurs.
     pub fn from_dlpack(managed_tensor_ptr: usize) -> FromDlpack {
         FromDlpack {
             managed_tensor_ptr,
@@ -4615,9 +4804,15 @@ impl Table {
 
     /// Converts this table into a `DLPack` `DLManagedTensor` pointer.
     ///
-    /// All columns must have the same numeric type and zero null count.
-    /// Returns the pointer as `usize`; the caller is responsible for calling
-    /// the `DLManagedTensor`'s `deleter` to free it.
+    /// All columns must have the same numeric data type and a null count
+    /// of zero. The returned `usize` is a raw pointer to a newly
+    /// allocated `DLManagedTensor`; the caller is responsible for
+    /// eventually calling the tensor's `deleter` function to free it.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the columns have different types, contain
+    /// nulls, or if a GPU error occurs.
     pub fn to_dlpack(&self) -> ToDlpack<'_> {
         ToDlpack {
             table: self,
@@ -4625,9 +4820,16 @@ impl Table {
         }
     }
 
-    /// Concatenates all columns in this table into a single column.
+    /// Concatenates all columns in this table into a single [`Column`],
+    /// stacking them end-to-end in column-index order.
     ///
-    /// All columns must have the same data type.
+    /// All columns must have the same data type. The resulting column has
+    /// `self.len() * self.columns_len()` rows.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the columns have different data types or if a
+    /// GPU error occurs.
     pub fn concatenate_columns(&self) -> ConcatenateTableColumns<'_> {
         ConcatenateTableColumns {
             table: self,
@@ -4637,7 +4839,40 @@ impl Table {
 
     /// Concatenates two tables vertically (row-wise append).
     ///
-    /// Both tables must have the same number of columns with matching types.
+    /// `other` is appended below `self`. Both tables must have the same
+    /// number of columns, and corresponding columns must have matching
+    /// data types. The resulting table has `self.len() + other.len()`
+    /// rows.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::column::Column;
+    /// use cudf::stream::GpuOp;
+    /// use cudf::table::TableBuilder;
+    ///
+    /// let c1 = Column::from_slice_i32(&[1, 2]).call()?;
+    /// let c2 = Column::from_slice_i32(&[3, 4]).call()?;
+    /// let t1 = {
+    ///     let mut b = TableBuilder::new();
+    ///     b.push_column(c1);
+    ///     b.build()?
+    /// };
+    /// let t2 = {
+    ///     let mut b = TableBuilder::new();
+    ///     b.push_column(c2);
+    ///     b.build()?
+    /// };
+    ///
+    /// let combined = t1.concatenate(&t2).call()?;
+    /// assert_eq!(combined.len(), 4);
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the tables have different column counts or
+    /// mismatched column types, or if a GPU error occurs.
     pub fn concatenate<'a>(&'a self, other: &'a Table) -> ConcatenateWith<'a> {
         ConcatenateWith {
             table: self,
@@ -4647,7 +4882,29 @@ impl Table {
     }
 }
 
-/// An iterator over the columns of a [`Table`].
+/// An iterator over the columns of a [`Table`], yielding
+/// [`ColumnView`]s in index order.
+///
+/// Created by [`Table::columns`]. Implements [`ExactSizeIterator`], so
+/// [`ExactSizeIterator::len`] returns the number of remaining columns.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::column::Column;
+/// use cudf::stream::GpuOp;
+/// use cudf::table::TableBuilder;
+///
+/// let c = Column::from_slice_i32(&[1, 2, 3]).call()?;
+/// let mut b = TableBuilder::new();
+/// b.push_column(c);
+/// let tbl = b.build()?;
+///
+/// for col_view in tbl.columns() {
+///     assert_eq!(col_view.len(), 3);
+/// }
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub struct Columns<'a> {
     table: &'a Table,
     index: usize,
@@ -4677,6 +4934,33 @@ impl<'a> Iterator for Columns<'a> {
 impl ExactSizeIterator for Columns<'_> {}
 
 /// A builder for constructing a [`Table`] from individual [`Column`]s.
+///
+/// Columns are added one at a time via [`push_column`](Self::push_column),
+/// which transfers ownership of each [`Column`]'s GPU memory to the
+/// builder. When all columns have been added, call
+/// [`build`](Self::build) to produce the final [`Table`].
+///
+/// All columns must have the same row count; `build` will return an
+/// error if they do not.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::column::Column;
+/// use cudf::stream::GpuOp;
+/// use cudf::table::TableBuilder;
+///
+/// let c1 = Column::from_slice_i32(&[1, 2, 3]).call()?;
+/// let c2 = Column::from_slice_f64(&[1.0, 2.0, 3.0]).call()?;
+/// let mut builder = TableBuilder::new();
+/// builder.push_column(c1);
+/// builder.push_column(c2);
+/// let table = builder.build()?;
+///
+/// assert_eq!(table.len(), 3);
+/// assert_eq!(table.columns_len(), 2);
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
 pub struct TableBuilder(UniquePtr<cudf_sys::ffi::TableBuilder>);
 
 impl Default for TableBuilder {
@@ -4686,17 +4970,25 @@ impl Default for TableBuilder {
 }
 
 impl TableBuilder {
-    /// Creates a new empty builder.
+    /// Creates a new, empty `TableBuilder` with no columns.
     pub fn new() -> Self {
         Self(cudf_sys::ffi::new_table_builder())
     }
 
-    /// Adds a column to the builder, transferring ownership.
+    /// Appends `col` to this builder, transferring ownership of the
+    /// column's GPU memory. The column must have the same row count as
+    /// any columns previously added (enforced by [`build`](Self::build)).
     pub fn push_column(&mut self, col: Column) {
         cudf_sys::ffi::table_builder_add_column(self.0.pin_mut(), col.0);
     }
 
-    /// Consumes the builder and returns a [`Table`].
+    /// Consumes the builder and returns a [`Table`] owning all added
+    /// columns.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the columns have mismatched row counts or if
+    /// a GPU error occurs.
     pub fn build(mut self) -> crate::Result<Table> {
         let tbl = cudf_sys::ffi::table_builder_build(self.0.pin_mut())?;
         Ok(Table(tbl))
