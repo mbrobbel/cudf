@@ -153,4 +153,12 @@ std::unique_ptr<Column> segmented_reduce(cudf::column_view const& col, cudf::col
       DT(output_type_id), ENUM<cudf::null_policy>(null_handling), S(stream)));
 }
 
+std::unique_ptr<Column> segmented_reduce_with_init(cudf::column_view const& col, cudf::column_view const& offsets, int32_t agg_kind, int32_t ddof, int32_t output_type_id, int32_t null_handling, Scalar const& init, std::size_t stream) {
+  auto const* offsets_data = offsets.data<cudf::size_type>();
+  auto offsets_span = cudf::device_span<cudf::size_type const>(offsets_data, offsets.size());
+  return COL(cudf::segmented_reduce(col, offsets_span, *make_segmented_reduce_agg(agg_kind, ddof),
+      DT(output_type_id), ENUM<cudf::null_policy>(null_handling),
+      std::optional<std::reference_wrapper<cudf::scalar const>>{init.inner()}, S(stream)));
+}
+
 }  // namespace cudf_sys

@@ -3,8 +3,13 @@
 
 //! Rolling window aggregation operations.
 
+use cxx::UniquePtr;
+
 use crate::column::{Column, ColumnView};
+use crate::data_type::TypeId;
 use crate::error::Result;
+use crate::scalar::Scalar;
+use crate::sorting::Order;
 use crate::stream::Stream;
 use crate::table::Table;
 use cudf_sys::ffi::AggregationKind;
@@ -254,5 +259,117 @@ impl<'a> ColumnView<'a> {
             agg_kind,
             stream: Stream::default_stream(),
         }
+    }
+
+    /// Grouped range-based rolling window aggregation.
+    ///
+    /// Uses a range of values in `orderby` (rather than a fixed row count) to
+    /// define the window around each element.
+    ///
+    /// Returns a [`GroupedRangeRollingWindow`] builder. Use `.stream()` to set
+    /// a custom CUDA stream, then `.call()` to execute.
+    pub fn grouped_range_rolling_window(
+        &'a self,
+        group_keys: &'a Table,
+        orderby: &'a ColumnView<'a>,
+        order: Order,
+        preceding: &'a RangeWindowBounds,
+        following: &'a RangeWindowBounds,
+        min_periods: i32,
+        agg_kind: AggregationKind,
+    ) -> GroupedRangeRollingWindow<'a> {
+        GroupedRangeRollingWindow {
+            view: self,
+            group_keys,
+            orderby,
+            order,
+            preceding,
+            following,
+            min_periods,
+            agg_kind,
+            stream: Stream::default_stream(),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Range window bounds
+// ---------------------------------------------------------------------------
+
+/// Defines the bounds for a range-based rolling window.
+///
+/// Created via the factory methods [`bounded`](RangeWindowBounds::bounded),
+/// [`current_row`](RangeWindowBounds::current_row), or
+/// [`unbounded`](RangeWindowBounds::unbounded).
+#[doc(alias = "range_window_bounds")]
+pub struct RangeWindowBounds(UniquePtr<cudf_sys::rolling::ffi::RangeWindowBounds>);
+
+impl RangeWindowBounds {
+    /// Creates bounded range window bounds from a scalar value.
+    pub fn bounded(boundary: &Scalar) -> Result<Self> {
+        let ffi = crate::scalar::scalar_to_ffi(boundary);
+        let b = cudf_sys::rolling::ffi::range_window_bounds_get(
+            &ffi,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Self(b))
+    }
+
+    /// Creates range window bounds matching the current row.
+    pub fn current_row(type_id: TypeId) -> Result<Self> {
+        let b = cudf_sys::rolling::ffi::range_window_bounds_current_row(
+            type_id.repr,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Self(b))
+    }
+
+    /// Creates unbounded range window bounds (extends to the entire group).
+    pub fn unbounded(type_id: TypeId) -> Result<Self> {
+        let b = cudf_sys::rolling::ffi::range_window_bounds_unbounded(
+            type_id.repr,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Self(b))
+    }
+}
+
+/// Builder for a grouped range-based rolling window aggregation.
+///
+/// Created by [`ColumnView::grouped_range_rolling_window`].
+/// Call [`.call()`](GroupedRangeRollingWindow::call) to execute.
+pub struct GroupedRangeRollingWindow<'a> {
+    view: &'a ColumnView<'a>,
+    group_keys: &'a Table,
+    orderby: &'a ColumnView<'a>,
+    order: Order,
+    preceding: &'a RangeWindowBounds,
+    following: &'a RangeWindowBounds,
+    min_periods: i32,
+    agg_kind: AggregationKind,
+    stream: Stream,
+}
+
+impl GroupedRangeRollingWindow<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the grouped range rolling window aggregation.
+    pub fn call(self) -> Result<Column> {
+        let c = cudf_sys::rolling::ffi::grouped_range_rolling_window(
+            &self.group_keys.0,
+            self.orderby.0,
+            self.order.repr,
+            self.view.0,
+            &self.preceding.0,
+            &self.following.0,
+            self.min_periods,
+            self.agg_kind.repr,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
     }
 }

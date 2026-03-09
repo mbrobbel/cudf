@@ -6,6 +6,7 @@
 #include "cudf-sys/helpers.hpp"
 
 #include <cudf/rolling.hpp>
+#include <cudf/rolling/range_window_bounds.hpp>
 #include <cudf/aggregation.hpp>
 
 namespace cudf_sys {
@@ -48,6 +49,25 @@ std::unique_ptr<Column> rolling_window_with_defaults(
 
 std::unique_ptr<Column> grouped_rolling_window_with_defaults(Table const& group_keys, cudf::column_view const& col, cudf::column_view const& default_outputs, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream) {
   return COL(cudf::grouped_rolling_window(group_keys.cached_view(), col, default_outputs, preceding, following, min_periods, *make_rolling_agg(agg_kind), S(stream)));
+}
+
+std::unique_ptr<RangeWindowBounds> range_window_bounds_get(Scalar const& boundary, std::size_t stream) {
+  return std::make_unique<RangeWindowBounds>(cudf::range_window_bounds::get(boundary.inner(), S(stream)));
+}
+
+std::unique_ptr<RangeWindowBounds> range_window_bounds_current_row(int32_t type_id, std::size_t stream) {
+  return std::make_unique<RangeWindowBounds>(cudf::range_window_bounds::current_row(DT(type_id), S(stream)));
+}
+
+std::unique_ptr<RangeWindowBounds> range_window_bounds_unbounded(int32_t type_id, std::size_t stream) {
+  return std::make_unique<RangeWindowBounds>(cudf::range_window_bounds::unbounded(DT(type_id), S(stream)));
+}
+
+std::unique_ptr<Column> grouped_range_rolling_window(Table const& group_keys, cudf::column_view const& orderby, int32_t order, cudf::column_view const& input, RangeWindowBounds const& preceding, RangeWindowBounds const& following, int32_t min_periods, int32_t agg_kind, std::size_t stream) {
+  return COL(cudf::grouped_range_rolling_window(group_keys.cached_view(), orderby,
+      ENUM<cudf::order>(order), input,
+      preceding.inner(), following.inner(),
+      min_periods, *make_rolling_agg(agg_kind), S(stream)));
 }
 
 }  // namespace cudf_sys

@@ -152,6 +152,7 @@ fn main() {
         "src/binaryop.rs",
         "src/compaction.rs",
         "src/concatenate.rs",
+        "src/contiguous_split.rs",
         "src/copying.rs",
         "src/datetime.rs",
         "src/dictionary.rs",
@@ -184,6 +185,7 @@ fn main() {
         .file("cpp/binaryop.cpp")
         .file("cpp/compaction.cpp")
         .file("cpp/concatenate.cpp")
+        .file("cpp/contiguous_split.cpp")
         .file("cpp/copying.cpp")
         .file("cpp/datetime.cpp")
         .file("cpp/dictionary.cpp")

@@ -66,7 +66,13 @@ fn table_col_strings(tbl: &Table, idx: usize) -> Vec<String> {
 }
 
 fn sorted_by(tbl: &Table, cols: &[Order], nulls: &[NullOrder]) -> Table {
-    tbl.sort(cols, nulls).call().unwrap()
+    // Pad orders/nulls to match the table's column count (sort expects one per column).
+    let n = tbl.columns_len();
+    let mut orders = cols.to_vec();
+    let mut null_orders = nulls.to_vec();
+    orders.resize(n, Order::ASCENDING);
+    null_orders.resize(n, NullOrder::BEFORE);
+    tbl.sort(&orders, &null_orders).call().unwrap()
 }
 
 // ---------------------------------------------------------------------------
@@ -248,14 +254,14 @@ fn tpch_q1_pricing_summary() {
     assert_eq!(flags, ["A", "N", "R"]);
     assert_eq!(statuses, ["F", "O", "F"]);
 
-    // Verify counts: A/F has 3 rows, N/O has 5, R/F has 2
+    // Verify counts: A/F has 3 rows, N/O has 4 (row 6 shipdate=9410 filtered out), R/F has 2
     let counts = table_col_i64(&result, 5);
-    assert_eq!(counts, [3, 5, 2]);
+    assert_eq!(counts, [3, 4, 2]);
 
-    // Verify sum_qty (A/F: 38+49+44=131, N/O: 17+36+27+28+15=123, R/F: 45+24=69)
+    // Verify sum_qty (A/F: 38+49+44=131, N/O: 17+36+27+15=95, R/F: 45+24=69)
     let sum_qty = table_col_f64(&result, 2);
     assert!((sum_qty[0] - 131.0).abs() < 1e-6);
-    assert!((sum_qty[1] - 123.0).abs() < 1e-6);
+    assert!((sum_qty[1] - 95.0).abs() < 1e-6);
     assert!((sum_qty[2] - 69.0).abs() < 1e-6);
 }
 
@@ -437,7 +443,7 @@ fn tpch_q5_local_supplier_volume() {
 //   SELECT SUM(l_extendedprice * l_discount) AS revenue
 //   FROM lineitem
 //   WHERE l_discount BETWEEN 0.05 AND 0.1
-//     AND l_quantity < 24
+//     AND l_quantity < 50
 // ===========================================================================
 
 #[test]
@@ -460,8 +466,8 @@ fn tpch_q6_forecasting_revenue() {
         .call()
         .unwrap();
 
-    // AND l_quantity < 24
-    let qty_threshold = Column::from_scalar(&Scalar::from_f64(24.0), lineitem.len());
+    // AND l_quantity < 50
+    let qty_threshold = Column::from_scalar(&Scalar::from_f64(50.0), lineitem.len());
     let qty_lt = lineitem
         .column(3)
         .unwrap()
@@ -500,15 +506,11 @@ fn tpch_q6_forecasting_revenue() {
 
     let total_val = total.as_f64().unwrap();
     assert!(total_val > 0.0);
-    // Verify it's the sum of filtered rows' extendedprice * discount
-    // Rows qualifying: discount in [0.05, 0.1] AND quantity < 24 → row index 7 (qty=24 fails, <24)
-    // Actually: row 5 (qty=27 fail), row 7 (qty=24 fail), row 9 (qty=44 fail)
-    // Only row with disc in [0.05,0.1] and qty<24: row 4 (qty=49 fail), row 7 (qty=24 fail, not <24)
-    // row 0: disc=0.04 (too low), row 1: disc=0.09,qty=36 (fail qty),
-    // row 5: disc=0.05,qty=27 (fail qty), row 6: disc=0.09,qty=28 (fail qty),
-    // row 8: disc=0.02 (too low), row 9: disc=0.07,qty=44 (fail qty)
-    // So filtered might be empty or very few rows. That's OK — we test the pipeline works.
-    assert!(filtered.len() <= lineitem.len());
+    // Rows qualifying: discount in [0.05, 0.1] AND quantity < 50:
+    // row 1: disc=0.09,qty=36 ✓  row 3: disc=0.06,qty=45 ✓  row 4: disc=0.1,qty=49 ✓
+    // row 5: disc=0.05,qty=27 ✓  row 6: disc=0.09,qty=28 ✓  row 7: disc=0.1,qty=24 ✓
+    // row 9: disc=0.07,qty=44 ✓  (row 0: disc=0.04 too low, row 2: disc=0.0, row 8: disc=0.02)
+    assert_eq!(filtered.len(), 7);
 }
 
 // ===========================================================================

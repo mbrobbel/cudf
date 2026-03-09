@@ -1315,6 +1315,43 @@ impl SegmentedReduce<'_> {
     }
 }
 
+/// Builder for [`ColumnView::segmented_reduce_with_init`].
+pub struct SegmentedReduceWithInit<'a> {
+    view: &'a ColumnView<'a>,
+    offsets: &'a ColumnView<'a>,
+    agg: crate::groupby::AggregationKind,
+    output_type: TypeId,
+    ddof: i32,
+    exclude_nulls: bool,
+    init: &'a Scalar,
+    stream: Stream,
+}
+
+impl SegmentedReduceWithInit<'_> {
+    /// Sets the CUDA stream.
+    pub fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Executes the operation.
+    pub fn call(self) -> Result<Column> {
+        let null_handling = i32::from(!self.exclude_nulls);
+        let init_ffi = crate::scalar::scalar_to_ffi(self.init);
+        let c = cudf_sys::reduction::ffi::segmented_reduce_with_init(
+            self.view.0,
+            self.offsets.0,
+            self.agg.repr,
+            self.ddof,
+            self.output_type.repr,
+            null_handling,
+            &init_ffi,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
 /// Builder for [`ColumnView::scan`].
 pub struct Scan<'a> {
     view: &'a ColumnView<'a>,
@@ -2726,6 +2763,31 @@ impl ColumnView<'_> {
             output_type,
             ddof,
             exclude_nulls,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Segmented reduce with an initial value.
+    ///
+    /// Only SUM, PRODUCT, MIN, MAX, ANY, and ALL aggregations are supported.
+    #[doc(alias = "segmented_reduce")]
+    pub fn segmented_reduce_with_init<'a>(
+        &'a self,
+        offsets: &'a ColumnView<'_>,
+        agg: crate::groupby::AggregationKind,
+        output_type: TypeId,
+        ddof: i32,
+        exclude_nulls: bool,
+        init: &'a Scalar,
+    ) -> SegmentedReduceWithInit<'a> {
+        SegmentedReduceWithInit {
+            view: self,
+            offsets,
+            agg,
+            output_type,
+            ddof,
+            exclude_nulls,
+            init,
             stream: Stream::default_stream(),
         }
     }

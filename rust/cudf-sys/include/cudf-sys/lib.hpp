@@ -10,6 +10,9 @@
 #include <cudf/table/table.hpp>
 #include <cudf/table/table_view.hpp>
 #include <cudf/types.hpp>
+#include <cudf/contiguous_split.hpp>
+#include <cudf/io/types.hpp>
+#include <cudf/rolling/range_window_bounds.hpp>
 
 #include <cuda_runtime.h>
 
@@ -517,7 +520,19 @@ rust::Vec<rust::String> column_to_host_strings(Column const& col, std::size_t st
 
 // -- I/O --
 
+class TableWithMetadata {
+ public:
+  explicit TableWithMetadata(cudf::io::table_with_metadata t) : twm(std::move(t)) {}
+  cudf::io::table_with_metadata twm;
+};
+
+std::unique_ptr<Table> table_with_metadata_take_table(TableWithMetadata& twm);
+rust::Vec<rust::String> table_with_metadata_column_names(TableWithMetadata const& twm);
+int32_t table_with_metadata_num_columns(TableWithMetadata const& twm);
+rust::String table_with_metadata_column_name(TableWithMetadata const& twm, int32_t index);
+
 std::unique_ptr<Table> read_csv(rust::Str filepath);
+std::unique_ptr<TableWithMetadata> read_csv_meta(rust::Str filepath);
 std::unique_ptr<Table> read_csv_with_options(
     rust::Str filepath,
     uint8_t delimiter,
@@ -533,7 +548,28 @@ void write_csv_with_options(
     rust::Str na_rep);
 
 std::unique_ptr<Table> read_parquet(rust::Str filepath);
+std::unique_ptr<TableWithMetadata> read_parquet_meta(rust::Str filepath);
+std::unique_ptr<TableWithMetadata> read_parquet_with_columns(
+    rust::Str filepath,
+    rust::Slice<rust::Str const> columns,
+    int64_t skip_rows,
+    int64_t num_rows);
 void write_parquet(Table const& tbl, rust::Str filepath);
+void write_parquet_with_names(
+    Table const& tbl,
+    rust::Str filepath,
+    rust::Slice<rust::Str const> column_names);
+
+std::unique_ptr<Table> read_orc(rust::Str filepath);
+std::unique_ptr<TableWithMetadata> read_orc_meta(rust::Str filepath);
+void write_orc(Table const& tbl, rust::Str filepath);
+
+std::unique_ptr<Table> read_json(rust::Str filepath, bool json_lines);
+std::unique_ptr<TableWithMetadata> read_json_meta(rust::Str filepath, bool json_lines);
+void write_json(Table const& tbl, rust::Str filepath, bool json_lines);
+
+std::unique_ptr<Table> read_avro(rust::Str filepath);
+std::unique_ptr<TableWithMetadata> read_avro_meta(rust::Str filepath);
 
 // -- Datetime operations --
 
@@ -1153,6 +1189,33 @@ void scalar_list_add(ScalarList& list, std::unique_ptr<Scalar> s);
 std::unique_ptr<Table> scatter_scalars(ScalarList& sources, cudf::column_view const& indices, Table const& target, std::size_t stream);
 std::unique_ptr<Table> boolean_mask_scatter_scalars(ScalarList& sources, Table const& target, cudf::column_view const& mask, std::size_t stream);
 
+// -- Packed columns (contiguous_split / pack / unpack) --
+
+class PackedColumns {
+ public:
+  explicit PackedColumns(cudf::packed_columns pc) : packed_(std::move(pc)) {}
+  cudf::packed_columns const& inner() const { return packed_; }
+  rust::Vec<uint8_t> metadata_to_host() const;
+  std::size_t metadata_size() const;
+  std::size_t gpu_data_size() const;
+ private:
+  cudf::packed_columns packed_;
+};
+
+class PackedTableVec {
+ public:
+  explicit PackedTableVec(std::vector<cudf::packed_table> v) : vec_(std::move(v)) {}
+  std::size_t size() const;
+  std::unique_ptr<Table> unpack_at(std::size_t index) const;
+ private:
+  std::vector<cudf::packed_table> vec_;
+};
+
+std::unique_ptr<PackedColumns> pack_table(Table const& tbl, std::size_t stream);
+std::size_t packed_size_of(Table const& tbl, std::size_t stream);
+std::unique_ptr<Table> unpack_packed(PackedColumns const& packed);
+std::unique_ptr<PackedTableVec> contiguous_split_table(Table const& tbl, rust::Slice<int32_t const> splits, std::size_t stream);
+
 // -- GroupBy shift --
 
 std::unique_ptr<Table> groupby_shift(
@@ -1177,6 +1240,7 @@ std::unique_ptr<Column> hash_murmurhash3_x86_32(Table const& tbl, uint32_t seed,
 std::unique_ptr<Scalar> reduce_generic(cudf::column_view const& col, int32_t agg_kind, int32_t ddof, int32_t output_type_id, std::size_t stream);
 std::unique_ptr<Scalar> reduce_with_init(cudf::column_view const& col, int32_t agg_kind, int32_t ddof, int32_t output_type_id, Scalar const& init, std::size_t stream);
 std::unique_ptr<Column> segmented_reduce(cudf::column_view const& col, cudf::column_view const& offsets, int32_t agg_kind, int32_t ddof, int32_t output_type_id, int32_t null_handling, std::size_t stream);
+std::unique_ptr<Column> segmented_reduce_with_init(cudf::column_view const& col, cudf::column_view const& offsets, int32_t agg_kind, int32_t ddof, int32_t output_type_id, int32_t null_handling, Scalar const& init, std::size_t stream);
 
 // -- Rolling window with defaults --
 
@@ -1216,6 +1280,21 @@ std::size_t to_dlpack(Table const& tbl, std::size_t stream);
 // -- Grouped rolling window with defaults --
 
 std::unique_ptr<Column> grouped_rolling_window_with_defaults(Table const& group_keys, cudf::column_view const& col, cudf::column_view const& default_outputs, int32_t preceding, int32_t following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
+
+// -- Range window bounds --
+
+class RangeWindowBounds {
+ public:
+  explicit RangeWindowBounds(cudf::range_window_bounds b) : bounds_(std::move(b)) {}
+  cudf::range_window_bounds const& inner() const { return bounds_; }
+ private:
+  cudf::range_window_bounds bounds_;
+};
+
+std::unique_ptr<RangeWindowBounds> range_window_bounds_get(Scalar const& boundary, std::size_t stream);
+std::unique_ptr<RangeWindowBounds> range_window_bounds_current_row(int32_t type_id, std::size_t stream);
+std::unique_ptr<RangeWindowBounds> range_window_bounds_unbounded(int32_t type_id, std::size_t stream);
+std::unique_ptr<Column> grouped_range_rolling_window(Table const& group_keys, cudf::column_view const& orderby, int32_t order, cudf::column_view const& input, RangeWindowBounds const& preceding, RangeWindowBounds const& following, int32_t min_periods, int32_t agg_kind, std::size_t stream);
 
 // -- Percentile approx --
 

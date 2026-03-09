@@ -38,6 +38,7 @@ pub mod arrow;
 pub mod column;
 pub mod compaction;
 pub mod concatenate;
+pub mod contiguous_split;
 pub mod copying;
 pub mod data_type;
 pub mod datetime;

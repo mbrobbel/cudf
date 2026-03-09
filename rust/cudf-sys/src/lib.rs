@@ -14,6 +14,7 @@
 pub mod binaryop;
 pub mod compaction;
 pub mod concatenate;
+pub mod contiguous_split;
 pub mod copying;
 pub mod datetime;
 pub mod dictionary;

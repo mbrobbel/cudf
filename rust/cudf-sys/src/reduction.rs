@@ -133,5 +133,17 @@ pub mod ffi {
             null_handling: i32,
             stream: usize,
         ) -> Result<UniquePtr<Column>>;
+
+        /// Segmented reduce with an initial value.
+        fn segmented_reduce_with_init(
+            col: &column_view,
+            offsets: &column_view,
+            agg_kind: i32,
+            ddof: i32,
+            output_type_id: i32,
+            null_handling: i32,
+            init: &Scalar,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
     }
 }

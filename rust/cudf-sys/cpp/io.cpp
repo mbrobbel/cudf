@@ -14,12 +14,40 @@
 
 namespace cudf_sys {
 
+// -- TableWithMetadata --
+
+std::unique_ptr<Table> table_with_metadata_take_table(TableWithMetadata& twm) {
+  return std::make_unique<Table>(std::move(twm.twm.tbl));
+}
+
+rust::Vec<rust::String> table_with_metadata_column_names(TableWithMetadata const& twm) {
+  rust::Vec<rust::String> out;
+  for (auto const& info : twm.twm.metadata.schema_info) {
+    out.push_back(rust::String(info.name));
+  }
+  return out;
+}
+
+int32_t table_with_metadata_num_columns(TableWithMetadata const& twm) {
+  return static_cast<int32_t>(twm.twm.metadata.schema_info.size());
+}
+
+rust::String table_with_metadata_column_name(TableWithMetadata const& twm, int32_t index) {
+  return rust::String(twm.twm.metadata.schema_info.at(index).name);
+}
+
 // -- CSV I/O --
 
 std::unique_ptr<Table> read_csv(rust::Str filepath) {
   std::string path(filepath.data(), filepath.size());
   auto opts = cudf::io::csv_reader_options::builder(cudf::io::source_info{path}).build();
   return TBL(cudf::io::read_csv(opts).tbl);
+}
+
+std::unique_ptr<TableWithMetadata> read_csv_meta(rust::Str filepath) {
+  std::string path(filepath.data(), filepath.size());
+  auto opts = cudf::io::csv_reader_options::builder(cudf::io::source_info{path}).build();
+  return std::make_unique<TableWithMetadata>(cudf::io::read_csv(opts));
 }
 
 std::unique_ptr<Table> read_csv_with_options(
@@ -72,11 +100,57 @@ std::unique_ptr<Table> read_parquet(rust::Str filepath) {
   return TBL(cudf::io::read_parquet(opts).tbl);
 }
 
+std::unique_ptr<TableWithMetadata> read_parquet_meta(rust::Str filepath) {
+  std::string path(filepath.data(), filepath.size());
+  auto opts = cudf::io::parquet_reader_options::builder(cudf::io::source_info{path}).build();
+  return std::make_unique<TableWithMetadata>(cudf::io::read_parquet(opts));
+}
+
+std::unique_ptr<TableWithMetadata> read_parquet_with_columns(
+    rust::Str filepath,
+    rust::Slice<rust::Str const> columns,
+    int64_t skip_rows,
+    int64_t num_rows) {
+  std::string path(filepath.data(), filepath.size());
+  auto builder = cudf::io::parquet_reader_options::builder(cudf::io::source_info{path});
+  if (!columns.empty()) {
+    std::vector<std::string> col_names;
+    col_names.reserve(columns.size());
+    for (auto const& c : columns) {
+      col_names.emplace_back(c.data(), c.size());
+    }
+    builder.column_names(std::move(col_names));
+  }
+  if (skip_rows > 0) {
+    builder.skip_rows(skip_rows);
+  }
+  if (num_rows >= 0) {
+    builder.num_rows(num_rows);
+  }
+  return std::make_unique<TableWithMetadata>(cudf::io::read_parquet(builder.build()));
+}
+
 void write_parquet(Table const& tbl, rust::Str filepath) {
   std::string path(filepath.data(), filepath.size());
   auto opts = cudf::io::parquet_writer_options::builder(
       cudf::io::sink_info{path}, tbl.cached_view()).build();
   cudf::io::write_parquet(opts);
+}
+
+void write_parquet_with_names(
+    Table const& tbl,
+    rust::Str filepath,
+    rust::Slice<rust::Str const> column_names) {
+  std::string path(filepath.data(), filepath.size());
+  auto view = tbl.cached_view();
+  cudf::io::table_input_metadata meta(view);
+  for (std::size_t i = 0; i < column_names.size() && i < meta.column_metadata.size(); ++i) {
+    meta.column_metadata[i].set_name(std::string(column_names[i].data(), column_names[i].size()));
+  }
+  auto builder = cudf::io::parquet_writer_options::builder(
+      cudf::io::sink_info{path}, view);
+  builder.metadata(std::move(meta));
+  cudf::io::write_parquet(builder.build());
 }
 
 // -- ORC I/O --
@@ -85,6 +159,12 @@ std::unique_ptr<Table> read_orc(rust::Str filepath) {
   std::string path(filepath.data(), filepath.size());
   auto opts = cudf::io::orc_reader_options::builder(cudf::io::source_info{path}).build();
   return TBL(cudf::io::read_orc(opts).tbl);
+}
+
+std::unique_ptr<TableWithMetadata> read_orc_meta(rust::Str filepath) {
+  std::string path(filepath.data(), filepath.size());
+  auto opts = cudf::io::orc_reader_options::builder(cudf::io::source_info{path}).build();
+  return std::make_unique<TableWithMetadata>(cudf::io::read_orc(opts));
 }
 
 void write_orc(Table const& tbl, rust::Str filepath) {
@@ -103,6 +183,13 @@ std::unique_ptr<Table> read_json(rust::Str filepath, bool json_lines) {
   return TBL(cudf::io::read_json(builder.build()).tbl);
 }
 
+std::unique_ptr<TableWithMetadata> read_json_meta(rust::Str filepath, bool json_lines) {
+  std::string path(filepath.data(), filepath.size());
+  auto builder = cudf::io::json_reader_options::builder(cudf::io::source_info{path});
+  builder.lines(json_lines);
+  return std::make_unique<TableWithMetadata>(cudf::io::read_json(builder.build()));
+}
+
 void write_json(Table const& tbl, rust::Str filepath, bool json_lines) {
   std::string path(filepath.data(), filepath.size());
   auto builder = cudf::io::json_writer_options::builder(
@@ -117,6 +204,12 @@ std::unique_ptr<Table> read_avro(rust::Str filepath) {
   std::string path(filepath.data(), filepath.size());
   auto opts = cudf::io::avro_reader_options::builder(cudf::io::source_info{path}).build();
   return TBL(cudf::io::read_avro(opts).tbl);
+}
+
+std::unique_ptr<TableWithMetadata> read_avro_meta(rust::Str filepath) {
+  std::string path(filepath.data(), filepath.size());
+  auto opts = cudf::io::avro_reader_options::builder(cudf::io::source_info{path}).build();
+  return std::make_unique<TableWithMetadata>(cudf::io::read_avro(opts));
 }
 
 // -- DLPack interop --

@@ -1,24 +1,54 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
-//! CSV, Parquet, and ORC I/O operations.
+//! CSV, Parquet, ORC, JSON, and Avro I/O operations.
 
 use std::path::Path;
 
 use crate::table::Table;
 
+/// Column name metadata returned alongside a table from `read_with_metadata`.
+#[derive(Debug, Clone)]
+pub struct TableMetadata {
+    /// Top-level column names.
+    pub column_names: Vec<String>,
+}
+
+/// A table together with column name metadata.
+pub struct TableWithMetadata {
+    /// The table data.
+    pub table: Table,
+    /// Column name metadata.
+    pub metadata: TableMetadata,
+}
+
+fn path_str(path: &Path) -> crate::Result<&str> {
+    path.to_str().ok_or(crate::error::Error::InvalidPath)
+}
+
 /// CSV read and write operations.
 pub mod csv {
-    use super::{Path, Table};
+    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
 
     /// Reads a CSV file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path
-            .as_ref()
-            .to_str()
-            .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::io::ffi::read_csv(path_str)?;
+        let s = path_str(path.as_ref())?;
+        let tbl = cudf_sys::io::ffi::read_csv(s)?;
         Ok(Table(tbl))
+    }
+
+    /// Reads a CSV file into a [`TableWithMetadata`] (table + column names).
+    pub fn read_with_metadata<P: AsRef<Path>>(path: P) -> crate::Result<TableWithMetadata> {
+        let s = path_str(path.as_ref())?;
+        let mut twm = cudf_sys::io::ffi::read_csv_meta(s)?;
+        let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
+        let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
+        Ok(TableWithMetadata {
+            table: Table(tbl),
+            metadata: TableMetadata {
+                column_names: names,
+            },
+        })
     }
 
     /// Options for reading a CSV file.
@@ -113,94 +143,165 @@ pub mod csv {
 
 /// Parquet read and write operations.
 pub mod parquet {
-    use super::{Path, Table};
+    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
 
     /// Reads a Parquet file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path
-            .as_ref()
-            .to_str()
-            .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::io::ffi::read_parquet(path_str)?;
+        let s = path_str(path.as_ref())?;
+        let tbl = cudf_sys::io::ffi::read_parquet(s)?;
         Ok(Table(tbl))
+    }
+
+    /// Reads a Parquet file into a [`TableWithMetadata`] (table + column names).
+    pub fn read_with_metadata<P: AsRef<Path>>(path: P) -> crate::Result<TableWithMetadata> {
+        let s = path_str(path.as_ref())?;
+        let mut twm = cudf_sys::io::ffi::read_parquet_meta(s)?;
+        let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
+        let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
+        Ok(TableWithMetadata {
+            table: Table(tbl),
+            metadata: TableMetadata {
+                column_names: names,
+            },
+        })
+    }
+
+    /// Reads specific columns from a Parquet file.
+    ///
+    /// `columns` selects columns by name (empty = all). `skip_rows` skips
+    /// leading rows. `num_rows` limits the result (-1 = all).
+    pub fn read_columns<P: AsRef<Path>>(
+        path: P,
+        columns: &[&str],
+        skip_rows: i64,
+        num_rows: i64,
+    ) -> crate::Result<TableWithMetadata> {
+        let s = path_str(path.as_ref())?;
+        let mut twm = cudf_sys::io::ffi::read_parquet_with_columns(s, columns, skip_rows, num_rows)?;
+        let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
+        let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
+        Ok(TableWithMetadata {
+            table: Table(tbl),
+            metadata: TableMetadata {
+                column_names: names,
+            },
+        })
     }
 
     /// Writes a [`Table`] to a Parquet file.
     pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
-        let path_str = path
-            .as_ref()
-            .to_str()
-            .ok_or(crate::error::Error::InvalidPath)?;
-        cudf_sys::io::ffi::write_parquet(&table.0, path_str)?;
+        let s = path_str(path.as_ref())?;
+        cudf_sys::io::ffi::write_parquet(&table.0, s)?;
+        Ok(())
+    }
+
+    /// Writes a [`Table`] to a Parquet file with column names.
+    pub fn write_with_names<P: AsRef<Path>>(
+        table: &Table,
+        path: P,
+        column_names: &[&str],
+    ) -> crate::Result<()> {
+        let s = path_str(path.as_ref())?;
+        cudf_sys::io::ffi::write_parquet_with_names(&table.0, s, column_names)?;
         Ok(())
     }
 }
 
 /// JSON read and write operations.
 pub mod json {
-    use super::{Path, Table};
+    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
 
     /// Reads a JSON file into a [`Table`].
     ///
     /// Set `json_lines` to `true` for JSON Lines (newline-delimited) format.
     pub fn read<P: AsRef<Path>>(path: P, json_lines: bool) -> crate::Result<Table> {
-        let path_str = path
-            .as_ref()
-            .to_str()
-            .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::io::ffi::read_json(path_str, json_lines)?;
+        let s = path_str(path.as_ref())?;
+        let tbl = cudf_sys::io::ffi::read_json(s, json_lines)?;
         Ok(Table(tbl))
+    }
+
+    /// Reads a JSON file into a [`TableWithMetadata`] (table + column names).
+    pub fn read_with_metadata<P: AsRef<Path>>(
+        path: P,
+        json_lines: bool,
+    ) -> crate::Result<TableWithMetadata> {
+        let s = path_str(path.as_ref())?;
+        let mut twm = cudf_sys::io::ffi::read_json_meta(s, json_lines)?;
+        let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
+        let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
+        Ok(TableWithMetadata {
+            table: Table(tbl),
+            metadata: TableMetadata {
+                column_names: names,
+            },
+        })
     }
 
     /// Writes a [`Table`] to a JSON file.
     ///
     /// Set `json_lines` to `true` for JSON Lines (newline-delimited) format.
     pub fn write<P: AsRef<Path>>(table: &Table, path: P, json_lines: bool) -> crate::Result<()> {
-        let path_str = path
-            .as_ref()
-            .to_str()
-            .ok_or(crate::error::Error::InvalidPath)?;
-        cudf_sys::io::ffi::write_json(&table.0, path_str, json_lines)?;
+        let s = path_str(path.as_ref())?;
+        cudf_sys::io::ffi::write_json(&table.0, s, json_lines)?;
         Ok(())
     }
 }
 
 /// Avro read operations.
 pub mod avro {
-    use super::{Path, Table};
+    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
 
     /// Reads an Avro file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path
-            .as_ref()
-            .to_str()
-            .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::io::ffi::read_avro(path_str)?;
+        let s = path_str(path.as_ref())?;
+        let tbl = cudf_sys::io::ffi::read_avro(s)?;
         Ok(Table(tbl))
+    }
+
+    /// Reads an Avro file into a [`TableWithMetadata`] (table + column names).
+    pub fn read_with_metadata<P: AsRef<Path>>(path: P) -> crate::Result<TableWithMetadata> {
+        let s = path_str(path.as_ref())?;
+        let mut twm = cudf_sys::io::ffi::read_avro_meta(s)?;
+        let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
+        let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
+        Ok(TableWithMetadata {
+            table: Table(tbl),
+            metadata: TableMetadata {
+                column_names: names,
+            },
+        })
     }
 }
 
 /// ORC read and write operations.
 pub mod orc {
-    use super::{Path, Table};
+    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
 
     /// Reads an ORC file into a [`Table`].
     pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
-        let path_str = path
-            .as_ref()
-            .to_str()
-            .ok_or(crate::error::Error::InvalidPath)?;
-        let tbl = cudf_sys::io::ffi::read_orc(path_str)?;
+        let s = path_str(path.as_ref())?;
+        let tbl = cudf_sys::io::ffi::read_orc(s)?;
         Ok(Table(tbl))
+    }
+
+    /// Reads an ORC file into a [`TableWithMetadata`] (table + column names).
+    pub fn read_with_metadata<P: AsRef<Path>>(path: P) -> crate::Result<TableWithMetadata> {
+        let s = path_str(path.as_ref())?;
+        let mut twm = cudf_sys::io::ffi::read_orc_meta(s)?;
+        let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
+        let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
+        Ok(TableWithMetadata {
+            table: Table(tbl),
+            metadata: TableMetadata {
+                column_names: names,
+            },
+        })
     }
 
     /// Writes a [`Table`] to an ORC file.
     pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
-        let path_str = path
-            .as_ref()
-            .to_str()
-            .ok_or(crate::error::Error::InvalidPath)?;
-        cudf_sys::io::ffi::write_orc(&table.0, path_str)?;
+        let s = path_str(path.as_ref())?;
+        cudf_sys::io::ffi::write_orc(&table.0, s)?;
         Ok(())
     }
 }

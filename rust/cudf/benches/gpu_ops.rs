@@ -3,13 +3,16 @@
 
 //! GPU operation benchmarks for cudf.
 //!
-//! Minimal benchmark harness with no external dependencies.
-//! Reports median wall-clock time per iteration.
+//! Measures end-to-end latency of common GPU operations including kernel
+//! launch overhead and synchronization. Reports throughput in elements/sec.
 //!
 //! Run with: `pixi run cargo bench`
 
-use std::time::Instant;
+use std::hint::black_box;
+use std::mem;
+use std::time::Duration;
 
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use cudf::column::Column;
 use cudf::data_type::TypeId;
 use cudf::groupby::AggregationKind;
@@ -17,37 +20,6 @@ use cudf::ops::BinaryOperator;
 use cudf::scalar::Scalar;
 use cudf::sorting::{NullOrder, Order};
 use cudf::table::{Table, TableBuilder};
-
-// ---------------------------------------------------------------------------
-// Harness
-// ---------------------------------------------------------------------------
-
-const WARMUP_ITERS: u32 = 3;
-const BENCH_ITERS: u32 = 20;
-
-fn bench<F: FnMut()>(name: &str, mut f: F) {
-    // Warmup
-    for _ in 0..WARMUP_ITERS {
-        f();
-    }
-
-    // Timed iterations
-    let mut times = Vec::with_capacity(BENCH_ITERS as usize);
-    for _ in 0..BENCH_ITERS {
-        let start = Instant::now();
-        f();
-        times.push(start.elapsed());
-    }
-
-    times.sort();
-    let median = times[times.len() / 2];
-    let min = times[0];
-    let max = times[times.len() - 1];
-    println!(
-        "{name:<45} median: {:>10.3?}  min: {:>10.3?}  max: {:>10.3?}",
-        median, min, max,
-    );
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,109 +49,184 @@ fn make_table(columns: Vec<Column>) -> Table {
     b.build().unwrap()
 }
 
+const SIZES: &[usize] = &[1_000, 10_000, 100_000, 1_000_000];
+const SIZES_SMALL: &[usize] = &[1_000, 10_000, 100_000];
+
+/// Average bytes per string in `make_string_column` ("str_000000" = 10 bytes).
+const AVG_STRING_BYTES: u64 = 10;
+
 // ---------------------------------------------------------------------------
-// Benchmarks
+// Column creation
 // ---------------------------------------------------------------------------
 
-fn bench_column_creation() {
-    println!("\n--- Column Creation ---");
+fn bench_column_from_scalar(c: &mut Criterion) {
+    let mut group = c.benchmark_group("column_from_scalar");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
     let scalar = Scalar::from_i32(42);
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
-        bench(&format!("from_scalar/i32/{n}"), || {
-            let _ = Column::from_scalar(&scalar, n);
+    for &n in SIZES {
+        group.throughput(Throughput::Bytes((n * mem::size_of::<i32>()) as u64));
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
+            b.iter(|| Column::from_scalar(black_box(&scalar), black_box(n)));
         });
     }
+    group.finish();
+}
 
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
+fn bench_column_from_slice_i32(c: &mut Criterion) {
+    let mut group = c.benchmark_group("column_from_slice_i32");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES {
+        group.throughput(Throughput::Bytes((n * mem::size_of::<i32>()) as u64));
         let data: Vec<i32> = (0..n as i32).collect();
-        bench(&format!("from_slice_i32/{n}"), || {
-            let _ = Column::from_slice_i32(&data);
+        group.bench_with_input(BenchmarkId::from_parameter(n), &data, |b, data| {
+            b.iter(|| Column::from_slice_i32(black_box(data)));
         });
     }
+    group.finish();
+}
 
-    for n in [1_000, 10_000, 100_000] {
+fn bench_column_from_strings(c: &mut Criterion) {
+    let mut group = c.benchmark_group("column_from_strings");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES_SMALL {
+        group.throughput(Throughput::Bytes(n as u64 * AVG_STRING_BYTES));
         let data: Vec<String> = (0..n).map(|i| format!("value_{i}")).collect();
         let refs: Vec<&str> = data.iter().map(String::as_str).collect();
-        bench(&format!("from_strings/{n}"), || {
-            let _ = Column::from_strings(&refs);
+        group.bench_with_input(BenchmarkId::from_parameter(n), &refs, |b, refs| {
+            b.iter(|| Column::from_strings(black_box(refs)));
         });
     }
+    group.finish();
 }
 
-fn bench_compute() {
-    println!("\n--- Compute ---");
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
+// ---------------------------------------------------------------------------
+// Compute
+// ---------------------------------------------------------------------------
+
+fn bench_binary_op(c: &mut Criterion) {
+    let mut group = c.benchmark_group("binary_op_add_f64");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES {
+        group.throughput(Throughput::Elements(n as u64));
         let a = make_f64_column(n);
-        let b = make_f64_column(n);
-        bench(&format!("binary_op/add_f64/{n}"), || {
-            let _ = a
-                .view()
-                .binary_op(&b.view(), BinaryOperator::ADD, TypeId::FLOAT64)
-                .call()
-                .unwrap();
+        let b_col = make_f64_column(n);
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| {
+                a.view()
+                    .binary_op(&b_col.view(), BinaryOperator::ADD, TypeId::FLOAT64)
+                    .call()
+                    .unwrap()
+            });
         });
     }
+    group.finish();
+}
 
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
+fn bench_comparison(c: &mut Criterion) {
+    let mut group = c.benchmark_group("comparison_gt_i32");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES {
+        group.throughput(Throughput::Elements(n as u64));
         let a = make_i32_column(n);
         let threshold = Column::from_scalar(&Scalar::from_i32(500), n);
-        bench(&format!("comparison/gt_i32/{n}"), || {
-            let _ = a.view().gt(&threshold.view()).call().unwrap();
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| a.view().gt(&threshold.view()).call().unwrap());
         });
     }
-
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
-        let col = make_i32_column(n);
-        bench(&format!("cast/i32_to_f64/{n}"), || {
-            let _ = col.view().cast(TypeId::FLOAT64).call().unwrap();
-        });
-    }
-
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
-        let col = make_f64_column(n);
-        bench(&format!("sum/f64/{n}"), || {
-            let _ = col.view().sum(TypeId::FLOAT64).call().unwrap();
-        });
-    }
+    group.finish();
 }
 
-fn bench_table_ops() {
-    println!("\n--- Table Operations ---");
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
-        let tbl = make_table(vec![make_i32_column(n)]);
-        bench(&format!("sort/i32/{n}"), || {
-            let _ = tbl
-                .sort(&[Order::ASCENDING], &[NullOrder::BEFORE])
-                .call()
-                .unwrap();
+fn bench_cast(c: &mut Criterion) {
+    let mut group = c.benchmark_group("cast_i32_to_f64");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES {
+        group.throughput(Throughput::Elements(n as u64));
+        let col = make_i32_column(n);
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| col.view().cast(TypeId::FLOAT64).call().unwrap());
         });
     }
+    group.finish();
+}
 
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
+fn bench_sum(c: &mut Criterion) {
+    let mut group = c.benchmark_group("sum_f64");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES {
+        group.throughput(Throughput::Elements(n as u64));
+        let col = make_f64_column(n);
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| col.view().sum(TypeId::FLOAT64).call().unwrap());
+        });
+    }
+    group.finish();
+}
+
+// ---------------------------------------------------------------------------
+// Table operations
+// ---------------------------------------------------------------------------
+
+fn bench_sort(c: &mut Criterion) {
+    let mut group = c.benchmark_group("sort_i32");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES {
+        group.throughput(Throughput::Elements(n as u64));
+        let tbl = make_table(vec![make_i32_column(n)]);
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| {
+                tbl.sort(&[Order::ASCENDING], &[NullOrder::BEFORE])
+                    .call()
+                    .unwrap()
+            });
+        });
+    }
+    group.finish();
+}
+
+fn bench_filter(c: &mut Criterion) {
+    let mut group = c.benchmark_group("filter_i32");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES {
+        group.throughput(Throughput::Elements(n as u64));
         let col = make_i32_column(n);
         let threshold = Column::from_scalar(&Scalar::from_i32(500), n);
         let mask = col.view().gt(&threshold.view()).call().unwrap();
         let tbl = make_table(vec![col]);
-        bench(&format!("filter/i32/{n}"), || {
-            let _ = tbl.filter(&mask.view()).call().unwrap();
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| tbl.filter(&mask.view()).call().unwrap());
         });
     }
-
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
-        let keys: Vec<i32> = (0..n).map(|i| (i % 100) as i32).collect();
-        let tbl = make_table(vec![Column::from_slice_i32(&keys), make_f64_column(n)]);
-        bench(&format!("groupby/sum_f64_100groups/{n}"), || {
-            let _ = tbl
-                .groupby(&[0], 1, AggregationKind::SUM)
-                .call()
-                .unwrap();
-        });
-    }
+    group.finish();
 }
 
-fn bench_joins() {
-    println!("\n--- Joins ---");
-    for n in [1_000, 10_000, 100_000] {
+fn bench_groupby(c: &mut Criterion) {
+    let mut group = c.benchmark_group("groupby_sum_f64");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES {
+        group.throughput(Throughput::Elements(n as u64));
+        let keys: Vec<i32> = (0..n).map(|i| (i % 100) as i32).collect();
+        let tbl = make_table(vec![Column::from_slice_i32(&keys), make_f64_column(n)]);
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| {
+                tbl.groupby(&[0], 1, AggregationKind::SUM)
+                    .call()
+                    .unwrap()
+            });
+        });
+    }
+    group.finish();
+}
+
+// ---------------------------------------------------------------------------
+// Joins
+// ---------------------------------------------------------------------------
+
+fn bench_inner_join(c: &mut Criterion) {
+    let mut group = c.benchmark_group("inner_join_i32");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES_SMALL {
+        // Throughput = total rows across both sides.
+        group.throughput(Throughput::Elements(2 * n as u64));
         let left_keys: Vec<i32> = (0..n as i32).collect();
         let right_keys: Vec<i32> = (0..n as i32).rev().collect();
         let tbl_l = make_table(vec![
@@ -190,44 +237,66 @@ fn bench_joins() {
             Column::from_slice_i32(&right_keys),
             make_f64_column(n),
         ]);
-        bench(&format!("inner_join/i32_unique/{n}"), || {
-            let _ = tbl_l.inner_join(&tbl_r, &[0], &[0]).call().unwrap();
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| tbl_l.inner_join(&tbl_r, &[0], &[0]).call().unwrap());
         });
     }
+    group.finish();
 }
 
-fn bench_transfer() {
-    println!("\n--- Host Transfer ---");
-    for n in [1_000, 10_000, 100_000, 1_000_000] {
+// ---------------------------------------------------------------------------
+// Host transfer
+// ---------------------------------------------------------------------------
+
+fn bench_to_vec_i32(c: &mut Criterion) {
+    let mut group = c.benchmark_group("to_vec_i32");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES {
+        group.throughput(Throughput::Bytes((n * mem::size_of::<i32>()) as u64));
         let col = make_i32_column(n);
-        bench(&format!("to_vec_i32/{n}"), || {
-            let _ = col.view().to_vec_i32();
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| col.view().to_vec_i32());
         });
     }
+    group.finish();
+}
 
-    for n in [1_000, 10_000, 100_000] {
+fn bench_to_vec_string(c: &mut Criterion) {
+    let mut group = c.benchmark_group("to_vec_string");
+    group.sample_size(10).measurement_time(Duration::from_secs(10));
+    for &n in SIZES_SMALL {
+        group.throughput(Throughput::Bytes(n as u64 * AVG_STRING_BYTES));
         let col = make_string_column(n);
-        bench(&format!("to_vec_string/{n}"), || {
-            let _ = col.to_vec_string();
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |bench, _| {
+            bench.iter(|| col.to_vec_string());
         });
     }
+    group.finish();
 }
 
 // ---------------------------------------------------------------------------
-// Main
+// Criterion groups
 // ---------------------------------------------------------------------------
 
-fn main() {
-    println!("cudf GPU operation benchmarks");
-    println!("=============================");
-    println!(
-        "{} warmup iterations, {} bench iterations (reporting median)",
-        WARMUP_ITERS, BENCH_ITERS,
-    );
+criterion_group!(
+    creation,
+    bench_column_from_scalar,
+    bench_column_from_slice_i32,
+    bench_column_from_strings,
+);
 
-    bench_column_creation();
-    bench_compute();
-    bench_table_ops();
-    bench_joins();
-    bench_transfer();
-}
+criterion_group!(
+    compute,
+    bench_binary_op,
+    bench_comparison,
+    bench_cast,
+    bench_sum,
+);
+
+criterion_group!(table_ops, bench_sort, bench_filter, bench_groupby,);
+
+criterion_group!(joins, bench_inner_join,);
+
+criterion_group!(transfer, bench_to_vec_i32, bench_to_vec_string,);
+
+criterion_main!(creation, compute, table_ops, joins, transfer);
