@@ -8,6 +8,7 @@
 
 use std::sync::Arc;
 
+use cudf::stream::GpuOp;
 use arrow_array::{
     Array, BooleanArray, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Int64Array,
     RecordBatch, StringArray, UInt8Array, UInt16Array, UInt32Array, UInt64Array,

@@ -96,14 +96,15 @@ pub struct ExtractYear<'a> {
     stream: Stream,
 }
 
-impl ExtractYear<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractYear<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_year(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -115,14 +116,15 @@ pub struct ExtractMonth<'a> {
     stream: Stream,
 }
 
-impl ExtractMonth<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractMonth<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_month(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -134,14 +136,15 @@ pub struct ExtractDay<'a> {
     stream: Stream,
 }
 
-impl ExtractDay<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractDay<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_day(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -153,14 +156,15 @@ pub struct ExtractWeekday<'a> {
     stream: Stream,
 }
 
-impl ExtractWeekday<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractWeekday<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_extract_weekday(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
@@ -173,14 +177,15 @@ pub struct ExtractHour<'a> {
     stream: Stream,
 }
 
-impl ExtractHour<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractHour<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_hour(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -192,14 +197,15 @@ pub struct ExtractMinute<'a> {
     stream: Stream,
 }
 
-impl ExtractMinute<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractMinute<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_extract_minute(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
@@ -212,14 +218,15 @@ pub struct ExtractSecond<'a> {
     stream: Stream,
 }
 
-impl ExtractSecond<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractSecond<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_extract_second(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
@@ -232,14 +239,15 @@ pub struct DayOfYear<'a> {
     stream: Stream,
 }
 
-impl DayOfYear<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DayOfYear<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_day_of_year(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -251,14 +259,15 @@ pub struct IsLeapYear<'a> {
     stream: Stream,
 }
 
-impl IsLeapYear<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for IsLeapYear<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_is_leap_year(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -270,14 +279,15 @@ pub struct DaysInMonth<'a> {
     stream: Stream,
 }
 
-impl DaysInMonth<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DaysInMonth<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_days_in_month(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -289,14 +299,15 @@ pub struct LastDayOfMonth<'a> {
     stream: Stream,
 }
 
-impl LastDayOfMonth<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for LastDayOfMonth<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_last_day_of_month(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
@@ -309,14 +320,15 @@ pub struct ExtractQuarter<'a> {
     stream: Stream,
 }
 
-impl ExtractQuarter<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractQuarter<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_extract_quarter(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
@@ -330,14 +342,15 @@ pub struct DtCeil<'a> {
     stream: Stream,
 }
 
-impl DtCeil<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DtCeil<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_ceil(
             self.view.0,
             i32::from(self.freq),
@@ -354,14 +367,15 @@ pub struct DtFloor<'a> {
     stream: Stream,
 }
 
-impl DtFloor<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DtFloor<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_floor(
             self.view.0,
             i32::from(self.freq),
@@ -378,14 +392,15 @@ pub struct DtRound<'a> {
     stream: Stream,
 }
 
-impl DtRound<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DtRound<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_round(
             self.view.0,
             i32::from(self.freq),
@@ -402,14 +417,15 @@ pub struct DtAddMonths<'a> {
     stream: Stream,
 }
 
-impl DtAddMonths<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DtAddMonths<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_add_months(
             self.view.0,
             self.months.0,
@@ -426,14 +442,15 @@ pub struct DtAddMonthsScalar<'a> {
     stream: Stream,
 }
 
-impl DtAddMonthsScalar<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DtAddMonthsScalar<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let ffi_scalar = crate::scalar::scalar_to_ffi(self.months);
         let c = cudf_sys::datetime::ffi::datetime_add_months_scalar(
             self.view.0,
@@ -450,14 +467,15 @@ pub struct ExtractMillisecond<'a> {
     stream: Stream,
 }
 
-impl ExtractMillisecond<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractMillisecond<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_millisecond(
             self.view.0,
             self.stream.as_raw(),
@@ -472,14 +490,15 @@ pub struct ExtractMicrosecond<'a> {
     stream: Stream,
 }
 
-impl ExtractMicrosecond<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractMicrosecond<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_microsecond(
             self.view.0,
             self.stream.as_raw(),
@@ -494,14 +513,15 @@ pub struct ExtractNanosecond<'a> {
     stream: Stream,
 }
 
-impl ExtractNanosecond<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ExtractNanosecond<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_nanosecond(
             self.view.0,
             self.stream.as_raw(),
@@ -652,6 +672,7 @@ mod tests {
     use super::*;
     use crate::column::Column;
     use crate::data_type::TypeId;
+    use crate::stream::GpuOp;
 
     /// Helper: create a timestamp column from epoch seconds.
     fn make_timestamp_seconds(epochs: &[i64]) -> Column {

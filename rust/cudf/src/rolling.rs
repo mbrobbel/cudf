@@ -17,7 +17,7 @@ use cudf_sys::ffi::AggregationKind;
 /// Builder for a fixed-size rolling window aggregation.
 ///
 /// Created by [`ColumnView::rolling_window`].
-/// Call [`.call()`](RollingWindow::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct RollingWindow<'a> {
     view: &'a ColumnView<'a>,
     preceding: i32,
@@ -27,15 +27,15 @@ pub struct RollingWindow<'a> {
     stream: Stream,
 }
 
-impl RollingWindow<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for RollingWindow<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the rolling window aggregation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::rolling::ffi::rolling_window(
             self.view.0,
             self.preceding,
@@ -51,7 +51,7 @@ impl RollingWindow<'_> {
 /// Builder for a grouped fixed-size rolling window aggregation.
 ///
 /// Created by [`ColumnView::grouped_rolling_window`].
-/// Call [`.call()`](GroupedRollingWindow::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct GroupedRollingWindow<'a> {
     view: &'a ColumnView<'a>,
     group_keys: &'a Table,
@@ -62,15 +62,15 @@ pub struct GroupedRollingWindow<'a> {
     stream: Stream,
 }
 
-impl GroupedRollingWindow<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for GroupedRollingWindow<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the grouped rolling window aggregation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::rolling::ffi::grouped_rolling_window(
             &self.group_keys.0,
             self.view.0,
@@ -87,7 +87,7 @@ impl GroupedRollingWindow<'_> {
 /// Builder for a rolling window with default output values.
 ///
 /// Created by [`ColumnView::rolling_window_with_defaults`].
-/// Call [`.call()`](RollingWindowWithDefaults::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct RollingWindowWithDefaults<'a> {
     view: &'a ColumnView<'a>,
     default_outputs: &'a ColumnView<'a>,
@@ -98,15 +98,15 @@ pub struct RollingWindowWithDefaults<'a> {
     stream: Stream,
 }
 
-impl RollingWindowWithDefaults<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for RollingWindowWithDefaults<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the rolling window aggregation with defaults.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::rolling::ffi::rolling_window_with_defaults(
             self.view.0,
             self.default_outputs.0,
@@ -123,7 +123,7 @@ impl RollingWindowWithDefaults<'_> {
 /// Builder for a grouped rolling window with default output values.
 ///
 /// Created by [`ColumnView::grouped_rolling_window_with_defaults`].
-/// Call [`.call()`](GroupedRollingWindowWithDefaults::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct GroupedRollingWindowWithDefaults<'a> {
     view: &'a ColumnView<'a>,
     group_keys: &'a Table,
@@ -135,15 +135,15 @@ pub struct GroupedRollingWindowWithDefaults<'a> {
     stream: Stream,
 }
 
-impl GroupedRollingWindowWithDefaults<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for GroupedRollingWindowWithDefaults<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the grouped rolling window aggregation with defaults.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::rolling::ffi::grouped_rolling_window_with_defaults(
             &self.group_keys.0,
             self.view.0,
@@ -268,6 +268,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// Returns a [`GroupedRangeRollingWindow`] builder. Use `.stream()` to set
     /// a custom CUDA stream, then `.call()` to execute.
+    #[allow(clippy::too_many_arguments)]
     pub fn grouped_range_rolling_window(
         &'a self,
         group_keys: &'a Table,
@@ -337,7 +338,7 @@ impl RangeWindowBounds {
 /// Builder for a grouped range-based rolling window aggregation.
 ///
 /// Created by [`ColumnView::grouped_range_rolling_window`].
-/// Call [`.call()`](GroupedRangeRollingWindow::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct GroupedRangeRollingWindow<'a> {
     view: &'a ColumnView<'a>,
     group_keys: &'a Table,
@@ -350,15 +351,15 @@ pub struct GroupedRangeRollingWindow<'a> {
     stream: Stream,
 }
 
-impl GroupedRangeRollingWindow<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for GroupedRangeRollingWindow<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the grouped range rolling window aggregation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::rolling::ffi::grouped_range_rolling_window(
             &self.group_keys.0,
             self.orderby.0,

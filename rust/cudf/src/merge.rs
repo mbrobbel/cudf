@@ -9,6 +9,7 @@
 mod tests {
     use crate::column::Column as Col;
     use crate::sorting::{NullOrder, Order};
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     #[test]

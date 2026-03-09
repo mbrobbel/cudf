@@ -44,10 +44,22 @@ Default configuration. No `.rustfmt.toml`.
 - **Extension traits** must be sealed (sealed trait pattern).
 - **Shared behavior** across types (Column, Table, Scalar) goes in traits.
 
-### Builder Pattern
-All operations use builders with `.call()` as the terminal method.
+### Builder Pattern & `GpuOp` Trait
+All GPU operations use builders with `.call()` as the terminal method.
 `.stream()` is an optional builder method (defaults to the default stream).
 Even simple operations go through builders — consistency over brevity.
+
+Every builder implements the `GpuOp` trait (`cudf::stream::GpuOp`):
+```rust
+pub trait GpuOp: Sized {
+    type Output;
+    fn stream(self, stream: Stream) -> Self;
+    fn call(self) -> Result<Self::Output>;
+}
+```
+
+Call sites must `use cudf::stream::GpuOp;` (no prelude re-export).
+`Stream` implements `Default` (returns the default CUDA stream).
 
 ### Stream / GPU Sync
 Within a single stream, operations are ordered — explicit sync is only needed for

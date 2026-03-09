@@ -11,6 +11,7 @@ mod tests {
     use crate::column::Column as Col;
     use crate::data_type::TypeId;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     #[test]

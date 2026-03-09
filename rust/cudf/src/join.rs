@@ -9,6 +9,7 @@
 #[cfg(test)]
 mod tests {
     use crate::column::Column;
+    use crate::stream::GpuOp;
     use crate::table::{Table, TableBuilder};
 
     /// Helper to build a two-column table from i32 slices.

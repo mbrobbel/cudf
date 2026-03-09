@@ -10,6 +10,7 @@
 mod tests {
     use crate::column::Column;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     #[test]

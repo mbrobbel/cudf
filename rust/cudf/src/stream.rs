@@ -12,10 +12,16 @@
 #[repr(transparent)]
 pub struct Stream(usize);
 
+impl Default for Stream {
+    fn default() -> Self {
+        Self(cudf_sys::ffi::get_default_stream())
+    }
+}
+
 impl Stream {
     /// Returns the default CUDA stream used by cudf.
     pub fn default_stream() -> Self {
-        Self(cudf_sys::ffi::get_default_stream())
+        Self::default()
     }
 
     /// Creates a `Stream` from a raw `cudaStream_t` handle.
@@ -30,4 +36,20 @@ impl Stream {
     pub fn as_raw(self) -> usize {
         self.0
     }
+}
+
+/// Trait for GPU operation builders that support stream selection and execution.
+///
+/// All builders returned by cudf operations implement this trait. Use
+/// `.stream()` to override the CUDA stream (defaults to the cudf default
+/// stream), then `.call()` to execute.
+pub trait GpuOp: Sized {
+    /// The result type produced by [`call`](GpuOp::call).
+    type Output;
+
+    /// Sets the CUDA stream for this operation.
+    fn stream(self, stream: Stream) -> Self;
+
+    /// Executes the operation.
+    fn call(self) -> crate::error::Result<Self::Output>;
 }

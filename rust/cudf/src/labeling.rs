@@ -9,6 +9,7 @@ pub use cudf_sys::ffi::Inclusive;
 #[cfg(test)]
 mod tests {
     use crate::column::Column;
+    use crate::stream::GpuOp;
 
     #[test]
     fn label_bins_basic() {

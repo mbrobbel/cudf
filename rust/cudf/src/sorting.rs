@@ -43,6 +43,7 @@ mod tests {
     use crate::data_type::TypeId;
     use crate::scalar::Scalar;
     use crate::sorting::{NullOrder, Order};
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     #[test]

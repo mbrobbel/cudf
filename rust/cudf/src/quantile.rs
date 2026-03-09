@@ -12,6 +12,7 @@ pub use cudf_sys::ffi::Interpolation;
 #[cfg(test)]
 mod tests {
     use crate::column::Column;
+    use crate::stream::GpuOp;
 
     #[test]
     fn median_of_column() {

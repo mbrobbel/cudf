@@ -16,6 +16,7 @@ pub use cudf_sys::ffi::NullPolicy;
 mod tests {
     use crate::column::Column;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     #[test]

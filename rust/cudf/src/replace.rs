@@ -11,22 +11,22 @@ use crate::stream::Stream;
 /// Builder for replacing null values with a column.
 ///
 /// Created by [`ColumnView::replace_nulls_with_column`].
-/// Call [`.call()`](ReplaceNullsColumn::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct ReplaceNullsColumn<'a> {
     view: &'a ColumnView<'a>,
     replacement: &'a ColumnView<'a>,
     stream: Stream,
 }
 
-impl ReplaceNullsColumn<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ReplaceNullsColumn<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the replace-nulls operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::replace::ffi::replace_nulls_column(
             self.view.0,
             self.replacement.0,
@@ -39,22 +39,22 @@ impl ReplaceNullsColumn<'_> {
 /// Builder for replacing null values with a scalar.
 ///
 /// Created by [`ColumnView::replace_nulls_with_scalar`].
-/// Call [`.call()`](ReplaceNullsScalar::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct ReplaceNullsScalar<'a> {
     view: &'a ColumnView<'a>,
     replacement: &'a Scalar,
     stream: Stream,
 }
 
-impl ReplaceNullsScalar<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ReplaceNullsScalar<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the replace-nulls operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let ffi = crate::scalar::scalar_to_ffi(self.replacement);
         let c =
             cudf_sys::replace::ffi::replace_nulls_scalar(self.view.0, &ffi, self.stream.as_raw())?;
@@ -65,22 +65,22 @@ impl ReplaceNullsScalar<'_> {
 /// Builder for replacing NaN values with a column.
 ///
 /// Created by [`ColumnView::replace_nans`].
-/// Call [`.call()`](ReplaceNansColumn::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct ReplaceNansColumn<'a> {
     view: &'a ColumnView<'a>,
     replacement: &'a ColumnView<'a>,
     stream: Stream,
 }
 
-impl ReplaceNansColumn<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ReplaceNansColumn<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the replace-NaNs operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::replace::ffi::replace_nans_column(
             self.view.0,
             self.replacement.0,
@@ -93,22 +93,22 @@ impl ReplaceNansColumn<'_> {
 /// Builder for replacing NaN values with a scalar.
 ///
 /// Created by [`ColumnView::replace_nans_scalar`].
-/// Call [`.call()`](ReplaceNansScalar::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct ReplaceNansScalar<'a> {
     view: &'a ColumnView<'a>,
     replacement: &'a Scalar,
     stream: Stream,
 }
 
-impl ReplaceNansScalar<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ReplaceNansScalar<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the replace-NaNs operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let ffi = crate::scalar::scalar_to_ffi(self.replacement);
         let c =
             cudf_sys::replace::ffi::replace_nans_scalar(self.view.0, &ffi, self.stream.as_raw())?;
@@ -119,7 +119,7 @@ impl ReplaceNansScalar<'_> {
 /// Builder for clamping column values to a range.
 ///
 /// Created by [`ColumnView::clamp`].
-/// Call [`.call()`](Clamp::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct Clamp<'a> {
     view: &'a ColumnView<'a>,
     lo: &'a Scalar,
@@ -127,15 +127,15 @@ pub struct Clamp<'a> {
     stream: Stream,
 }
 
-impl Clamp<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Clamp<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the clamp operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let lo_ffi = crate::scalar::scalar_to_ffi(self.lo);
         let hi_ffi = crate::scalar::scalar_to_ffi(self.hi);
         let c = cudf_sys::replace::ffi::clamp_column(
@@ -151,7 +151,7 @@ impl Clamp<'_> {
 /// Builder for finding and replacing all matching values.
 ///
 /// Created by [`ColumnView::find_and_replace_all`].
-/// Call [`.call()`](FindAndReplaceAll::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct FindAndReplaceAll<'a> {
     view: &'a ColumnView<'a>,
     old: &'a ColumnView<'a>,
@@ -159,15 +159,15 @@ pub struct FindAndReplaceAll<'a> {
     stream: Stream,
 }
 
-impl FindAndReplaceAll<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for FindAndReplaceAll<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the find-and-replace operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::replace::ffi::find_and_replace_all(
             self.view.0,
             self.old.0,
@@ -265,6 +265,7 @@ impl<'a> ColumnView<'a> {
 mod tests {
     use crate::column::Column;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
 
     #[test]
     fn replace_nulls_with_scalar() {

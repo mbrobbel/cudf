@@ -14,7 +14,7 @@ use crate::stream::Stream;
 
 /// Builder for generating an arithmetic sequence: \[init, init+step, init+2*step, ...\].
 ///
-/// Created by [`sequence()`]. Call [`.call()`](Sequence::call) to execute.
+/// Created by [`sequence()`]. Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct Sequence<'a> {
     count: usize,
     init: &'a Scalar,
@@ -40,15 +40,15 @@ pub fn sequence<'a>(count: usize, init: &'a Scalar, step: &'a Scalar) -> Sequenc
     }
 }
 
-impl Sequence<'_> {
-    /// Sets the CUDA stream for this operation.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Sequence<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the sequence generation and returns the resulting column.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let init_ffi = crate::scalar::scalar_to_ffi(self.init);
         let step_ffi = crate::scalar::scalar_to_ffi(self.step);
         let c = cudf_sys::filling::ffi::sequence_column(
@@ -66,6 +66,7 @@ mod tests {
     use super::*;
     use crate::column::Column;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     #[test]

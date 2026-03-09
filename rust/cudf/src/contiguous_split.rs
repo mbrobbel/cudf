@@ -14,7 +14,7 @@ use crate::table::Table;
 
 /// A table packed into a contiguous device buffer with host metadata.
 ///
-/// Created by [`Pack::call`]. Use [`unpack`](PackedColumns::unpack) to
+/// Created by [`Pack`](crate::table::Table::pack). Use [`unpack`](PackedColumns::unpack) to
 /// reconstruct an owned [`Table`].
 #[doc(alias = "packed_columns")]
 pub struct PackedColumns(UniquePtr<cudf_sys::contiguous_split::ffi::PackedColumns>);
@@ -42,7 +42,7 @@ impl PackedColumns {
     }
 }
 
-/// A vector of table partitions from [`ContiguousSplit::call`].
+/// A vector of table partitions from [`contiguous_split`](crate::table::Table::contiguous_split).
 ///
 /// Each partition is stored contiguously in device memory. Use
 /// [`unpack`](PackedTableVec::unpack) to reconstruct individual partitions.
@@ -72,15 +72,15 @@ pub struct Pack<'a> {
     stream: Stream,
 }
 
-impl Pack<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Pack<'_> {
+    type Output = PackedColumns;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the pack operation.
-    pub fn call(self) -> Result<PackedColumns> {
+    fn call(self) -> Result<Self::Output> {
         let p = cudf_sys::contiguous_split::ffi::pack_table(
             &self.table.0,
             self.stream.as_raw(),
@@ -95,15 +95,15 @@ pub struct PackedSize<'a> {
     stream: Stream,
 }
 
-impl PackedSize<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for PackedSize<'_> {
+    type Output = usize;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Returns the number of bytes required to pack the table.
-    pub fn call(self) -> Result<usize> {
+    fn call(self) -> Result<Self::Output> {
         let n = cudf_sys::contiguous_split::ffi::packed_size_of(
             &self.table.0,
             self.stream.as_raw(),
@@ -119,15 +119,15 @@ pub struct ContiguousSplit<'a> {
     stream: Stream,
 }
 
-impl ContiguousSplit<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ContiguousSplit<'_> {
+    type Output = PackedTableVec;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the contiguous split operation.
-    pub fn call(self) -> Result<PackedTableVec> {
+    fn call(self) -> Result<Self::Output> {
         let v = cudf_sys::contiguous_split::ffi::contiguous_split_table(
             &self.table.0,
             self.splits,

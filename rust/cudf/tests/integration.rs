@@ -15,6 +15,7 @@ use cudf::datetime::{DatetimeExt, RoundingFrequency};
 use cudf::groupby::AggregationKind;
 use cudf::scalar::Scalar;
 use cudf::sorting::{NullOrder, Order, RankMethod};
+use cudf::stream::GpuOp;
 use cudf::strings::{SideType, StringExt};
 use cudf::table::{Table, TableBuilder};
 
@@ -467,12 +468,12 @@ fn murmur3_hash_deterministic() {
     let tbl = build_table(vec![col]);
 
     // Same input should produce same hash
-    let hash1 = tbl.murmur3(42).call();
-    let hash2 = tbl.murmur3(42).call();
+    let hash1 = tbl.murmur3(42).call().unwrap();
+    let hash2 = tbl.murmur3(42).call().unwrap();
     assert_eq!(hash1.to_vec_u32(), hash2.to_vec_u32());
 
     // Different seed should produce different hash
-    let hash3 = tbl.murmur3(99).call();
+    let hash3 = tbl.murmur3(99).call().unwrap();
     assert_ne!(hash1.to_vec_u32(), hash3.to_vec_u32());
 }
 
@@ -1071,7 +1072,7 @@ fn top_k_largest() {
 #[test]
 fn column_distinct_count() {
     let col = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]);
-    let count = col.view().distinct_count(false, false).call();
+    let count = col.view().distinct_count(false, false).call().unwrap();
     assert_eq!(count, 3);
 }
 
@@ -1316,11 +1317,11 @@ fn xxhash64_hashing() {
     let col = Column::from_slice_i32(&[1, 2, 3]);
     let tbl = build_table(vec![col]);
 
-    let h1 = tbl.xxhash64(42).call();
-    let h2 = tbl.xxhash64(42).call();
+    let h1 = tbl.xxhash64(42).call().unwrap();
+    let h2 = tbl.xxhash64(42).call().unwrap();
     assert_eq!(h1.to_vec_i64(), h2.to_vec_i64()); // deterministic
 
-    let h3 = tbl.xxhash64(99).call();
+    let h3 = tbl.xxhash64(99).call().unwrap();
     assert_ne!(h1.to_vec_i64(), h3.to_vec_i64()); // different seed
 }
 
@@ -1333,7 +1334,7 @@ fn md5_and_sha256_hashing() {
     let col = Column::from_slice_i32(&[1, 2, 3]);
     let tbl = build_table(vec![col]);
 
-    let md5 = tbl.md5().call();
+    let md5 = tbl.md5().call().unwrap();
     assert_eq!(md5.len(), 3);
     // MD5 outputs strings
     let hashes = md5.to_vec_string();
@@ -1342,7 +1343,7 @@ fn md5_and_sha256_hashing() {
     assert_eq!(hashes[0].len(), 32);
     assert_ne!(hashes[0], hashes[1]);
 
-    let sha = tbl.sha256().call();
+    let sha = tbl.sha256().call().unwrap();
     assert_eq!(sha.len(), 3);
     let sha_hashes = sha.to_vec_string();
     // SHA-256 is 64 hex chars
@@ -1388,10 +1389,10 @@ fn table_distinct_and_unique_count() {
     let col = Column::from_slice_i32(&[1, 2, 2, 3, 3, 3]);
     let tbl = build_table(vec![col]);
 
-    let dc = tbl.distinct_count(true).call();
+    let dc = tbl.distinct_count(true).call().unwrap();
     assert_eq!(dc, 3); // 3 distinct values
 
-    let uc = tbl.unique_count(true).call();
+    let uc = tbl.unique_count(true).call().unwrap();
     // unique_count counts consecutive unique groups
     assert_eq!(uc, 3); // [1], [2,2], [3,3,3] → 3 groups
 }
@@ -1839,7 +1840,7 @@ fn approx_distinct_count_estimate() {
     let col = Column::from_slice_i32(&[1, 2, 3, 4, 5, 1, 2, 3]);
     let tbl = build_table(vec![col]);
 
-    let approx = tbl.approx_distinct_count(10).call();
+    let approx = tbl.approx_distinct_count(10).call().unwrap();
     // HyperLogLog approximation — should be close to 5
     assert!((3..=7).contains(&approx));
 }

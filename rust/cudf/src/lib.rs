@@ -160,15 +160,15 @@ pub fn calendrical_month_sequence(
     }
 }
 
-impl CalendricalMonthSequence<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for CalendricalMonthSequence<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let ffi = scalar::scalar_to_ffi(self.init);
         let c = cudf_sys::filling::ffi::calendrical_month_sequence(
             usize_to_i32(self.count),
@@ -202,15 +202,15 @@ pub fn copy_if_else_scalars<'a>(
     }
 }
 
-impl CopyIfElseScalars<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for CopyIfElseScalars<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let lhs_ffi = scalar::scalar_to_ffi(self.lhs);
         let rhs_ffi = scalar::scalar_to_ffi(self.rhs);
         let c = cudf_sys::copying::ffi::copy_if_else_scalars(

@@ -9,6 +9,7 @@
 #[cfg(test)]
 mod tests {
     use crate::column::Column as Col;
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     #[test]

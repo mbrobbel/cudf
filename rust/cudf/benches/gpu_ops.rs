@@ -19,6 +19,7 @@ use cudf::groupby::AggregationKind;
 use cudf::ops::BinaryOperator;
 use cudf::scalar::Scalar;
 use cudf::sorting::{NullOrder, Order};
+use cudf::stream::GpuOp;
 use cudf::table::{Table, TableBuilder};
 
 // ---------------------------------------------------------------------------

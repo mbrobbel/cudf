@@ -427,15 +427,15 @@ pub struct Cast<'a> {
     stream: Stream,
 }
 
-impl Cast<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Cast<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::unary::ffi::unary_cast(self.view.0, self.target.repr, self.stream.as_raw())?;
         Ok(Column(c))
@@ -448,15 +448,15 @@ pub struct IsNull<'a> {
     stream: Stream,
 }
 
-impl IsNull<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for IsNull<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::unary::ffi::unary_is_null(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -468,15 +468,15 @@ pub struct IsValid<'a> {
     stream: Stream,
 }
 
-impl IsValid<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for IsValid<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::unary::ffi::unary_is_valid(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -488,15 +488,15 @@ pub struct IsNan<'a> {
     stream: Stream,
 }
 
-impl IsNan<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for IsNan<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::unary::ffi::unary_is_nan(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -508,15 +508,15 @@ pub struct Negate<'a> {
     stream: Stream,
 }
 
-impl Negate<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Negate<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::unary::ffi::unary_negate(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -528,15 +528,15 @@ pub struct Abs<'a> {
     stream: Stream,
 }
 
-impl Abs<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Abs<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::unary::ffi::unary_abs(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -549,15 +549,15 @@ pub struct Sum<'a> {
     stream: Stream,
 }
 
-impl Sum<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Sum<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_sum(
             self.view.0,
             self.output_type.repr,
@@ -574,15 +574,15 @@ pub struct Min<'a> {
     stream: Stream,
 }
 
-impl Min<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Min<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_min(
             self.view.0,
             self.output_type.repr,
@@ -599,15 +599,15 @@ pub struct Max<'a> {
     stream: Stream,
 }
 
-impl Max<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Max<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_max(
             self.view.0,
             self.output_type.repr,
@@ -624,15 +624,15 @@ pub struct Product<'a> {
     stream: Stream,
 }
 
-impl Product<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Product<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_product(
             self.view.0,
             self.output_type.repr,
@@ -648,15 +648,15 @@ pub struct Any<'a> {
     stream: Stream,
 }
 
-impl Any<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Any<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_any(self.view.0, self.stream.as_raw())?;
         Ok(scalar_from_ffi(&s))
     }
@@ -668,15 +668,15 @@ pub struct All<'a> {
     stream: Stream,
 }
 
-impl All<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for All<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_all(self.view.0, self.stream.as_raw())?;
         Ok(scalar_from_ffi(&s))
     }
@@ -689,15 +689,15 @@ pub struct Quantile<'a> {
     stream: Stream,
 }
 
-impl Quantile<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Quantile<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::quantile::ffi::quantile_column(
             self.view.0,
             self.quantiles,
@@ -716,15 +716,15 @@ pub struct QuantileWithInterp<'a> {
     stream: Stream,
 }
 
-impl QuantileWithInterp<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for QuantileWithInterp<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::quantile::ffi::quantile_column(
             self.view.0,
             self.quantiles,
@@ -741,15 +741,15 @@ pub struct NansToNulls<'a> {
     stream: Stream,
 }
 
-impl NansToNulls<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for NansToNulls<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let result = cudf_sys::transform::ffi::nans_to_nulls(self.view.0, self.stream.as_raw())?;
         Ok(Column(result))
     }
@@ -763,15 +763,15 @@ pub struct Add<'a> {
     stream: Stream,
 }
 
-impl Add<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Add<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -791,15 +791,15 @@ pub struct Sub<'a> {
     stream: Stream,
 }
 
-impl Sub<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Sub<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -819,15 +819,15 @@ pub struct Mul<'a> {
     stream: Stream,
 }
 
-impl Mul<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Mul<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -847,15 +847,15 @@ pub struct Div<'a> {
     stream: Stream,
 }
 
-impl Div<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Div<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -874,15 +874,15 @@ pub struct Eq<'a> {
     stream: Stream,
 }
 
-impl Eq<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Eq<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -901,15 +901,15 @@ pub struct Ne<'a> {
     stream: Stream,
 }
 
-impl Ne<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Ne<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -928,15 +928,15 @@ pub struct Lt<'a> {
     stream: Stream,
 }
 
-impl Lt<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Lt<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -955,15 +955,15 @@ pub struct Gt<'a> {
     stream: Stream,
 }
 
-impl Gt<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Gt<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -982,15 +982,15 @@ pub struct Le<'a> {
     stream: Stream,
 }
 
-impl Le<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Le<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -1009,15 +1009,15 @@ pub struct Ge<'a> {
     stream: Stream,
 }
 
-impl Ge<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Ge<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.view.0,
             self.rhs.0,
@@ -1036,15 +1036,15 @@ pub struct UnaryOp<'a> {
     stream: Stream,
 }
 
-impl UnaryOp<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for UnaryOp<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::unary::ffi::unary_operation(self.view.0, self.op.repr, self.stream.as_raw())?;
         Ok(Column(c))
@@ -1057,15 +1057,15 @@ pub struct IsNotNan<'a> {
     stream: Stream,
 }
 
-impl IsNotNan<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for IsNotNan<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::unary::ffi::unary_is_not_nan(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -1078,15 +1078,15 @@ pub struct Round<'a> {
     stream: Stream,
 }
 
-impl Round<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Round<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::unary::ffi::round_column(
             self.view.0,
             self.decimal_places,
@@ -1104,15 +1104,15 @@ pub struct Mean<'a> {
     stream: Stream,
 }
 
-impl Mean<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Mean<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_mean(
             self.view.0,
             self.output_type.repr,
@@ -1130,15 +1130,15 @@ pub struct StdDev<'a> {
     stream: Stream,
 }
 
-impl StdDev<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for StdDev<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_std(
             self.view.0,
             self.output_type.repr,
@@ -1157,15 +1157,15 @@ pub struct Variance<'a> {
     stream: Stream,
 }
 
-impl Variance<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Variance<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_var(
             self.view.0,
             self.output_type.repr,
@@ -1183,15 +1183,15 @@ pub struct Median<'a> {
     stream: Stream,
 }
 
-impl Median<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Median<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_median(
             self.view.0,
             self.output_type.repr,
@@ -1207,15 +1207,15 @@ pub struct Nunique<'a> {
     stream: Stream,
 }
 
-impl Nunique<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Nunique<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_nunique(self.view.0, 0, self.stream.as_raw())?;
         Ok(scalar_from_ffi(&s))
     }
@@ -1230,15 +1230,15 @@ pub struct Reduce<'a> {
     stream: Stream,
 }
 
-impl Reduce<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Reduce<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_generic(
             self.view.0,
             self.agg.repr,
@@ -1260,15 +1260,15 @@ pub struct ReduceWithInit<'a> {
     stream: Stream,
 }
 
-impl ReduceWithInit<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ReduceWithInit<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::reduce_with_init(
             self.view.0,
             self.agg.repr,
@@ -1292,15 +1292,15 @@ pub struct SegmentedReduce<'a> {
     stream: Stream,
 }
 
-impl SegmentedReduce<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for SegmentedReduce<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let null_handling = i32::from(!self.exclude_nulls);
         let c = cudf_sys::reduction::ffi::segmented_reduce(
             self.view.0,
@@ -1327,15 +1327,15 @@ pub struct SegmentedReduceWithInit<'a> {
     stream: Stream,
 }
 
-impl SegmentedReduceWithInit<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for SegmentedReduceWithInit<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let null_handling = i32::from(!self.exclude_nulls);
         let init_ffi = crate::scalar::scalar_to_ffi(self.init);
         let c = cudf_sys::reduction::ffi::segmented_reduce_with_init(
@@ -1360,15 +1360,15 @@ pub struct Scan<'a> {
     stream: Stream,
 }
 
-impl Scan<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Scan<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let scan_type = i32::from(!self.inclusive);
         let c = cudf_sys::reduction::ffi::scan_column(
             self.view.0,
@@ -1389,15 +1389,15 @@ pub struct Shift<'a> {
     stream: Stream,
 }
 
-impl Shift<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Shift<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let ffi = crate::scalar::scalar_to_ffi(self.fill_value);
         let c = cudf_sys::copying::ffi::shift_column(
             self.view.0,
@@ -1415,15 +1415,15 @@ pub struct Reverse<'a> {
     stream: Stream,
 }
 
-impl Reverse<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Reverse<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::copying::ffi::reverse_column(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -1437,15 +1437,15 @@ pub struct Slice<'a> {
     stream: Stream,
 }
 
-impl Slice<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Slice<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::copying::ffi::slice_column(
             self.view.0,
             usize_to_i32(self.begin),
@@ -1463,15 +1463,15 @@ pub struct ContainsScalar<'a> {
     stream: Stream,
 }
 
-impl ContainsScalar<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ContainsScalar<'_> {
+    type Output = bool;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<bool> {
+    fn call(self) -> Result<Self::Output> {
         let ffi = crate::scalar::scalar_to_ffi(self.needle);
         cudf_sys::search::ffi::contains_scalar(self.view.0, &ffi, self.stream.as_raw())
             .map_err(Into::into)
@@ -1485,15 +1485,15 @@ pub struct ContainsColumn<'a> {
     stream: Stream,
 }
 
-impl ContainsColumn<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ContainsColumn<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::search::ffi::contains_column(
             self.view.0,
             self.needles.0,
@@ -1512,15 +1512,15 @@ pub struct Fill<'a> {
     stream: Stream,
 }
 
-impl Fill<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Fill<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let ffi = crate::scalar::scalar_to_ffi(self.value);
         let c = cudf_sys::filling::ffi::fill_column(
             self.view.0,
@@ -1540,15 +1540,15 @@ pub struct GetElement<'a> {
     stream: Stream,
 }
 
-impl GetElement<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for GetElement<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::copying::ffi::get_element(
             self.view.0,
             usize_to_i32(self.index),
@@ -1566,15 +1566,15 @@ pub struct CopyIfElse<'a> {
     stream: Stream,
 }
 
-impl CopyIfElse<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for CopyIfElse<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::copying::ffi::copy_if_else_columns(
             self.view.0,
             self.rhs.0,
@@ -1595,15 +1595,15 @@ pub struct LabelBins<'a> {
     stream: Stream,
 }
 
-impl LabelBins<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for LabelBins<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::labeling::ffi::label_bins_column(
             self.view.0,
             self.left_edges.0,
@@ -1627,15 +1627,15 @@ pub struct Rank<'a> {
     stream: Stream,
 }
 
-impl Rank<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Rank<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::sorting::ffi::rank_column(
             self.view.0,
             i32::from(self.method),
@@ -1657,15 +1657,15 @@ pub struct TopK<'a> {
     stream: Stream,
 }
 
-impl TopK<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for TopK<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::sorting::ffi::top_k(
             self.view.0,
             usize_to_i32(self.k),
@@ -1684,15 +1684,15 @@ pub struct TopKOrder<'a> {
     stream: Stream,
 }
 
-impl TopKOrder<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for TopKOrder<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::sorting::ffi::top_k_order(
             self.view.0,
             usize_to_i32(self.k),
@@ -1712,15 +1712,15 @@ pub struct SegmentedTopK<'a> {
     stream: Stream,
 }
 
-impl SegmentedTopK<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for SegmentedTopK<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::sorting::ffi::segmented_top_k(
             self.view.0,
             self.segment_offsets.0,
@@ -1741,15 +1741,15 @@ pub struct SegmentedTopKOrder<'a> {
     stream: Stream,
 }
 
-impl SegmentedTopKOrder<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for SegmentedTopKOrder<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::sorting::ffi::segmented_top_k_order(
             self.view.0,
             self.segment_offsets.0,
@@ -1771,15 +1771,15 @@ pub struct CopyRangeInto<'a> {
     stream: Stream,
 }
 
-impl CopyRangeInto<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for CopyRangeInto<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::copying::ffi::copy_range(
             self.view.0,
             self.target.0,
@@ -1798,15 +1798,15 @@ pub struct AllocateLike<'a> {
     stream: Stream,
 }
 
-impl AllocateLike<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for AllocateLike<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::copying::ffi::allocate_like_column(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -1818,15 +1818,15 @@ pub struct HasNonemptyNulls<'a> {
     stream: Stream,
 }
 
-impl HasNonemptyNulls<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for HasNonemptyNulls<'_> {
+    type Output = bool;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<bool> {
+    fn call(self) -> Result<Self::Output> {
         cudf_sys::copying::ffi::has_nonempty_nulls(self.view.0, self.stream.as_raw())
             .map_err(Into::into)
     }
@@ -1838,15 +1838,15 @@ pub struct PurgeNonemptyNulls<'a> {
     stream: Stream,
 }
 
-impl PurgeNonemptyNulls<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for PurgeNonemptyNulls<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::copying::ffi::purge_nonempty_nulls(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -1859,15 +1859,15 @@ pub struct ReplaceNullsPolicy<'a> {
     stream: Stream,
 }
 
-impl ReplaceNullsPolicy<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ReplaceNullsPolicy<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let policy = i32::from(!self.preceding);
         let c = cudf_sys::replace::ffi::replace_nulls_policy(
             self.view.0,
@@ -1888,15 +1888,15 @@ pub struct ClampWithReplace<'a> {
     stream: Stream,
 }
 
-impl ClampWithReplace<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ClampWithReplace<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let lo_ffi = crate::scalar::scalar_to_ffi(self.lo);
         let lo_r_ffi = crate::scalar::scalar_to_ffi(self.lo_replace);
         let hi_ffi = crate::scalar::scalar_to_ffi(self.hi);
@@ -1919,15 +1919,15 @@ pub struct NormalizeNansAndZeros<'a> {
     stream: Stream,
 }
 
-impl NormalizeNansAndZeros<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for NormalizeNansAndZeros<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::replace::ffi::normalize_nans_and_zeros(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
@@ -1940,15 +1940,15 @@ pub struct MinmaxMin<'a> {
     stream: Stream,
 }
 
-impl MinmaxMin<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for MinmaxMin<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::minmax_min(self.view.0, self.stream.as_raw())?;
         Ok(scalar_from_ffi(&s))
     }
@@ -1960,15 +1960,15 @@ pub struct MinmaxMax<'a> {
     stream: Stream,
 }
 
-impl MinmaxMax<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for MinmaxMax<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+    fn call(self) -> Result<Self::Output> {
         let s = cudf_sys::reduction::ffi::minmax_max(self.view.0, self.stream.as_raw())?;
         Ok(scalar_from_ffi(&s))
     }
@@ -1982,15 +1982,15 @@ pub struct RoundWithMethod<'a> {
     stream: Stream,
 }
 
-impl RoundWithMethod<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for RoundWithMethod<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::unary::ffi::round_column(
             self.view.0,
             self.decimal_places,
@@ -2008,15 +2008,15 @@ pub struct Child<'a> {
     stream: Stream,
 }
 
-impl Child<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for Child<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::ffi::column_view_child_copy(
             self.view.0,
             usize_to_i32(self.index),
@@ -2034,22 +2034,22 @@ pub struct ColumnDistinctCount<'a> {
     stream: Stream,
 }
 
-impl ColumnDistinctCount<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ColumnDistinctCount<'_> {
+    type Output = usize;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> usize {
+    fn call(self) -> Result<Self::Output> {
         let null_policy = i32::from(self.include_nulls);
-        i32_to_usize(cudf_sys::compaction::ffi::distinct_count_column(
+        Ok(i32_to_usize(cudf_sys::compaction::ffi::distinct_count_column(
             self.view.0,
             null_policy,
             self.nan_is_null,
             self.stream.as_raw(),
-        ))
+        )))
     }
 }
 
@@ -2061,22 +2061,22 @@ pub struct ColumnUniqueCount<'a> {
     stream: Stream,
 }
 
-impl ColumnUniqueCount<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ColumnUniqueCount<'_> {
+    type Output = usize;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> usize {
+    fn call(self) -> Result<Self::Output> {
         let null_policy = i32::from(self.include_nulls);
-        i32_to_usize(cudf_sys::compaction::ffi::unique_count_column(
+        Ok(i32_to_usize(cudf_sys::compaction::ffi::unique_count_column(
             self.view.0,
             null_policy,
             self.nan_is_null,
             self.stream.as_raw(),
-        ))
+        )))
     }
 }
 
@@ -2087,15 +2087,15 @@ pub struct PercentileApprox<'a> {
     stream: Stream,
 }
 
-impl PercentileApprox<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for PercentileApprox<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::quantile::ffi::percentile_approx(
             self.view.0,
             self.percentiles.0,

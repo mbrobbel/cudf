@@ -24,15 +24,15 @@ pub fn concatenate_columns<'a>(columns: &'a [&'a ColumnView<'a>]) -> Concatenate
     }
 }
 
-impl ConcatenateColumns<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ConcatenateColumns<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the concatenation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let mut cat = cudf_sys::concatenate::ffi::new_column_concatenator();
         for col in self.columns {
             cudf_sys::concatenate::ffi::column_concatenator_add(cat.pin_mut(), col.0);
@@ -61,15 +61,15 @@ pub fn concatenate_tables<'a>(tables: &'a [&'a Table]) -> ConcatenateTables<'a> 
     }
 }
 
-impl ConcatenateTables<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ConcatenateTables<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the concatenation.
-    pub fn call(self) -> Result<Table> {
+    fn call(self) -> Result<Self::Output> {
         let mut cat = cudf_sys::concatenate::ffi::new_table_concatenator();
         for t in self.tables {
             cudf_sys::concatenate::ffi::table_concatenator_add(cat.pin_mut(), &t.0);
@@ -88,6 +88,7 @@ mod tests {
     use crate::column::Column as Col;
     use crate::data_type::TypeId;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     #[test]

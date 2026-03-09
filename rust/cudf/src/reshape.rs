@@ -34,15 +34,15 @@ pub fn one_hot_encode<'a>(
     }
 }
 
-impl OneHotEncode<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for OneHotEncode<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the operation.
-    pub fn call(self) -> Result<Table> {
+    fn call(self) -> Result<Self::Output> {
         let t = cudf_sys::transform::ffi::one_hot_encode(
             self.input.0,
             self.categories.0,
@@ -55,6 +55,7 @@ impl OneHotEncode<'_> {
 #[cfg(test)]
 mod tests {
     use crate::column::Column as Col;
+    use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
     #[test]

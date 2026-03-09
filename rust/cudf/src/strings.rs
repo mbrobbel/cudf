@@ -279,14 +279,13 @@ pub trait StringExt: private::Sealed {
 
 macro_rules! simple_builder {
     ($name:ident -> $ret:ident, $body:expr) => {
-        impl $name<'_> {
-            /// Sets the CUDA stream.
-            pub fn stream(mut self, stream: Stream) -> Self {
+        impl crate::stream::GpuOp for $name<'_> {
+            type Output = $ret;
+            fn stream(mut self, stream: Stream) -> Self {
                 self.stream = stream;
                 self
             }
-            /// Executes the operation.
-            pub fn call(self) -> Result<$ret> {
+            fn call(self) -> Result<Self::Output> {
                 $body(self)
             }
         }
@@ -2313,6 +2312,7 @@ mod tests {
     use super::*;
     use crate::column::Column;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
 
     fn make_string_col(values: &[&str]) -> Column {
         Column::from_strings(values)

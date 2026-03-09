@@ -11,6 +11,7 @@ mod tests {
     use crate::column::Column as Col;
     use crate::data_type::TypeId;
     use crate::scalar::Scalar;
+    use crate::stream::GpuOp;
     use crate::table::{Table, TableBuilder};
 
     fn make_test_table() -> Table {
@@ -25,7 +26,7 @@ mod tests {
     #[test]
     fn murmur3_basic() {
         let table = make_test_table();
-        let hashes = table.murmur3(0).call();
+        let hashes = table.murmur3(0).call().unwrap();
         assert_eq!(hashes.len(), 3);
         assert_eq!(hashes.type_id(), TypeId::UINT32);
         assert!(!hashes.has_nulls());
@@ -34,7 +35,7 @@ mod tests {
     #[test]
     fn xxhash64_basic() {
         let table = make_test_table();
-        let hashes = table.xxhash64(0).call();
+        let hashes = table.xxhash64(0).call().unwrap();
         assert_eq!(hashes.len(), 3);
         assert_eq!(hashes.type_id(), TypeId::UINT64);
         assert!(!hashes.has_nulls());
@@ -43,8 +44,8 @@ mod tests {
     #[test]
     fn murmur3_deterministic() {
         let table = make_test_table();
-        let h1 = table.murmur3(42).call();
-        let h2 = table.murmur3(42).call();
+        let h1 = table.murmur3(42).call().unwrap();
+        let h2 = table.murmur3(42).call().unwrap();
         assert_eq!(h1.to_vec_i32(), h2.to_vec_i32());
     }
 
@@ -54,7 +55,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c);
         let table = builder.build().unwrap();
-        let hashes = table.md5().call();
+        let hashes = table.md5().call().unwrap();
         assert_eq!(hashes.len(), 2);
         assert_eq!(hashes.type_id(), TypeId::STRING);
         let strings = hashes.to_vec_string();
@@ -68,7 +69,7 @@ mod tests {
         let mut builder = TableBuilder::new();
         builder.push_column(c);
         let table = builder.build().unwrap();
-        let hashes = table.sha256().call();
+        let hashes = table.sha256().call().unwrap();
         assert_eq!(hashes.len(), 2);
         assert_eq!(hashes.type_id(), TypeId::STRING);
         let strings = hashes.to_vec_string();

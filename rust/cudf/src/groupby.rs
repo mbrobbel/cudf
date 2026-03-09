@@ -15,6 +15,7 @@ mod tests {
     use crate::column::Column;
     use crate::data_type::TypeId;
     use crate::groupby::AggregationKind;
+    use crate::stream::GpuOp;
     use crate::table::{Table, TableBuilder};
 
     /// Helper to build a two-column table: keys (i32) and values (i32).

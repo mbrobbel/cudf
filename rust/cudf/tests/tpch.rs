@@ -15,6 +15,7 @@ use cudf::groupby::AggregationKind;
 use cudf::ops::BinaryOperator;
 use cudf::scalar::Scalar;
 use cudf::sorting::{NullOrder, Order};
+use cudf::stream::GpuOp;
 use cudf::strings::StringExt;
 use cudf::table::{Table, TableBuilder};
 
@@ -324,7 +325,7 @@ fn tpch_q3_shipping_priority() {
         .unwrap();
 
     // Verify we got some joined rows
-    assert!(co_li.len() > 0);
+    assert!(!co_li.is_empty());
 
     // Compute revenue = l_extendedprice * (1 - l_discount)
     // In co_li: cust(5) + ord(6) + lineitem(10) = 21 cols
@@ -355,7 +356,7 @@ fn tpch_q3_shipping_priority() {
     );
 
     // We should have at least one group with non-zero revenue
-    assert!(result.len() > 0);
+    assert!(!result.is_empty());
     let revenues = table_col_f64(&result, 1);
     for r in &revenues {
         assert!(*r > 0.0);
@@ -581,7 +582,7 @@ fn tpch_q10_returned_item_reporting() {
         .unwrap();
 
     // Should have at least one customer with returned items
-    assert!(grouped.len() > 0);
+    assert!(!grouped.is_empty());
 
     // All revenues should be positive
     let revs = table_col_f64(&grouped, 2);

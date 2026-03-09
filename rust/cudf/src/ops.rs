@@ -19,7 +19,7 @@ pub use cudf_sys::ffi::UnaryOperator;
 /// Builder for a column-column binary operation.
 ///
 /// Created by [`ColumnView::binary_op`].
-/// Call [`.call()`](BinaryOpColumns::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct BinaryOpColumns<'a> {
     lhs: &'a ColumnView<'a>,
     rhs: &'a ColumnView<'a>,
@@ -28,15 +28,15 @@ pub struct BinaryOpColumns<'a> {
     stream: Stream,
 }
 
-impl BinaryOpColumns<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for BinaryOpColumns<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the binary operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let col = cudf_sys::binaryop::ffi::binary_operation_columns(
             self.lhs.0,
             self.rhs.0,
@@ -51,7 +51,7 @@ impl BinaryOpColumns<'_> {
 /// Builder for a column-scalar binary operation.
 ///
 /// Created by [`ColumnView::binary_op_scalar`].
-/// Call [`.call()`](BinaryOpColumnScalar::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct BinaryOpColumnScalar<'a> {
     lhs: &'a ColumnView<'a>,
     rhs: &'a Scalar,
@@ -60,15 +60,15 @@ pub struct BinaryOpColumnScalar<'a> {
     stream: Stream,
 }
 
-impl BinaryOpColumnScalar<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for BinaryOpColumnScalar<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the binary operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let rhs_ffi = crate::scalar::scalar_to_ffi(self.rhs);
         let col = cudf_sys::binaryop::ffi::binary_operation_column_scalar(
             self.lhs.0,
@@ -84,7 +84,7 @@ impl BinaryOpColumnScalar<'_> {
 /// Builder for a scalar-column binary operation.
 ///
 /// Created by [`scalar_binary_op`].
-/// Call [`.call()`](ScalarBinaryOp::call) to execute.
+/// Call [`.call()`](crate::stream::GpuOp::call) to execute.
 pub struct ScalarBinaryOp<'a> {
     lhs: &'a Scalar,
     rhs: &'a ColumnView<'a>,
@@ -93,15 +93,15 @@ pub struct ScalarBinaryOp<'a> {
     stream: Stream,
 }
 
-impl ScalarBinaryOp<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ScalarBinaryOp<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
 
-    /// Executes the binary operation.
-    pub fn call(self) -> Result<Column> {
+    fn call(self) -> Result<Self::Output> {
         let lhs_ffi = crate::scalar::scalar_to_ffi(self.lhs);
         let col = cudf_sys::binaryop::ffi::binary_operation_scalar_column(
             &lhs_ffi,
@@ -190,6 +190,7 @@ pub fn is_supported_binaryop(out: TypeId, lhs: TypeId, rhs: TypeId, op: BinaryOp
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stream::GpuOp;
 
     // -- Binary operation tests --
 

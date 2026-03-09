@@ -11,6 +11,7 @@ mod tests {
     use crate::column::Column;
     use crate::data_type::TypeId;
     use crate::scalar::Scalar as ScalarVal;
+    use crate::stream::GpuOp;
 
     #[test]
     fn sum_i32() {

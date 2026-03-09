@@ -39,14 +39,15 @@ pub struct DictDecode<'a> {
     stream: Stream,
 }
 
-impl DictDecode<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DictDecode<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::dictionary::ffi::dictionary_decode(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -59,14 +60,15 @@ pub struct DictAddKeys<'a> {
     stream: Stream,
 }
 
-impl DictAddKeys<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DictAddKeys<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::dictionary::ffi::dictionary_add_keys(
             self.view.0,
             self.new_keys.0,
@@ -83,14 +85,15 @@ pub struct DictRemoveKeys<'a> {
     stream: Stream,
 }
 
-impl DictRemoveKeys<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DictRemoveKeys<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::dictionary::ffi::dictionary_remove_keys(
             self.view.0,
             self.keys_to_remove.0,
@@ -107,14 +110,15 @@ pub struct DictSetKeys<'a> {
     stream: Stream,
 }
 
-impl DictSetKeys<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DictSetKeys<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::dictionary::ffi::dictionary_set_keys(
             self.view.0,
             self.keys.0,
@@ -130,14 +134,15 @@ pub struct DictRemoveUnusedKeys<'a> {
     stream: Stream,
 }
 
-impl DictRemoveUnusedKeys<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DictRemoveUnusedKeys<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::dictionary::ffi::dictionary_remove_unused_keys(
             self.view.0,
             self.stream.as_raw(),
@@ -153,14 +158,15 @@ pub struct DictGetIndex<'a> {
     stream: Stream,
 }
 
-impl DictGetIndex<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DictGetIndex<'_> {
+    type Output = Scalar;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Scalar> {
+
+    fn call(self) -> Result<Self::Output> {
         let ffi = crate::scalar::scalar_to_ffi(self.key);
         let s = cudf_sys::dictionary::ffi::dictionary_get_index(
             self.view.0,
@@ -197,14 +203,15 @@ pub fn dictionary_encode<'a>(
     }
 }
 
-impl DictionaryEncode<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for DictionaryEncode<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::dictionary::ffi::dictionary_encode(
             self.col.0,
             self.indices_type.repr,

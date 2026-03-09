@@ -79,14 +79,15 @@ pub struct ListCountElements<'a> {
     stream: Stream,
 }
 
-impl ListCountElements<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListCountElements<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_count_elements(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -99,14 +100,15 @@ pub struct ListExtractElement<'a> {
     stream: Stream,
 }
 
-impl ListExtractElement<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListExtractElement<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_extract_element(
             self.view.0,
             self.index,
@@ -124,14 +126,15 @@ pub struct ListSort<'a> {
     stream: Stream,
 }
 
-impl ListSort<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListSort<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_sort(
             self.view.0,
             self.ascending,
@@ -148,14 +151,15 @@ pub struct ListReverse<'a> {
     stream: Stream,
 }
 
-impl ListReverse<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListReverse<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_reverse(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -167,14 +171,15 @@ pub struct ListContainsNulls<'a> {
     stream: Stream,
 }
 
-impl ListContainsNulls<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListContainsNulls<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_contains_nulls(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -186,14 +191,15 @@ pub struct ListDistinct<'a> {
     stream: Stream,
 }
 
-impl ListDistinct<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListDistinct<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_distinct(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -205,14 +211,15 @@ pub struct ListConcatenateElements<'a> {
     stream: Stream,
 }
 
-impl ListConcatenateElements<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListConcatenateElements<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::lists::ffi::lists_concatenate_elements(self.view.0, self.stream.as_raw())?;
         Ok(Column(c))
@@ -226,14 +233,15 @@ pub struct ListContainsScalar<'a> {
     stream: Stream,
 }
 
-impl ListContainsScalar<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListContainsScalar<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let ffi = crate::scalar::scalar_to_ffi(self.search_key);
         let c =
             cudf_sys::lists::ffi::lists_contains_scalar(self.view.0, &ffi, self.stream.as_raw())?;
@@ -248,14 +256,15 @@ pub struct ListContainsColumn<'a> {
     stream: Stream,
 }
 
-impl ListContainsColumn<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListContainsColumn<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_contains_column(
             self.view.0,
             self.search_keys.0,
@@ -273,14 +282,15 @@ pub struct ListIndexOfScalar<'a> {
     stream: Stream,
 }
 
-impl ListIndexOfScalar<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListIndexOfScalar<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let ffi = crate::scalar::scalar_to_ffi(self.search_key);
         let c = cudf_sys::lists::ffi::lists_index_of_scalar(
             self.view.0,
@@ -300,14 +310,15 @@ pub struct ListIndexOfColumn<'a> {
     stream: Stream,
 }
 
-impl ListIndexOfColumn<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListIndexOfColumn<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_index_of_column(
             self.view.0,
             self.search_keys.0,
@@ -326,14 +337,15 @@ pub struct ListSegmentedGather<'a> {
     stream: Stream,
 }
 
-impl ListSegmentedGather<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListSegmentedGather<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_segmented_gather(
             self.view.0,
             self.gather_map.0,
@@ -351,14 +363,15 @@ pub struct ListFormat<'a> {
     stream: Stream,
 }
 
-impl ListFormat<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListFormat<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::strings::ffi::strings_format_list_column(
             self.view.0,
             self.na_rep,
@@ -375,14 +388,15 @@ pub struct ListExtractElementColumn<'a> {
     stream: Stream,
 }
 
-impl ListExtractElementColumn<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListExtractElementColumn<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_extract_element_column(
             self.view.0,
             self.indices.0,
@@ -400,14 +414,15 @@ pub struct ListStableSort<'a> {
     stream: Stream,
 }
 
-impl ListStableSort<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListStableSort<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_stable_sort(
             self.view.0,
             self.ascending,
@@ -425,14 +440,15 @@ pub struct ListApplyBooleanMask<'a> {
     stream: Stream,
 }
 
-impl ListApplyBooleanMask<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListApplyBooleanMask<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_apply_boolean_mask(
             self.view.0,
             self.boolean_mask.0,
@@ -465,14 +481,15 @@ pub fn list_sequences<'a>(
     }
 }
 
-impl ListSequences<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListSequences<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_sequences(
             self.starts.0,
             self.sizes.0,
@@ -504,14 +521,15 @@ pub fn list_sequences_with_step<'a>(
     }
 }
 
-impl ListSequencesWithStep<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListSequencesWithStep<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_sequences_with_step(
             self.starts.0,
             self.steps.0,
@@ -536,14 +554,15 @@ pub fn lists_concatenate_rows(tbl: &crate::table::Table) -> ListsConcatenateRows
     }
 }
 
-impl ListsConcatenateRows<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListsConcatenateRows<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_concatenate_rows(&self.tbl.0, self.stream.as_raw())?;
         Ok(Column(c))
     }
@@ -568,14 +587,15 @@ pub fn lists_have_overlap<'a>(
     }
 }
 
-impl ListsHaveOverlap<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListsHaveOverlap<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::lists::ffi::lists_have_overlap(self.lhs.0, self.rhs.0, self.stream.as_raw())?;
         Ok(Column(c))
@@ -601,14 +621,15 @@ pub fn lists_intersect_distinct<'a>(
     }
 }
 
-impl ListsIntersectDistinct<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListsIntersectDistinct<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_intersect_distinct(
             self.lhs.0,
             self.rhs.0,
@@ -637,14 +658,15 @@ pub fn lists_union_distinct<'a>(
     }
 }
 
-impl ListsUnionDistinct<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListsUnionDistinct<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_union_distinct(
             self.lhs.0,
             self.rhs.0,
@@ -673,14 +695,15 @@ pub fn lists_difference_distinct<'a>(
     }
 }
 
-impl ListsDifferenceDistinct<'_> {
-    /// Sets the CUDA stream.
-    pub fn stream(mut self, stream: Stream) -> Self {
+impl crate::stream::GpuOp for ListsDifferenceDistinct<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
         self
     }
-    /// Executes the operation.
-    pub fn call(self) -> Result<Column> {
+
+    fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_difference_distinct(
             self.lhs.0,
             self.rhs.0,
