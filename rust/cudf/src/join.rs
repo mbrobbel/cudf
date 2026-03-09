@@ -3,7 +3,7 @@
 
 //! Join operations on GPU tables.
 //!
-//! Joins are available as methods on [`Table`](crate::Table):
+//! Joins are available as methods on [`Table`](crate::table::Table):
 //! `table.inner_join(...)`, `table.left_join(...)`, etc.
 
 #[cfg(test)]

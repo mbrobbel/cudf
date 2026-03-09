@@ -3,7 +3,7 @@
 
 //! Filtering operations on GPU tables.
 //!
-//! Filtering is available as methods on [`Table`](crate::Table):
+//! Filtering is available as methods on [`Table`](crate::table::Table):
 //! `table.filter(...)`, `table.drop_nulls()`.
 
 #[cfg(test)]

@@ -3,7 +3,7 @@
 
 //! Reshape operations on tables and columns.
 //!
-//! Available as methods on [`Table`](crate::Table):
+//! Available as methods on [`Table`]:
 //! `table.interleave_columns()`, `table.tile(...)`.
 //!
 //! Free functions:

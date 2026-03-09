@@ -3,7 +3,7 @@
 
 //! Hashing operations on GPU tables.
 //!
-//! Available as methods on [`Table`](crate::Table):
+//! Available as methods on [`Table`](crate::table::Table):
 //! `table.murmur3(...)`, `table.xxhash64(...)`, `table.md5()`, `table.sha256()`.
 
 #[cfg(test)]

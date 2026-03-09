@@ -3,7 +3,7 @@
 
 //! `GroupBy` aggregation operations.
 //!
-//! `GroupBy` is available as methods on [`Table`](crate::Table):
+//! `GroupBy` is available as methods on [`Table`](crate::table::Table):
 //! `table.groupby(...)`, `table.groupby_multi(...)`.
 
 /// Aggregation operation kind for groupby.

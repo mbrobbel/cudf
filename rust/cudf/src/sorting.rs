@@ -3,7 +3,7 @@
 
 //! Sorting operations on GPU tables.
 //!
-//! Sorting is available as methods on [`Table`](crate::Table):
+//! Sorting is available as methods on [`Table`](crate::table::Table):
 //! `table.sort(...)`, `table.sorted_order(...)`, `table.is_sorted(...)`.
 
 #[doc(alias = "null_order")]

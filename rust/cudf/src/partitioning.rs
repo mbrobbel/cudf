@@ -3,7 +3,7 @@
 
 //! Table partitioning operations.
 //!
-//! Available as methods on [`Table`](crate::Table):
+//! Available as methods on [`Table`](crate::table::Table):
 //! `table.hash_partition(...)`, `table.round_robin(...)`, etc.
 
 #[cfg(test)]

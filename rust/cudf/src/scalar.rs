@@ -11,7 +11,7 @@ use crate::data_type::TypeId;
 /// A scalar value that can be sent to the GPU.
 ///
 /// This is a pure Rust enum; the FFI scalar is created on demand via
-/// [`scalar_to_ffi`] when calling into libcudf.
+/// `scalar_to_ffi` when calling into libcudf.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Scalar {
     /// Signed 8-bit integer.

@@ -3,7 +3,7 @@
 
 //! Merge operations on sorted tables.
 //!
-//! Available as a method on [`Table`](crate::Table): `table.merge(...)`.
+//! Available as a method on [`Table`](crate::table::Table): `table.merge(...)`.
 
 #[cfg(test)]
 mod tests {

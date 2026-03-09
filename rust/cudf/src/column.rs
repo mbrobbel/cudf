@@ -2110,7 +2110,7 @@ impl PercentileApprox<'_> {
 #[doc(alias = "column_view")]
 /// A non-owning, immutable view of a GPU column.
 ///
-/// The lifetime parameter ties this view to the owning [`Table`](crate::Table).
+/// The lifetime parameter ties this view to the owning [`Table`](crate::table::Table).
 pub struct ColumnView<'a>(pub(crate) &'a cudf_sys::ffi::column_view);
 
 impl ColumnView<'_> {
