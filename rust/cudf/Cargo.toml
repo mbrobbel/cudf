@@ -21,3 +21,7 @@ arrow-schema = { version = "56", optional = true }
 [features]
 vendored = ["cudf-sys/vendored"]
 arrow = ["dep:arrow-array", "dep:arrow-buffer", "dep:arrow-data", "dep:arrow-schema"]
+
+[[bench]]
+name = "gpu_ops"
+harness = false
