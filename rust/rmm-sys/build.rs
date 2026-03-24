@@ -63,6 +63,7 @@ fn main() {
     // both libcudf and librmm. We skip linking here to avoid duplicate symbols.
     if !vendored {
         println!("cargo:rustc-link-lib=rmm");
+        println!("cargo:rustc-link-lib=rapids_logger");
         println!("cargo:rustc-link-lib=cudart");
 
         let lib_paths = discover_lib_paths("RMM_ROOT");
