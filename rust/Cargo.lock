@@ -330,7 +330,6 @@ dependencies = [
  "cudf-sys",
  "cxx",
  "rmm",
- "rmm-sys",
 ]
 
 [[package]]

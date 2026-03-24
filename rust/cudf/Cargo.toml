@@ -11,7 +11,6 @@ repository.workspace = true
 
 [dependencies]
 cudf-sys = { path = "../cudf-sys" }
-rmm-sys = { path = "../rmm-sys" }
 rmm = { path = "../rmm" }
 cxx = { workspace = true }
 arrow-array = { version = "56", optional = true }
