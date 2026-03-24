@@ -6,7 +6,12 @@
 //! This crate provides device queries, GPU memory allocation
 //! ([`DeviceBuffer`](ffi::DeviceBuffer)), CUDA stream management
 //! ([`CudaStream`](ffi::CudaStream), [`CudaStreamPool`](ffi::CudaStreamPool)),
-//! prefetch, and alignment utilities.
+//! memory resources ([`CudaMemoryResource`](ffi::CudaMemoryResource),
+//! [`PoolMemoryResource`](ffi::PoolMemoryResource),
+//! [`CudaAsyncMemoryResource`](ffi::CudaAsyncMemoryResource),
+//! [`ManagedMemoryResource`](ffi::ManagedMemoryResource)),
+//! per-device resource management, scoped device switching
+//! ([`ScopedDevice`](ffi::ScopedDevice)), prefetch, and alignment utilities.
 
 #![deny(clippy::undocumented_unsafe_blocks)]
 // CXX-generated shared enum variants and repr fields cannot carry doc comments.
@@ -81,6 +86,24 @@ pub mod ffi {
         /// Throws a C++ exception if reallocation fails.
         fn device_buffer_resize(buf: Pin<&mut DeviceBuffer>, new_size: usize, stream: usize);
 
+        /// Increases the capacity to at least `new_capacity` bytes without
+        /// changing the logical size.
+        ///
+        /// If `new_capacity <= capacity`, this is a no-op. Otherwise a new
+        /// allocation is made and existing contents are copied.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if allocation fails.
+        fn device_buffer_reserve(buf: Pin<&mut DeviceBuffer>, new_capacity: usize, stream: usize);
+
+        /// Releases any excess capacity so that `capacity == size`.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if reallocation fails.
+        fn device_buffer_shrink_to_fit(buf: Pin<&mut DeviceBuffer>, stream: usize);
+
         /// Returns the raw device pointer as `usize`.
         ///
         /// The returned value is an opaque handle; it should only be passed
@@ -145,6 +168,179 @@ pub mod ffi {
         /// Returns the number of streams in the pool.
         fn cuda_stream_pool_get_pool_size(pool: &CudaStreamPool) -> usize;
 
+        // ---- Memory Resources ----
+
+        /// Opaque wrapper around `rmm::mr::cuda_memory_resource`.
+        ///
+        /// Uses `cudaMalloc`/`cudaFree` for allocation and deallocation.
+        /// This is the default memory resource if none is explicitly configured.
+        ///
+        /// See: [`rmm::mr::cuda_memory_resource`](https://docs.rapids.ai/api/rmm/stable/classrmm_1_1mr_1_1cuda__memory__resource.html)
+        type CudaMemoryResource;
+
+        /// Creates a new `CudaMemoryResource`.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if construction fails.
+        fn cuda_memory_resource_new() -> UniquePtr<CudaMemoryResource>;
+
+        /// Opaque wrapper around `rmm::mr::cuda_async_memory_resource`.
+        ///
+        /// Uses `cudaMallocAsync`/`cudaFreeAsync` for allocation and deallocation.
+        /// Requires CUDA 11.2+ runtime with a compatible driver.
+        ///
+        /// See: [`rmm::mr::cuda_async_memory_resource`](https://docs.rapids.ai/api/rmm/stable/classrmm_1_1mr_1_1cuda__async__memory__resource.html)
+        type CudaAsyncMemoryResource;
+
+        /// Creates a new `CudaAsyncMemoryResource` with default pool settings.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if `cudaMallocAsync` is not supported.
+        fn cuda_async_memory_resource_new() -> UniquePtr<CudaAsyncMemoryResource>;
+
+        /// Creates a new `CudaAsyncMemoryResource` with explicit pool parameters.
+        ///
+        /// # Parameters
+        ///
+        /// - `initial_pool_size`: Initial pool size in bytes (the pool is
+        ///   primed by allocating and immediately deallocating this amount).
+        /// - `release_threshold`: When the pool exceeds this size, unused
+        ///   memory is released at the next synchronization event.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if `cudaMallocAsync` is not supported.
+        fn cuda_async_memory_resource_with_size(
+            initial_pool_size: usize,
+            release_threshold: usize,
+        ) -> UniquePtr<CudaAsyncMemoryResource>;
+
+        /// Opaque wrapper around `rmm::mr::managed_memory_resource`.
+        ///
+        /// Uses `cudaMallocManaged`/`cudaFree` for allocation and deallocation
+        /// (CUDA Unified Virtual Memory).
+        ///
+        /// See: [`rmm::mr::managed_memory_resource`](https://docs.rapids.ai/api/rmm/stable/classrmm_1_1mr_1_1managed__memory__resource.html)
+        type ManagedMemoryResource;
+
+        /// Creates a new `ManagedMemoryResource`.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if construction fails.
+        fn managed_memory_resource_new() -> UniquePtr<ManagedMemoryResource>;
+
+        /// Opaque wrapper around `rmm::mr::pool_memory_resource<cuda_memory_resource>`.
+        ///
+        /// A coalescing best-fit suballocator backed by `cudaMalloc`. This is
+        /// the most commonly used memory resource in production because it
+        /// dramatically reduces the overhead of frequent small allocations.
+        ///
+        /// See: [`rmm::mr::pool_memory_resource`](https://docs.rapids.ai/api/rmm/stable/classrmm_1_1mr_1_1pool__memory__resource.html)
+        type PoolMemoryResource;
+
+        /// Creates a new `PoolMemoryResource` with a default initial pool
+        /// size of 50% of free device memory.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if the initial pool allocation fails.
+        fn pool_memory_resource_new() -> UniquePtr<PoolMemoryResource>;
+
+        /// Creates a new `PoolMemoryResource` with explicit size parameters.
+        ///
+        /// Both sizes must be aligned to 256 bytes
+        /// ([`cuda_allocation_alignment`]).
+        ///
+        /// # Parameters
+        ///
+        /// - `initial_size`: Minimum initial pool size in bytes.
+        /// - `maximum_size`: Maximum pool size in bytes.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if the sizes are misaligned or if the
+        /// initial allocation fails.
+        fn pool_memory_resource_with_size(
+            initial_size: usize,
+            maximum_size: usize,
+        ) -> UniquePtr<PoolMemoryResource>;
+
+        /// Returns the current total pool size in bytes, including both
+        /// allocated and free regions.
+        fn pool_memory_resource_pool_size(mr: &PoolMemoryResource) -> usize;
+
+        // ---- MemoryResourceRef (type-erased) ----
+
+        /// Non-owning, type-erased handle to any `rmm::mr::device_memory_resource`.
+        ///
+        /// Obtained from one of the `memory_resource_ref_from_*` functions or
+        /// from [`get_current_device_resource`]. The referenced memory resource
+        /// must outlive this handle.
+        type MemoryResourceRef;
+
+        /// Creates a [`MemoryResourceRef`] pointing to a [`CudaMemoryResource`].
+        fn memory_resource_ref_from_cuda(
+            mr: Pin<&mut CudaMemoryResource>,
+        ) -> UniquePtr<MemoryResourceRef>;
+
+        /// Creates a [`MemoryResourceRef`] pointing to a [`PoolMemoryResource`].
+        fn memory_resource_ref_from_pool(
+            mr: Pin<&mut PoolMemoryResource>,
+        ) -> UniquePtr<MemoryResourceRef>;
+
+        /// Creates a [`MemoryResourceRef`] pointing to a [`CudaAsyncMemoryResource`].
+        fn memory_resource_ref_from_async(
+            mr: Pin<&mut CudaAsyncMemoryResource>,
+        ) -> UniquePtr<MemoryResourceRef>;
+
+        /// Creates a [`MemoryResourceRef`] pointing to a [`ManagedMemoryResource`].
+        fn memory_resource_ref_from_managed(
+            mr: Pin<&mut ManagedMemoryResource>,
+        ) -> UniquePtr<MemoryResourceRef>;
+
+        // ---- Per-device resource management ----
+
+        /// Returns a [`MemoryResourceRef`] to the current device's memory resource.
+        ///
+        /// If no resource has been explicitly set, this returns a reference to
+        /// the default `cuda_memory_resource`.
+        fn get_current_device_resource() -> UniquePtr<MemoryResourceRef>;
+
+        /// Sets the memory resource for the current device.
+        ///
+        /// Returns a [`MemoryResourceRef`] to the *previous* resource.
+        ///
+        /// # Safety (lifetime)
+        ///
+        /// The concrete memory resource referenced by `mr` must outlive all
+        /// allocations made through it. It is the caller's responsibility to
+        /// ensure this.
+        fn set_current_device_resource(mr: &MemoryResourceRef) -> UniquePtr<MemoryResourceRef>;
+
+        /// Resets the current device's memory resource to the built-in default
+        /// (`cuda_memory_resource`).
+        fn reset_current_device_resource();
+
+        // ---- ScopedDevice ----
+
+        /// RAII guard that sets the CUDA device on construction and restores
+        /// the previous device when dropped.
+        ///
+        /// See: [`rmm::cuda_set_device_raii`](https://docs.rapids.ai/api/rmm/stable/structrmm_1_1cuda__set__device__raii.html)
+        type ScopedDevice;
+
+        /// Creates a [`ScopedDevice`] that sets the current CUDA device to
+        /// `device_id`. The previous device is restored when the returned
+        /// `UniquePtr` is dropped.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if `device_id` is invalid.
+        fn scoped_device_new(device_id: i32) -> UniquePtr<ScopedDevice>;
+
         // ---- Prefetch ----
 
         /// Prefetches memory to the specified device on the given stream.
@@ -185,3 +381,57 @@ pub mod ffi {
         fn is_aligned(value: usize, alignment: usize) -> bool;
     }
 }
+
+// SAFETY: DeviceBuffer owns GPU memory via UniquePtr. Ownership can be
+// transferred across threads; the GPU driver serializes access.
+unsafe impl Send for ffi::DeviceBuffer {}
+// SAFETY: &DeviceBuffer only allows immutable queries (size, capacity, data pointer).
+unsafe impl Sync for ffi::DeviceBuffer {}
+
+// SAFETY: CudaStream owns a CUDA stream handle. Ownership can be
+// transferred across threads.
+unsafe impl Send for ffi::CudaStream {}
+// SAFETY: &CudaStream only allows immutable queries (view, is_valid) and
+// synchronize which is thread-safe in the CUDA runtime.
+unsafe impl Sync for ffi::CudaStream {}
+
+// SAFETY: CudaStreamPool is internally synchronized by the CUDA runtime.
+unsafe impl Send for ffi::CudaStreamPool {}
+// SAFETY: &CudaStreamPool only allows round-robin stream retrieval which is
+// thread-safe.
+unsafe impl Sync for ffi::CudaStreamPool {}
+
+// SAFETY: CudaMemoryResource wraps cudaMalloc/Free which are thread-safe.
+unsafe impl Send for ffi::CudaMemoryResource {}
+// SAFETY: device_memory_resource::allocate/deallocate are thread-safe.
+unsafe impl Sync for ffi::CudaMemoryResource {}
+
+// SAFETY: CudaAsyncMemoryResource wraps cudaMallocAsync/FreeAsync which are
+// thread-safe.
+unsafe impl Send for ffi::CudaAsyncMemoryResource {}
+// SAFETY: device_memory_resource::allocate/deallocate are thread-safe.
+unsafe impl Sync for ffi::CudaAsyncMemoryResource {}
+
+// SAFETY: ManagedMemoryResource wraps cudaMallocManaged/Free which are
+// thread-safe.
+unsafe impl Send for ffi::ManagedMemoryResource {}
+// SAFETY: device_memory_resource::allocate/deallocate are thread-safe.
+unsafe impl Sync for ffi::ManagedMemoryResource {}
+
+// SAFETY: PoolMemoryResource uses internal locking for thread safety.
+unsafe impl Send for ffi::PoolMemoryResource {}
+// SAFETY: pool_memory_resource uses std::mutex internally.
+unsafe impl Sync for ffi::PoolMemoryResource {}
+
+// SAFETY: MemoryResourceRef is a non-owning pointer to a thread-safe
+// device_memory_resource. It can be sent across threads provided the
+// referenced MR outlives the ref.
+unsafe impl Send for ffi::MemoryResourceRef {}
+// SAFETY: The underlying device_memory_resource is thread-safe.
+unsafe impl Sync for ffi::MemoryResourceRef {}
+
+// SAFETY: ScopedDevice wraps cuda_set_device_raii. Transferring ownership
+// across threads is valid — the destructor simply calls cudaSetDevice.
+unsafe impl Send for ffi::ScopedDevice {}
+// SAFETY: &ScopedDevice has no methods; it only restores the device on drop.
+unsafe impl Sync for ffi::ScopedDevice {}

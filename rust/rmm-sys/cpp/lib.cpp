@@ -9,6 +9,12 @@
 #include <rmm/cuda_stream_pool.hpp>
 #include <rmm/cuda_stream_view.hpp>
 #include <rmm/device_buffer.hpp>
+#include <rmm/mr/cuda_async_memory_resource.hpp>
+#include <rmm/mr/cuda_memory_resource.hpp>
+#include <rmm/mr/device_memory_resource.hpp>
+#include <rmm/mr/managed_memory_resource.hpp>
+#include <rmm/mr/per_device_resource.hpp>
+#include <rmm/mr/pool_memory_resource.hpp>
 #include <rmm/prefetch.hpp>
 
 #include <cuda_runtime_api.h>
@@ -62,6 +68,14 @@ void device_buffer_resize(DeviceBuffer& buf, std::size_t new_size, std::size_t s
   buf.resize(new_size, stream);
 }
 
+void device_buffer_reserve(DeviceBuffer& buf, std::size_t new_capacity, std::size_t stream) {
+  buf.reserve(new_capacity, stream);
+}
+
+void device_buffer_shrink_to_fit(DeviceBuffer& buf, std::size_t stream) {
+  buf.shrink_to_fit(stream);
+}
+
 std::size_t device_buffer_data(const DeviceBuffer& buf) {
   return buf.data();
 }
@@ -100,6 +114,78 @@ std::size_t cuda_stream_pool_get_stream(const CudaStreamPool& pool) {
 
 std::size_t cuda_stream_pool_get_pool_size(const CudaStreamPool& pool) {
   return pool.get_pool_size();
+}
+
+// ---- Memory Resources ----
+
+std::unique_ptr<CudaMemoryResource> cuda_memory_resource_new() {
+  return std::make_unique<CudaMemoryResource>();
+}
+
+std::unique_ptr<CudaAsyncMemoryResource> cuda_async_memory_resource_new() {
+  return std::make_unique<CudaAsyncMemoryResource>();
+}
+
+std::unique_ptr<CudaAsyncMemoryResource> cuda_async_memory_resource_with_size(
+    std::size_t initial_pool_size, std::size_t release_threshold) {
+  return std::make_unique<CudaAsyncMemoryResource>(initial_pool_size, release_threshold);
+}
+
+std::unique_ptr<ManagedMemoryResource> managed_memory_resource_new() {
+  return std::make_unique<ManagedMemoryResource>();
+}
+
+std::unique_ptr<PoolMemoryResource> pool_memory_resource_new() {
+  return std::make_unique<PoolMemoryResource>();
+}
+
+std::unique_ptr<PoolMemoryResource> pool_memory_resource_with_size(
+    std::size_t initial_size, std::size_t maximum_size) {
+  return std::make_unique<PoolMemoryResource>(initial_size, maximum_size);
+}
+
+std::size_t pool_memory_resource_pool_size(const PoolMemoryResource& mr) {
+  return mr.pool_size();
+}
+
+// ---- MemoryResourceRef ----
+
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_cuda(CudaMemoryResource& mr) {
+  return std::make_unique<MemoryResourceRef>(mr.get());
+}
+
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_pool(PoolMemoryResource& mr) {
+  return std::make_unique<MemoryResourceRef>(mr.get());
+}
+
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_async(CudaAsyncMemoryResource& mr) {
+  return std::make_unique<MemoryResourceRef>(mr.get());
+}
+
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_managed(ManagedMemoryResource& mr) {
+  return std::make_unique<MemoryResourceRef>(mr.get());
+}
+
+// ---- Per-device resource management ----
+
+std::unique_ptr<MemoryResourceRef> get_current_device_resource() {
+  auto* mr = rmm::mr::get_current_device_resource();
+  return std::make_unique<MemoryResourceRef>(mr);
+}
+
+std::unique_ptr<MemoryResourceRef> set_current_device_resource(const MemoryResourceRef& mr) {
+  auto* old = rmm::mr::set_current_device_resource(mr.get());
+  return std::make_unique<MemoryResourceRef>(old);
+}
+
+void reset_current_device_resource() {
+  rmm::mr::set_current_device_resource(nullptr);
+}
+
+// ---- ScopedDevice ----
+
+std::unique_ptr<ScopedDevice> scoped_device_new(int32_t device_id) {
+  return std::make_unique<ScopedDevice>(device_id);
 }
 
 // ---- Prefetch ----
