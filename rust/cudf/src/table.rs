@@ -1274,6 +1274,52 @@ impl crate::stream::GpuOp for GatherChecked<'_> {
     }
 }
 
+#[doc(alias = "negative_index_policy")]
+/// Builder for [`Table::gather_with_policy`]. See that method for details.
+pub struct GatherWithPolicy<'a> {
+    table: &'a Table,
+    indices: &'a ColumnView<'a>,
+    nullify_oob: bool,
+    allow_negative: bool,
+    stream: Stream,
+}
+
+impl GatherWithPolicy<'_> {
+    /// If `true`, out-of-bounds indices produce null rows in the output.
+    /// If `false` (the default), behavior is undefined for out-of-bounds indices.
+    pub fn nullify_oob(mut self, nullify: bool) -> Self {
+        self.nullify_oob = nullify;
+        self
+    }
+
+    /// If `true` (the default), negative indices wrap around (`i + n`).
+    /// If `false`, negative indices are undefined behavior.
+    pub fn allow_negative(mut self, allow: bool) -> Self {
+        self.allow_negative = allow;
+        self
+    }
+}
+
+impl crate::stream::GpuOp for GatherWithPolicy<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::copying::ffi::gather_table_with_policy(
+            &self.table.0,
+            self.indices.0,
+            self.nullify_oob,
+            self.allow_negative,
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
 /// Builder for [`Table::cross_join`]. See that method for details.
 pub struct CrossJoin<'a> {
     table: &'a Table,
@@ -4441,6 +4487,40 @@ impl Table {
         }
     }
 
+    /// Gathers rows by index with configurable out-of-bounds and negative-index
+    /// handling.
+    ///
+    /// This is a more flexible version of [`gather_checked`](Table::gather_checked)
+    /// that additionally controls whether negative indices are allowed (wrap
+    /// around) or treated as undefined behavior.
+    ///
+    /// Use the builder methods [`.nullify_oob()`](GatherWithPolicy::nullify_oob)
+    /// and [`.allow_negative()`](GatherWithPolicy::allow_negative) to configure
+    /// the policies before calling [`.call()`](crate::stream::GpuOp::call).
+    ///
+    /// # Arguments
+    ///
+    /// * `indices` -- An `INT32` column of row indices to select.
+    ///
+    /// # Defaults
+    ///
+    /// * `nullify_oob` -- `false` (`DONT_CHECK`)
+    /// * `allow_negative` -- `true` (`ALLOWED`, negative indices wrap around)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the libcudf call fails.
+    #[doc(alias = "negative_index_policy")]
+    pub fn gather_with_policy<'a>(&'a self, indices: &'a ColumnView<'a>) -> GatherWithPolicy<'a> {
+        GatherWithPolicy {
+            table: self,
+            indices,
+            nullify_oob: false,
+            allow_negative: true,
+            stream: Stream::default_stream(),
+        }
+    }
+
     /// Computes the cross join (Cartesian product) of this table with
     /// `right`.
     ///
@@ -5090,5 +5170,50 @@ mod tests {
         let builder = TableBuilder::default();
         let table = builder.build().unwrap();
         assert_eq!(table.columns_len(), 0);
+    }
+
+    #[test]
+    fn gather_with_policy_default() {
+        let col = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
+        let mut builder = TableBuilder::new();
+        builder.push_column(col);
+        let table = builder.build().unwrap();
+
+        let idx = Column::from_slice_i32(&[2, 0]).call().unwrap();
+        let result = table.gather_with_policy(&idx.view()).call().unwrap();
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn gather_with_policy_nullify_oob() {
+        let col = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
+        let mut builder = TableBuilder::new();
+        builder.push_column(col);
+        let table = builder.build().unwrap();
+
+        let idx = Column::from_slice_i32(&[0, 100]).call().unwrap();
+        let result = table
+            .gather_with_policy(&idx.view())
+            .nullify_oob(true)
+            .call()
+            .unwrap();
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn gather_with_policy_allow_negative() {
+        let col = Column::from_slice_i32(&[10, 20, 30]).call().unwrap();
+        let mut builder = TableBuilder::new();
+        builder.push_column(col);
+        let table = builder.build().unwrap();
+
+        // -1 should wrap to index 2 (30)
+        let idx = Column::from_slice_i32(&[-1]).call().unwrap();
+        let result = table
+            .gather_with_policy(&idx.view())
+            .allow_negative(true)
+            .call()
+            .unwrap();
+        assert_eq!(result.len(), 1);
     }
 }

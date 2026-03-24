@@ -60,5 +60,36 @@ pub mod ffi {
 
         /// Compute the cross join (Cartesian product) of two tables.
         fn cross_join(left: &Table, right: &Table, stream: usize) -> Result<UniquePtr<Table>>;
+
+        // -- MarkJoin --
+
+        /// Stateful hash join that builds a hash table once for repeated probes.
+        type MarkJoin;
+
+        /// Creates a new MarkJoin from a build table's key columns.
+        fn mark_join_new(
+            tbl: &Table,
+            keys: &[i32],
+            compare_nulls_equal: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<MarkJoin>>;
+
+        /// Semi join probe: returns build rows that have matches in probe.
+        fn mark_join_semi(
+            joiner: &MarkJoin,
+            build: &Table,
+            probe: &Table,
+            probe_keys: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Anti join probe: returns build rows that have NO matches in probe.
+        fn mark_join_anti(
+            joiner: &MarkJoin,
+            build: &Table,
+            probe: &Table,
+            probe_keys: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
     }
 }

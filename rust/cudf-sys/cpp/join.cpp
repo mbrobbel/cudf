@@ -143,4 +143,62 @@ std::unique_ptr<Table> cross_join(Table const& left, Table const& right, std::si
   return TBL(cudf::cross_join(left.cached_view(), right.cached_view(), S(stream)));
 }
 
+// -- MarkJoin --
+
+MarkJoin::MarkJoin(cudf::table_view keys, bool compare_nulls_equal,
+                   rmm::cuda_stream_view stream)
+    : joiner_(std::make_unique<cudf::mark_join>(
+          keys,
+          compare_nulls_equal ? cudf::null_equality::EQUAL
+                              : cudf::null_equality::UNEQUAL,
+          stream)) {}
+
+std::unique_ptr<rmm::device_uvector<cudf::size_type>> MarkJoin::semi_join(
+    cudf::table_view const& probe, rmm::cuda_stream_view stream) const {
+  return joiner_->semi_join(probe, stream);
+}
+
+std::unique_ptr<rmm::device_uvector<cudf::size_type>> MarkJoin::anti_join(
+    cudf::table_view const& probe, rmm::cuda_stream_view stream) const {
+  return joiner_->anti_join(probe, stream);
+}
+
+std::unique_ptr<MarkJoin> mark_join_new(
+    Table const& tbl,
+    rust::Slice<int32_t const> keys,
+    bool compare_nulls_equal,
+    std::size_t stream) {
+  auto view = tbl.cached_view();
+  auto key_view = select_columns(view, keys);
+  return std::make_unique<MarkJoin>(key_view, compare_nulls_equal, S(stream));
+}
+
+std::unique_ptr<Table> mark_join_semi(
+    MarkJoin const& joiner,
+    Table const& build,
+    Table const& probe,
+    rust::Slice<int32_t const> probe_keys,
+    std::size_t stream) {
+  auto s = S(stream);
+  auto probe_key_view = select_columns(probe.cached_view(), probe_keys);
+  auto idx = joiner.semi_join(probe_key_view, s);
+  auto idx_col = indices_to_column(std::move(idx));
+  return TBL(cudf::gather(build.cached_view(), idx_col->view(),
+      cudf::out_of_bounds_policy::DONT_CHECK, s));
+}
+
+std::unique_ptr<Table> mark_join_anti(
+    MarkJoin const& joiner,
+    Table const& build,
+    Table const& probe,
+    rust::Slice<int32_t const> probe_keys,
+    std::size_t stream) {
+  auto s = S(stream);
+  auto probe_key_view = select_columns(probe.cached_view(), probe_keys);
+  auto idx = joiner.anti_join(probe_key_view, s);
+  auto idx_col = indices_to_column(std::move(idx));
+  return TBL(cudf::gather(build.cached_view(), idx_col->view(),
+      cudf::out_of_bounds_policy::DONT_CHECK, s));
+}
+
 }  // namespace cudf_sys

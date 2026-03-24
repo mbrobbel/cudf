@@ -11,6 +11,8 @@
 #include <cudf/table/table_view.hpp>
 #include <cudf/types.hpp>
 #include <cudf/contiguous_split.hpp>
+#include <cudf/join/filtered_join.hpp>
+#include <cudf/join/mark_join.hpp>
 #include <cudf/io/types.hpp>
 #include <cudf/rolling/range_window_bounds.hpp>
 
@@ -1041,6 +1043,7 @@ std::unique_ptr<Column> strings_extract_single(cudf::column_view const& col, rus
 // -- Copying: gather_checked, may_have_nonempty_nulls --
 
 std::unique_ptr<Table> gather_table_checked(Table const& tbl, cudf::column_view const& gather_map, bool nullify_oob, std::size_t stream);
+std::unique_ptr<Table> gather_table_with_policy(Table const& tbl, cudf::column_view const& gather_map, bool nullify_oob, bool allow_negative, std::size_t stream);
 bool may_have_nonempty_nulls(cudf::column_view const& col);
 
 // -- Sorting: segmented_sort_by_key (non-stable) --
@@ -1322,5 +1325,53 @@ std::unique_ptr<Scalar> repeat_string_scalar(Scalar const& input, int32_t repeat
 // -- Column with null mask from bools --
 
 std::unique_ptr<Column> column_with_null_mask_from_bools(Column const& col, cudf::column_view const& validity, std::size_t stream);
+
+// -- MarkJoin --
+
+/// Stateful mark-based hash join that builds a hash table once and supports
+/// repeated semi_join / anti_join probes.  Wraps `cudf::mark_join`.
+class MarkJoin {
+ public:
+  /// Construct from a build-table key view and null-equality flag.
+  MarkJoin(cudf::table_view keys, bool compare_nulls_equal,
+           rmm::cuda_stream_view stream);
+
+  /// Semi join: returns build row indices that have at least one match.
+  std::unique_ptr<rmm::device_uvector<cudf::size_type>> semi_join(
+      cudf::table_view const& probe, rmm::cuda_stream_view stream) const;
+
+  /// Anti join: returns build row indices that have NO matches.
+  std::unique_ptr<rmm::device_uvector<cudf::size_type>> anti_join(
+      cudf::table_view const& probe, rmm::cuda_stream_view stream) const;
+
+ private:
+  std::unique_ptr<cudf::mark_join> joiner_;
+};
+
+// MarkJoin free functions (CXX-compatible)
+std::unique_ptr<MarkJoin> mark_join_new(
+    Table const& tbl,
+    rust::Slice<int32_t const> keys,
+    bool compare_nulls_equal,
+    std::size_t stream);
+
+std::unique_ptr<Table> mark_join_semi(
+    MarkJoin const& joiner,
+    Table const& build,
+    Table const& probe,
+    rust::Slice<int32_t const> probe_keys,
+    std::size_t stream);
+
+std::unique_ptr<Table> mark_join_anti(
+    MarkJoin const& joiner,
+    Table const& build,
+    Table const& probe,
+    rust::Slice<int32_t const> probe_keys,
+    std::size_t stream);
+
+// -- JIT cache control --
+
+void enable_jit_cache(bool enable);
+void clear_jit_cache();
 
 }  // namespace cudf_sys

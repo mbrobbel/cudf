@@ -210,5 +210,20 @@ pub mod ffi {
             dest_begin: i32,
             stream: usize,
         ) -> Result<()>;
+
+        // -- Gather with policy --
+
+        /// Gather rows with both out-of-bounds and negative-index policies.
+        ///
+        /// `nullify_oob=true` means NULLIFY, `false` means DONT_CHECK.
+        /// `allow_negative=true` means negative indices wrap around (ALLOWED),
+        /// `false` means they are undefined behavior (NOT_ALLOWED).
+        fn gather_table_with_policy(
+            tbl: &Table,
+            gather_map: &column_view,
+            nullify_oob: bool,
+            allow_negative: bool,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
     }
 }

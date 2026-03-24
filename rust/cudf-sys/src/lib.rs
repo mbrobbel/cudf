@@ -735,6 +735,17 @@ pub mod ffi {
             validity: &column_view,
             stream: usize,
         ) -> Result<UniquePtr<Column>>;
+
+        // -- JIT cache control --
+
+        /// Enables or disables the JIT program cache.
+        ///
+        /// When `enable` is true, initializes the JIT cache if not already done.
+        /// When false, this is currently a no-op (call `clear_jit_cache` to tear down).
+        fn enable_jit_cache(enable: bool);
+
+        /// Clears the JIT program cache and tears down the cudf global context.
+        fn clear_jit_cache();
     }
 }
 
@@ -749,6 +760,13 @@ unsafe impl Sync for ffi::Column {}
 unsafe impl Send for ffi::Table {}
 // SAFETY: &Table only allows immutable access through the FFI.
 unsafe impl Sync for ffi::Table {}
+
+// SAFETY: MarkJoin wraps a cudf::filtered_join which holds GPU hash tables.
+// GPU memory is globally accessible from any CPU thread and the CXX UniquePtr
+// ensures exclusive ownership.
+unsafe impl Send for join::ffi::MarkJoin {}
+// SAFETY: &MarkJoin only allows immutable probe operations through the FFI.
+unsafe impl Sync for join::ffi::MarkJoin {}
 
 impl std::fmt::Display for ffi::TypeId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

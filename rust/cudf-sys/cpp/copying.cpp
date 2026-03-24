@@ -173,4 +173,19 @@ void copy_range_in_place(Column& dest, cudf::column_view const& source, int32_t 
   cudf::copy_range_in_place(source, mcv, source_begin, source_end, dest_begin, S(stream));
 }
 
+// -- Gather with policy --
+
+std::unique_ptr<Table> gather_table_with_policy(
+    Table const& tbl,
+    cudf::column_view const& gather_map,
+    bool nullify_oob,
+    bool allow_negative,
+    std::size_t stream) {
+  auto bounds = nullify_oob ? cudf::out_of_bounds_policy::NULLIFY
+                            : cudf::out_of_bounds_policy::DONT_CHECK;
+  auto neg = allow_negative ? cudf::negative_index_policy::ALLOWED
+                            : cudf::negative_index_policy::NOT_ALLOWED;
+  return TBL(cudf::gather(tbl.cached_view(), gather_map, bounds, neg, S(stream)));
+}
+
 }  // namespace cudf_sys

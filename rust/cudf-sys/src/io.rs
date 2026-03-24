@@ -100,10 +100,8 @@ pub mod ffi {
         fn read_json(filepath: &str, json_lines: bool) -> Result<UniquePtr<Table>>;
 
         /// Read a JSON file with metadata. Set json_lines=true for JSON Lines format.
-        fn read_json_meta(
-            filepath: &str,
-            json_lines: bool,
-        ) -> Result<UniquePtr<TableWithMetadata>>;
+        fn read_json_meta(filepath: &str, json_lines: bool)
+        -> Result<UniquePtr<TableWithMetadata>>;
 
         /// Write a table to a JSON file. Set json_lines=true for JSON Lines format.
         fn write_json(tbl: &Table, filepath: &str, json_lines: bool) -> Result<()>;

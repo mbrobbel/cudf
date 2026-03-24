@@ -6,7 +6,7 @@ members = ["rmm-sys", "cudf-sys", "cudf"]
 resolver = "3"
 
 [workspace.package]
-version = "0.0.0+26.04.00"
+version = "0.0.0+26.06.00"
 edition = "2024"
 rust-version = "1.85"
 license = "Apache-2.0"

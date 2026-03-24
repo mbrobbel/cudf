@@ -12,6 +12,7 @@
 #include <cudf/types.hpp>
 #include <cudf/unary.hpp>
 #include <cudf/utilities/type_checks.hpp>
+#include <cudf/context.hpp>
 
 #include <cuda_runtime.h>
 
@@ -705,6 +706,16 @@ std::unique_ptr<Column> column_with_null_mask_from_bools(Column const& col, cudf
   auto result = std::make_unique<cudf::column>(col.cached_view(), s);
   result->set_null_mask(std::move(*null_mask), null_count);
   return COL(std::move(result));
+}
+
+// -- JIT cache control --
+
+void enable_jit_cache(bool enable) {
+  cudf::enable_jit_cache(enable);
+}
+
+void clear_jit_cache() {
+  cudf::clear_jit_cache();
 }
 
 }  // namespace cudf_sys

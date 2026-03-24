@@ -23,7 +23,11 @@
 //! the left table followed by all columns from the right table. For semi and
 //! anti joins the output contains only the left table's columns.
 //!
-//! Joins are available as methods on [`Table`](crate::table::Table):
+//! Additionally, the [`MarkJoin`] type provides a stateful hash join that
+//! builds a hash table once from a "build" table and can be probed multiple
+//! times with different "probe" tables for semi and anti joins.
+//!
+//! Joins are available as methods on [`Table`]:
 //!
 //! ```ignore
 //! use cudf::stream::GpuOp;
@@ -33,8 +37,227 @@
 //! # Ok::<(), cudf::error::Error>(())
 //! ```
 
+use cxx::UniquePtr;
+
+use crate::error::Result;
+use crate::stream::Stream;
+use crate::table::Table;
+
+#[doc(alias = "mark_join")]
+/// A stateful mark-based hash join that builds a hash table once and supports
+/// repeated semi-join and anti-join probes.
+///
+/// `MarkJoin` is constructed from a build table and a set of key column
+/// indices. The hash table is built during construction. Subsequent calls to
+/// [`semi_join`](MarkJoin::semi_join) and [`anti_join`](MarkJoin::anti_join)
+/// probe this hash table with different probe tables, returning the matching
+/// (or non-matching) rows from the **build** table.
+///
+/// This is useful when the same build table is joined against many probe
+/// tables, as the hash table construction cost is paid only once.
+///
+/// # Examples
+///
+/// ```ignore
+/// use cudf::join::MarkJoin;
+/// use cudf::stream::GpuOp;
+///
+/// let build = /* ... */;
+/// let joiner = MarkJoin::new(&build, &[0], true).call()?;
+///
+/// let result1 = joiner.semi_join(&build, &probe1, &[0]).call()?;
+/// let result2 = joiner.anti_join(&build, &probe2, &[0]).call()?;
+/// # Ok::<(), cudf::error::Error>(())
+/// ```
+pub struct MarkJoin(UniquePtr<cudf_sys::join::ffi::MarkJoin>);
+
+/// Builder for [`MarkJoin::new`]. See that method for details.
+pub struct MarkJoinNew<'a> {
+    build: &'a Table,
+    keys: &'a [i32],
+    compare_nulls_equal: bool,
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for MarkJoinNew<'_> {
+    type Output = MarkJoin;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let inner = cudf_sys::join::ffi::mark_join_new(
+            &self.build.0,
+            self.keys,
+            self.compare_nulls_equal,
+            self.stream.as_raw(),
+        )?;
+        Ok(MarkJoin(inner))
+    }
+}
+
+/// Builder for [`MarkJoin::semi_join`]. See that method for details.
+pub struct MarkJoinSemi<'a> {
+    joiner: &'a MarkJoin,
+    build: &'a Table,
+    probe: &'a Table,
+    probe_keys: &'a [i32],
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for MarkJoinSemi<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::join::ffi::mark_join_semi(
+            &self.joiner.0,
+            &self.build.0,
+            &self.probe.0,
+            self.probe_keys,
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+/// Builder for [`MarkJoin::anti_join`]. See that method for details.
+pub struct MarkJoinAnti<'a> {
+    joiner: &'a MarkJoin,
+    build: &'a Table,
+    probe: &'a Table,
+    probe_keys: &'a [i32],
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for MarkJoinAnti<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::join::ffi::mark_join_anti(
+            &self.joiner.0,
+            &self.build.0,
+            &self.probe.0,
+            self.probe_keys,
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+impl MarkJoin {
+    /// Creates a new `MarkJoin` by building a hash table from the specified
+    /// key columns of the build table.
+    ///
+    /// # Arguments
+    ///
+    /// * `build` -- The table whose key columns form the hash table.
+    /// * `keys` -- Zero-based column indices identifying the key columns in
+    ///   `build`.
+    /// * `compare_nulls_equal` -- If `true`, null key values are considered
+    ///   equal when matching. If `false`, nulls never match.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key column indices are out of bounds or a GPU
+    /// error occurs.
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new<'a>(
+        build: &'a Table,
+        keys: &'a [i32],
+        compare_nulls_equal: bool,
+    ) -> MarkJoinNew<'a> {
+        MarkJoinNew {
+            build,
+            keys,
+            compare_nulls_equal,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Performs a semi-join probe: returns rows from `build` whose key columns
+    /// have at least one match in the `probe` table.
+    ///
+    /// The output table has the same columns as `build` and contains only the
+    /// matching rows.
+    ///
+    /// # Arguments
+    ///
+    /// * `build` -- The original build table (must be the same table used
+    ///   during construction).
+    /// * `probe` -- The table to probe against the build hash table.
+    /// * `probe_keys` -- Zero-based column indices identifying the key columns
+    ///   in `probe`. Must have the same length as the `keys` used during
+    ///   construction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key column types are incompatible or a GPU
+    /// error occurs.
+    pub fn semi_join<'a>(
+        &'a self,
+        build: &'a Table,
+        probe: &'a Table,
+        probe_keys: &'a [i32],
+    ) -> MarkJoinSemi<'a> {
+        MarkJoinSemi {
+            joiner: self,
+            build,
+            probe,
+            probe_keys,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Performs an anti-join probe: returns rows from `build` whose key columns
+    /// have NO matches in the `probe` table.
+    ///
+    /// The output table has the same columns as `build` and contains only the
+    /// non-matching rows.
+    ///
+    /// # Arguments
+    ///
+    /// * `build` -- The original build table (must be the same table used
+    ///   during construction).
+    /// * `probe` -- The table to probe against the build hash table.
+    /// * `probe_keys` -- Zero-based column indices identifying the key columns
+    ///   in `probe`. Must have the same length as the `keys` used during
+    ///   construction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key column types are incompatible or a GPU
+    /// error occurs.
+    pub fn anti_join<'a>(
+        &'a self,
+        build: &'a Table,
+        probe: &'a Table,
+        probe_keys: &'a [i32],
+    ) -> MarkJoinAnti<'a> {
+        MarkJoinAnti {
+            joiner: self,
+            build,
+            probe,
+            probe_keys,
+            stream: Stream::default_stream(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::MarkJoin;
     use crate::column::Column;
     use crate::stream::GpuOp;
     use crate::table::{Table, TableBuilder};
@@ -210,5 +433,73 @@ mod tests {
         let result = left.inner_join(&right, &[0i32], &[0i32]).call().unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result.columns_len(), 4);
+    }
+
+    // -- MarkJoin tests --
+
+    #[test]
+    fn mark_join_semi_basic() {
+        let build = make_two_col_table(&[2, 3, 4], &[200, 300, 400]);
+        let joiner = MarkJoin::new(&build, &[0i32], true).call().unwrap();
+
+        let probe = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
+        let result = joiner
+            .semi_join(&build, &probe, &[0i32])
+            .call()
+            .unwrap();
+        assert_eq!(result.columns_len(), 2);
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn mark_join_anti_basic() {
+        let build = make_two_col_table(&[2, 3, 4], &[200, 300, 400]);
+        let joiner = MarkJoin::new(&build, &[0i32], true).call().unwrap();
+
+        let probe = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
+        let result = joiner
+            .anti_join(&build, &probe, &[0i32])
+            .call()
+            .unwrap();
+        assert_eq!(result.columns_len(), 2);
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn mark_join_reuse_build() {
+        let build = make_two_col_table(&[1, 2], &[10, 20]);
+        let joiner = MarkJoin::new(&build, &[0i32], true).call().unwrap();
+
+        let probe1 = make_two_col_table(&[1, 3, 5], &[100, 300, 500]);
+        let probe2 = make_two_col_table(&[2, 4, 6], &[200, 400, 600]);
+
+        let r1 = joiner
+            .semi_join(&build, &probe1, &[0i32])
+            .call()
+            .unwrap();
+        let r2 = joiner
+            .semi_join(&build, &probe2, &[0i32])
+            .call()
+            .unwrap();
+        assert_eq!(r1.len(), 1);
+        assert_eq!(r2.len(), 1);
+    }
+
+    #[test]
+    fn mark_join_no_matches() {
+        let build = make_two_col_table(&[10, 20], &[100, 200]);
+        let joiner = MarkJoin::new(&build, &[0i32], true).call().unwrap();
+
+        let probe = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
+        let semi = joiner
+            .semi_join(&build, &probe, &[0i32])
+            .call()
+            .unwrap();
+        let anti = joiner
+            .anti_join(&build, &probe, &[0i32])
+            .call()
+            .unwrap();
+        assert_eq!(semi.len(), 0);
+        assert_eq!(anti.len(), 2);
     }
 }

@@ -320,7 +320,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "cudf"
-version = "0.0.0+26.04.00"
+version = "0.0.0+26.06.00"
 dependencies = [
  "arrow-array",
  "arrow-buffer",
@@ -334,7 +334,7 @@ dependencies = [
 
 [[package]]
 name = "cudf-sys"
-version = "0.0.0+26.04.00"
+version = "0.0.0+26.06.00"
 dependencies = [
  "cc",
  "cmake",
@@ -771,7 +771,7 @@ checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
 name = "rmm-sys"
-version = "0.0.0+26.04.00"
+version = "0.0.0+26.06.00"
 dependencies = [
  "cxx",
  "cxx-build",
