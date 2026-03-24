@@ -69,6 +69,21 @@ impl Stream {
     pub fn as_raw(self) -> usize {
         self.0
     }
+
+    /// Creates a `Stream` from an owning [`rmm::stream::Stream`].
+    ///
+    /// The returned cudf `Stream` borrows the raw handle. The caller must
+    /// ensure the owning `rmm::stream::Stream` outlives any operations
+    /// submitted to this handle.
+    pub fn from_rmm(stream: &rmm::stream::Stream) -> Self {
+        Self(stream.as_raw())
+    }
+}
+
+impl From<&rmm::stream::Stream> for Stream {
+    fn from(stream: &rmm::stream::Stream) -> Self {
+        Self(stream.as_raw())
+    }
 }
 
 /// Trait for GPU operation builders that support stream selection and execution.

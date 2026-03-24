@@ -1,63 +1,56 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
-//! GPU memory management via RMM (device queries).
+//! Re-export of the [`rmm`] crate for GPU memory management.
+//!
+//! This module re-exports the safe RMM API so cudf users can access device
+//! queries, memory resources, streams, and buffers without adding a separate
+//! `rmm` dependency.
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use cudf::rmm::device;
+//! use cudf::rmm::memory_resource::PoolMemoryResource;
+//!
+//! let n = device::num_devices();
+//! let dev = device::current_device();
+//! println!("{n} devices, current: {dev}");
+//! ```
 
-pub use rmm_sys::ffi::DeviceId;
-
-/// Returns the number of CUDA devices available.
-pub fn num_devices() -> i32 {
-    rmm_sys::ffi::get_num_cuda_devices()
-}
-
-/// Returns the current CUDA device.
-pub fn current_device() -> DeviceId {
-    rmm_sys::ffi::get_current_device()
-}
-
-/// Returns the available (free) device memory in bytes.
-pub fn available_device_memory() -> usize {
-    rmm_sys::ffi::available_device_memory()
-}
-
-/// Returns the total device memory in bytes.
-pub fn total_device_memory() -> usize {
-    rmm_sys::ffi::total_device_memory()
-}
-
-/// Returns the specified percentage of free device memory in bytes.
-pub fn percent_of_free_device_memory(percent: i32) -> usize {
-    rmm_sys::ffi::percent_of_free_device_memory(percent)
-}
+pub use rmm::aligned;
+pub use rmm::buffer;
+pub use rmm::device;
+pub use rmm::error;
+pub use rmm::memory_resource;
+pub use rmm::prefetch;
+pub use rmm::stream;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn has_at_least_one_device() {
-        assert!(num_devices() > 0);
+        assert!(rmm::device::num_devices() > 0);
     }
 
     #[test]
     fn current_device_is_valid() {
-        let dev = current_device();
-        assert!(dev.value >= 0);
-        assert!(dev.value < num_devices());
+        let dev = rmm::device::current_device();
+        assert!(dev.value() >= 0);
+        assert!(dev.value() < rmm::device::num_devices());
     }
 
     #[test]
     fn device_memory_is_nonzero() {
-        assert!(total_device_memory() > 0);
-        assert!(available_device_memory() > 0);
-        assert!(available_device_memory() <= total_device_memory());
+        assert!(rmm::device::total_memory() > 0);
+        assert!(rmm::device::available_memory() > 0);
+        assert!(rmm::device::available_memory() <= rmm::device::total_memory());
     }
 
     #[test]
     fn percent_of_free_memory() {
-        let half = percent_of_free_device_memory(50);
-        let full = available_device_memory();
-        // 50% should be roughly half of available, with some tolerance for concurrent changes
+        let half = rmm::device::percent_of_free_memory(50);
+        let full = rmm::device::available_memory();
         assert!(half > 0);
         assert!(half <= full);
     }

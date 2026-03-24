@@ -2034,12 +2034,12 @@ fn empty_table_operations() {
 
 #[test]
 fn rmm_device_queries() {
-    let num = cudf::rmm::num_devices();
+    let num = cudf::rmm::device::num_devices();
     assert!(num >= 1);
 
-    let dev = cudf::rmm::current_device();
+    let dev = cudf::rmm::device::current_device();
     // Device ID should be non-negative
-    assert!(dev.value >= 0);
+    assert!(dev.value() >= 0);
 }
 
 // ===========================================================================

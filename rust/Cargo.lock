@@ -329,6 +329,7 @@ dependencies = [
  "criterion",
  "cudf-sys",
  "cxx",
+ "rmm",
  "rmm-sys",
 ]
 
