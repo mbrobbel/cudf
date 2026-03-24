@@ -11,6 +11,7 @@
 // CXX bridge functions may need many parameters to match C++ signatures.
 #![allow(clippy::too_many_arguments)]
 
+pub mod ast;
 pub mod binaryop;
 pub mod compaction;
 pub mod concatenate;
@@ -767,6 +768,13 @@ unsafe impl Sync for ffi::Table {}
 unsafe impl Send for join::ffi::MarkJoin {}
 // SAFETY: &MarkJoin only allows immutable probe operations through the FFI.
 unsafe impl Sync for join::ffi::MarkJoin {}
+
+// SAFETY: ExpressionTree wraps host-side AST metadata and GPU scalar pointers.
+// The AST tree is read-only after construction and GPU scalars are thread-safe.
+unsafe impl Send for ast::ffi::ExpressionTree {}
+// SAFETY: ExpressionTree wraps host-side AST metadata and GPU scalar pointers.
+// The AST tree is read-only after construction and GPU scalars are thread-safe.
+unsafe impl Sync for ast::ffi::ExpressionTree {}
 
 impl std::fmt::Display for ffi::TypeId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -340,6 +340,178 @@ impl crate::stream::GpuOp for LeftAntiJoin<'_> {
     }
 }
 
+/// Builder for [`Table::compute_column`]. See that method for details.
+pub struct ComputeColumn<'a> {
+    table: &'a Table,
+    tree: &'a crate::ast::ExpressionTree,
+    root: crate::ast::ExprRef,
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for ComputeColumn<'_> {
+    type Output = Column;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let c = cudf_sys::ast::ffi::ast_compute_column(
+            &self.table.0,
+            self.tree.raw(),
+            self.root.index(),
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`Table::conditional_inner_join`]. See that method for details.
+pub struct ConditionalInnerJoin<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    tree: &'a crate::ast::ExpressionTree,
+    predicate: crate::ast::ExprRef,
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for ConditionalInnerJoin<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::ast::ffi::conditional_inner_join(
+            &self.table.0,
+            &self.right.0,
+            self.tree.raw(),
+            self.predicate.index(),
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+/// Builder for [`Table::conditional_left_join`]. See that method for details.
+pub struct ConditionalLeftJoin<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    tree: &'a crate::ast::ExpressionTree,
+    predicate: crate::ast::ExprRef,
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for ConditionalLeftJoin<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::ast::ffi::conditional_left_join(
+            &self.table.0,
+            &self.right.0,
+            self.tree.raw(),
+            self.predicate.index(),
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+/// Builder for [`Table::conditional_full_join`]. See that method for details.
+pub struct ConditionalFullJoin<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    tree: &'a crate::ast::ExpressionTree,
+    predicate: crate::ast::ExprRef,
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for ConditionalFullJoin<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::ast::ffi::conditional_full_join(
+            &self.table.0,
+            &self.right.0,
+            self.tree.raw(),
+            self.predicate.index(),
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+/// Builder for [`Table::conditional_left_semi_join`]. See that method for details.
+pub struct ConditionalLeftSemiJoin<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    tree: &'a crate::ast::ExpressionTree,
+    predicate: crate::ast::ExprRef,
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for ConditionalLeftSemiJoin<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::ast::ffi::conditional_left_semi_join(
+            &self.table.0,
+            &self.right.0,
+            self.tree.raw(),
+            self.predicate.index(),
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+/// Builder for [`Table::conditional_left_anti_join`]. See that method for details.
+pub struct ConditionalLeftAntiJoin<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    tree: &'a crate::ast::ExpressionTree,
+    predicate: crate::ast::ExprRef,
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for ConditionalLeftAntiJoin<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::ast::ffi::conditional_left_anti_join(
+            &self.table.0,
+            &self.right.0,
+            self.tree.raw(),
+            self.predicate.index(),
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
 /// Builder for [`Table::groupby`]. See that method for details.
 pub struct Groupby<'a> {
     table: &'a Table,
@@ -2957,6 +3129,196 @@ impl Table {
             right,
             left_on,
             right_on,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    // -- AST / Computed columns --
+
+    /// Computes a new column by evaluating an AST expression tree on this
+    /// table.
+    ///
+    /// The expression tree may reference columns of this table by index
+    /// using [`ExpressionTree::col`](crate::ast::ExpressionTree::col). The
+    /// `root` argument specifies which node in the tree is the root of the
+    /// expression to evaluate.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::ast::ExpressionTree;
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let mut tree = ExpressionTree::new();
+    /// let a = tree.col(0);
+    /// let b = tree.col(1);
+    /// let sum = tree.add(a, b);
+    ///
+    /// let result = table.compute_column(&tree, sum).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if column indices are out of bounds, if the
+    /// expression is invalid, or if a GPU error occurs.
+    pub fn compute_column<'a>(
+        &'a self,
+        tree: &'a crate::ast::ExpressionTree,
+        root: crate::ast::ExprRef,
+    ) -> ComputeColumn<'a> {
+        ComputeColumn {
+            table: self,
+            tree,
+            root,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    // -- Conditional joins --
+
+    /// Performs a conditional inner join with `right` using an AST
+    /// predicate.
+    ///
+    /// Unlike equality-based joins, conditional joins evaluate an arbitrary
+    /// boolean expression per row-pair. Only row-pairs where the predicate
+    /// evaluates to `true` appear in the output.
+    ///
+    /// The expression tree should use
+    /// [`col_in`](crate::ast::ExpressionTree::col_in) with
+    /// [`TableSide::Left`](crate::ast::TableSide::Left) and
+    /// [`TableSide::Right`](crate::ast::TableSide::Right) to reference
+    /// columns from the two tables.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::ast::{ExpressionTree, TableSide};
+    /// use cudf::stream::GpuOp;
+    ///
+    /// let mut tree = ExpressionTree::new();
+    /// let lc = tree.col_in(0, TableSide::Left);
+    /// let rc = tree.col_in(0, TableSide::Right);
+    /// let pred = tree.eq(lc, rc);
+    ///
+    /// let result = left.conditional_inner_join(&right, &tree, pred).call()?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the predicate is invalid or a GPU error occurs.
+    pub fn conditional_inner_join<'a>(
+        &'a self,
+        right: &'a Table,
+        tree: &'a crate::ast::ExpressionTree,
+        predicate: crate::ast::ExprRef,
+    ) -> ConditionalInnerJoin<'a> {
+        ConditionalInnerJoin {
+            table: self,
+            right,
+            tree,
+            predicate,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Performs a conditional left join with `right` using an AST predicate.
+    ///
+    /// All rows from `self` (the left table) are preserved. For each left
+    /// row, matching right rows (where the predicate is `true`) are
+    /// appended; where no match exists the right columns are filled with
+    /// nulls.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the predicate is invalid or a GPU error occurs.
+    pub fn conditional_left_join<'a>(
+        &'a self,
+        right: &'a Table,
+        tree: &'a crate::ast::ExpressionTree,
+        predicate: crate::ast::ExprRef,
+    ) -> ConditionalLeftJoin<'a> {
+        ConditionalLeftJoin {
+            table: self,
+            right,
+            tree,
+            predicate,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Performs a conditional full outer join with `right` using an AST
+    /// predicate.
+    ///
+    /// All rows from both tables are preserved. Where a row from one side
+    /// has no match (predicate is `false` for all pairings), the other
+    /// side's columns are filled with nulls.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the predicate is invalid or a GPU error occurs.
+    pub fn conditional_full_join<'a>(
+        &'a self,
+        right: &'a Table,
+        tree: &'a crate::ast::ExpressionTree,
+        predicate: crate::ast::ExprRef,
+    ) -> ConditionalFullJoin<'a> {
+        ConditionalFullJoin {
+            table: self,
+            right,
+            tree,
+            predicate,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Performs a conditional left semi join with `right` using an AST
+    /// predicate.
+    ///
+    /// Returns rows from `self` (the left table) that have at least one
+    /// matching row in `right` where the predicate is `true`. The output
+    /// contains only the left table's columns.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the predicate is invalid or a GPU error occurs.
+    pub fn conditional_left_semi_join<'a>(
+        &'a self,
+        right: &'a Table,
+        tree: &'a crate::ast::ExpressionTree,
+        predicate: crate::ast::ExprRef,
+    ) -> ConditionalLeftSemiJoin<'a> {
+        ConditionalLeftSemiJoin {
+            table: self,
+            right,
+            tree,
+            predicate,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Performs a conditional left anti join with `right` using an AST
+    /// predicate.
+    ///
+    /// Returns rows from `self` (the left table) that have NO matching row
+    /// in `right` where the predicate is `true`. The output contains only
+    /// the left table's columns.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the predicate is invalid or a GPU error occurs.
+    pub fn conditional_left_anti_join<'a>(
+        &'a self,
+        right: &'a Table,
+        tree: &'a crate::ast::ExpressionTree,
+        predicate: crate::ast::ExprRef,
+    ) -> ConditionalLeftAntiJoin<'a> {
+        ConditionalLeftAntiJoin {
+            table: self,
+            right,
+            tree,
+            predicate,
             stream: Stream::default_stream(),
         }
     }

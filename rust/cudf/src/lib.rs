@@ -35,6 +35,7 @@
 
 #[cfg(feature = "arrow")]
 pub mod arrow;
+pub mod ast;
 pub mod column;
 pub mod compaction;
 pub mod concatenate;

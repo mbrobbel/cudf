@@ -443,10 +443,7 @@ mod tests {
         let joiner = MarkJoin::new(&build, &[0i32], true).call().unwrap();
 
         let probe = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
-        let result = joiner
-            .semi_join(&build, &probe, &[0i32])
-            .call()
-            .unwrap();
+        let result = joiner.semi_join(&build, &probe, &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 2);
         assert_eq!(result.len(), 2);
     }
@@ -457,10 +454,7 @@ mod tests {
         let joiner = MarkJoin::new(&build, &[0i32], true).call().unwrap();
 
         let probe = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
-        let result = joiner
-            .anti_join(&build, &probe, &[0i32])
-            .call()
-            .unwrap();
+        let result = joiner.anti_join(&build, &probe, &[0i32]).call().unwrap();
         assert_eq!(result.columns_len(), 2);
         assert_eq!(result.len(), 1);
     }
@@ -473,14 +467,8 @@ mod tests {
         let probe1 = make_two_col_table(&[1, 3, 5], &[100, 300, 500]);
         let probe2 = make_two_col_table(&[2, 4, 6], &[200, 400, 600]);
 
-        let r1 = joiner
-            .semi_join(&build, &probe1, &[0i32])
-            .call()
-            .unwrap();
-        let r2 = joiner
-            .semi_join(&build, &probe2, &[0i32])
-            .call()
-            .unwrap();
+        let r1 = joiner.semi_join(&build, &probe1, &[0i32]).call().unwrap();
+        let r2 = joiner.semi_join(&build, &probe2, &[0i32]).call().unwrap();
         assert_eq!(r1.len(), 1);
         assert_eq!(r2.len(), 1);
     }
@@ -491,14 +479,8 @@ mod tests {
         let joiner = MarkJoin::new(&build, &[0i32], true).call().unwrap();
 
         let probe = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
-        let semi = joiner
-            .semi_join(&build, &probe, &[0i32])
-            .call()
-            .unwrap();
-        let anti = joiner
-            .anti_join(&build, &probe, &[0i32])
-            .call()
-            .unwrap();
+        let semi = joiner.semi_join(&build, &probe, &[0i32]).call().unwrap();
+        let anti = joiner.anti_join(&build, &probe, &[0i32]).call().unwrap();
         assert_eq!(semi.len(), 0);
         assert_eq!(anti.len(), 2);
     }

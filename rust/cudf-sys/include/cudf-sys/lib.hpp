@@ -15,6 +15,8 @@
 #include <cudf/join/mark_join.hpp>
 #include <cudf/io/types.hpp>
 #include <cudf/rolling/range_window_bounds.hpp>
+#include <cudf/ast/expressions.hpp>
+#include <cudf/ast/ast_operator.hpp>
 
 #include <cuda_runtime.h>
 
@@ -1368,6 +1370,52 @@ std::unique_ptr<Table> mark_join_anti(
     Table const& probe,
     rust::Slice<int32_t const> probe_keys,
     std::size_t stream);
+
+// -- ExpressionTree --
+
+/// RAII wrapper around cudf::ast::tree that owns both the AST tree
+/// and all scalars referenced by literal nodes.
+class ExpressionTree {
+ public:
+  ExpressionTree() = default;
+  ExpressionTree(ExpressionTree&&) = default;
+  ExpressionTree& operator=(ExpressionTree&&) = default;
+  ExpressionTree(ExpressionTree const&) = delete;
+  ExpressionTree& operator=(ExpressionTree const&) = delete;
+  ~ExpressionTree() = default;
+
+  cudf::ast::expression const& at(std::size_t index) const { return tree_[index]; }
+  std::size_t len() const { return tree_.size(); }
+
+  cudf::ast::tree& tree() { return tree_; }
+  std::vector<std::unique_ptr<cudf::scalar>>& scalars() { return scalars_; }
+
+ private:
+  cudf::ast::tree tree_;
+  std::vector<std::unique_ptr<cudf::scalar>> scalars_;
+};
+
+// -- ExpressionTree free functions (CXX-compatible) --
+std::unique_ptr<ExpressionTree> new_expression_tree();
+std::size_t expression_tree_len(ExpressionTree const& tree);
+std::size_t expression_tree_add_literal_i32(ExpressionTree& tree, int32_t value);
+std::size_t expression_tree_add_literal_i64(ExpressionTree& tree, int64_t value);
+std::size_t expression_tree_add_literal_f32(ExpressionTree& tree, float value);
+std::size_t expression_tree_add_literal_f64(ExpressionTree& tree, double value);
+std::size_t expression_tree_add_literal_bool(ExpressionTree& tree, bool value);
+std::size_t expression_tree_add_literal_string(ExpressionTree& tree, rust::Str value);
+std::size_t expression_tree_add_column_ref(ExpressionTree& tree, int32_t column_index, int32_t table_source);
+std::size_t expression_tree_add_column_name_ref(ExpressionTree& tree, rust::Str name);
+std::size_t expression_tree_add_unary_op(ExpressionTree& tree, int32_t op, std::size_t operand);
+std::size_t expression_tree_add_binary_op(ExpressionTree& tree, int32_t op, std::size_t left, std::size_t right);
+
+std::unique_ptr<Column> ast_compute_column(Table const& tbl, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
+std::unique_ptr<Table> read_parquet_filtered(rust::Str filepath, ExpressionTree const& tree, std::size_t root_index);
+std::unique_ptr<Table> conditional_inner_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
+std::unique_ptr<Table> conditional_left_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
+std::unique_ptr<Table> conditional_full_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
+std::unique_ptr<Table> conditional_left_semi_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
+std::unique_ptr<Table> conditional_left_anti_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
 
 // -- JIT cache control --
 

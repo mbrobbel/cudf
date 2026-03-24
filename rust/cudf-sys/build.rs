@@ -149,6 +149,7 @@ fn main() {
 
     let mut build = cxx_build::bridges([
         "src/lib.rs",
+        "src/ast.rs",
         "src/binaryop.rs",
         "src/compaction.rs",
         "src/concatenate.rs",
@@ -182,6 +183,7 @@ fn main() {
     }
     build
         .file("cpp/lib.cpp")
+        .file("cpp/ast.cpp")
         .file("cpp/binaryop.cpp")
         .file("cpp/compaction.cpp")
         .file("cpp/concatenate.cpp")

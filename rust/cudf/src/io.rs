@@ -196,6 +196,41 @@ pub mod parquet {
         Ok(())
     }
 
+    /// Reads a Parquet file with AST-based predicate pushdown filtering.
+    ///
+    /// Only rows matching the predicate are read from disk/GPU. Use
+    /// [`ExpressionTree::col_name`](crate::ast::ExpressionTree::col_name)
+    /// to reference columns by their Parquet schema name.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::ast::ExpressionTree;
+    /// use cudf::io::parquet;
+    ///
+    /// let mut tree = ExpressionTree::new();
+    /// let col = tree.col_name("price");
+    /// let threshold = tree.lit_f64(100.0);
+    /// let pred = tree.gt(col, threshold);
+    ///
+    /// let table = parquet::read_filtered("data.parquet", &tree, pred)?;
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the path is not valid UTF-8, if the file cannot
+    /// be read, or if the predicate references columns not in the schema.
+    pub fn read_filtered<P: AsRef<Path>>(
+        path: P,
+        tree: &crate::ast::ExpressionTree,
+        root: crate::ast::ExprRef,
+    ) -> crate::error::Result<Table> {
+        let s = path_str(path.as_ref())?;
+        let t = cudf_sys::ast::ffi::read_parquet_filtered(s, tree.raw(), root.index())?;
+        Ok(Table(t))
+    }
+
     /// Writes a [`Table`] to a Parquet file with column names.
     pub fn write_with_names<P: AsRef<Path>>(
         table: &Table,
