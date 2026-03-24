@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "rmm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rmm-sys = { path = "../rmm-sys" }
+cxx = { workspace = true }
