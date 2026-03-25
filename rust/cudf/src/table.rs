@@ -340,6 +340,156 @@ impl crate::stream::GpuOp for LeftAntiJoin<'_> {
     }
 }
 
+/// Builder for [`Table::inner_join_indices`]. See that method for details.
+#[doc(alias = "inner_join")]
+pub struct InnerJoinIndices<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    left_on: &'a [i32],
+    right_on: &'a [i32],
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for InnerJoinIndices<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::join::ffi::inner_join_indices(
+            &self.table.0,
+            &self.right.0,
+            self.left_on,
+            self.right_on,
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+/// Builder for [`Table::left_join_indices`]. See that method for details.
+#[doc(alias = "left_join")]
+pub struct LeftJoinIndices<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    left_on: &'a [i32],
+    right_on: &'a [i32],
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for LeftJoinIndices<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::join::ffi::left_join_indices(
+            &self.table.0,
+            &self.right.0,
+            self.left_on,
+            self.right_on,
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+/// Builder for [`Table::full_join_indices`]. See that method for details.
+#[doc(alias = "full_join")]
+pub struct FullJoinIndices<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    left_on: &'a [i32],
+    right_on: &'a [i32],
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for FullJoinIndices<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::join::ffi::full_join_indices(
+            &self.table.0,
+            &self.right.0,
+            self.left_on,
+            self.right_on,
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+/// Builder for [`Table::left_semi_join_indices`]. See that method for details.
+#[doc(alias = "left_semi_join")]
+pub struct LeftSemiJoinIndices<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    left_on: &'a [i32],
+    right_on: &'a [i32],
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for LeftSemiJoinIndices<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::join::ffi::left_semi_join_indices(
+            &self.table.0,
+            &self.right.0,
+            self.left_on,
+            self.right_on,
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
+/// Builder for [`Table::left_anti_join_indices`]. See that method for details.
+#[doc(alias = "left_anti_join")]
+pub struct LeftAntiJoinIndices<'a> {
+    table: &'a Table,
+    right: &'a Table,
+    left_on: &'a [i32],
+    right_on: &'a [i32],
+    stream: Stream,
+}
+
+impl crate::stream::GpuOp for LeftAntiJoinIndices<'_> {
+    type Output = Table;
+
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    fn call(self) -> Result<Self::Output> {
+        let t = cudf_sys::join::ffi::left_anti_join_indices(
+            &self.table.0,
+            &self.right.0,
+            self.left_on,
+            self.right_on,
+            self.stream.as_raw(),
+        )?;
+        Ok(Table(t))
+    }
+}
+
 /// Builder for [`Table::compute_column`]. See that method for details.
 pub struct ComputeColumn<'a> {
     table: &'a Table,
@@ -3125,6 +3275,192 @@ impl Table {
         right_on: &'a [i32],
     ) -> LeftAntiJoin<'a> {
         LeftAntiJoin {
+            table: self,
+            right,
+            left_on,
+            right_on,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    // -- Index-only join variants --
+
+    /// Returns the raw gather map indices for an inner join without
+    /// materializing the gathered output rows.
+    ///
+    /// The result is a [`Table`] with two `INT32` columns: the first
+    /// contains left-table row indices and the second contains
+    /// right-table row indices. Callers can use
+    /// [`Table::gather`](Table::gather) or
+    /// [`Table::gather_with_policy`](Table::gather_with_policy) to
+    /// materialize only the columns they need.
+    ///
+    /// `left_on` and `right_on` must have the same length. Each element is
+    /// a zero-based column index with compatible types at matching
+    /// positions.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use cudf::column::Column;
+    /// use cudf::stream::GpuOp;
+    /// use cudf::table::TableBuilder;
+    ///
+    /// let left = {
+    ///     let k = Column::from_slice_i32(&[1, 2, 3]).call()?;
+    ///     let mut b = TableBuilder::new();
+    ///     b.push_column(k);
+    ///     b.build()?
+    /// };
+    /// let right = {
+    ///     let k = Column::from_slice_i32(&[2, 3, 4]).call()?;
+    ///     let mut b = TableBuilder::new();
+    ///     b.push_column(k);
+    ///     b.build()?
+    /// };
+    ///
+    /// let indices = left.inner_join_indices(&right, &[0], &[0]).call()?;
+    /// assert_eq!(indices.columns_len(), 2); // left indices + right indices
+    /// # Ok::<(), cudf::error::Error>(())
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key column types are incompatible or a GPU
+    /// error occurs.
+    #[doc(alias = "inner_join")]
+    pub fn inner_join_indices<'a>(
+        &'a self,
+        right: &'a Table,
+        left_on: &'a [i32],
+        right_on: &'a [i32],
+    ) -> InnerJoinIndices<'a> {
+        InnerJoinIndices {
+            table: self,
+            right,
+            left_on,
+            right_on,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Returns the raw gather map indices for a left join without
+    /// materializing the gathered output rows.
+    ///
+    /// The result is a [`Table`] with two `INT32` columns: the first
+    /// contains left-table row indices and the second contains
+    /// right-table row indices. Right indices are `-1` for left rows
+    /// with no match.
+    ///
+    /// `left_on` and `right_on` must have the same length. Each element is
+    /// a zero-based column index with compatible types at matching
+    /// positions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key column types are incompatible or a GPU
+    /// error occurs.
+    #[doc(alias = "left_join")]
+    pub fn left_join_indices<'a>(
+        &'a self,
+        right: &'a Table,
+        left_on: &'a [i32],
+        right_on: &'a [i32],
+    ) -> LeftJoinIndices<'a> {
+        LeftJoinIndices {
+            table: self,
+            right,
+            left_on,
+            right_on,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Returns the raw gather map indices for a full outer join without
+    /// materializing the gathered output rows.
+    ///
+    /// The result is a [`Table`] with two `INT32` columns: the first
+    /// contains left-table row indices and the second contains
+    /// right-table row indices. Indices are `-1` for rows with no
+    /// match on that side.
+    ///
+    /// `left_on` and `right_on` must have the same length. Each element is
+    /// a zero-based column index with compatible types at matching
+    /// positions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key column types are incompatible or a GPU
+    /// error occurs.
+    #[doc(alias = "full_join")]
+    pub fn full_join_indices<'a>(
+        &'a self,
+        right: &'a Table,
+        left_on: &'a [i32],
+        right_on: &'a [i32],
+    ) -> FullJoinIndices<'a> {
+        FullJoinIndices {
+            table: self,
+            right,
+            left_on,
+            right_on,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Returns the raw gather map indices for a left semi join without
+    /// materializing the gathered output rows.
+    ///
+    /// The result is a [`Table`] with a single `INT32` column containing
+    /// left-table row indices for rows that have at least one match in
+    /// `right`.
+    ///
+    /// `left_on` and `right_on` must have the same length. Each element is
+    /// a zero-based column index with compatible types at matching
+    /// positions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key column types are incompatible or a GPU
+    /// error occurs.
+    #[doc(alias = "left_semi_join")]
+    pub fn left_semi_join_indices<'a>(
+        &'a self,
+        right: &'a Table,
+        left_on: &'a [i32],
+        right_on: &'a [i32],
+    ) -> LeftSemiJoinIndices<'a> {
+        LeftSemiJoinIndices {
+            table: self,
+            right,
+            left_on,
+            right_on,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Returns the raw gather map indices for a left anti join without
+    /// materializing the gathered output rows.
+    ///
+    /// The result is a [`Table`] with a single `INT32` column containing
+    /// left-table row indices for rows that have **no** match in `right`.
+    ///
+    /// `left_on` and `right_on` must have the same length. Each element is
+    /// a zero-based column index with compatible types at matching
+    /// positions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key column types are incompatible or a GPU
+    /// error occurs.
+    #[doc(alias = "left_anti_join")]
+    pub fn left_anti_join_indices<'a>(
+        &'a self,
+        right: &'a Table,
+        left_on: &'a [i32],
+        right_on: &'a [i32],
+    ) -> LeftAntiJoinIndices<'a> {
+        LeftAntiJoinIndices {
             table: self,
             right,
             left_on,

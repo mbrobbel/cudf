@@ -139,6 +139,102 @@ std::unique_ptr<Table> left_anti_join(
       cudf::out_of_bounds_policy::DONT_CHECK, s));
 }
 
+// -- Index-only join variants --
+
+std::unique_ptr<Table> inner_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream) {
+  auto s = S(stream);
+  auto [left_indices, right_indices] = cudf::inner_join(
+      select_columns(left.cached_view(), left_on),
+      select_columns(right.cached_view(), right_on),
+      cudf::null_equality::EQUAL, s);
+
+  auto left_col = indices_to_column(std::move(left_indices));
+  auto right_col = indices_to_column(std::move(right_indices));
+
+  std::vector<std::unique_ptr<cudf::column>> cols;
+  cols.push_back(std::move(left_col));
+  cols.push_back(std::move(right_col));
+  return TBL(std::make_unique<cudf::table>(std::move(cols)));
+}
+
+std::unique_ptr<Table> left_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream) {
+  auto s = S(stream);
+  auto [left_indices, right_indices] = cudf::left_join(
+      select_columns(left.cached_view(), left_on),
+      select_columns(right.cached_view(), right_on),
+      cudf::null_equality::EQUAL, s);
+
+  auto left_col = indices_to_column(std::move(left_indices));
+  auto right_col = indices_to_column(std::move(right_indices));
+
+  std::vector<std::unique_ptr<cudf::column>> cols;
+  cols.push_back(std::move(left_col));
+  cols.push_back(std::move(right_col));
+  return TBL(std::make_unique<cudf::table>(std::move(cols)));
+}
+
+std::unique_ptr<Table> full_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream) {
+  auto s = S(stream);
+  auto [left_indices, right_indices] = cudf::full_join(
+      select_columns(left.cached_view(), left_on),
+      select_columns(right.cached_view(), right_on),
+      cudf::null_equality::EQUAL, s);
+
+  auto left_col = indices_to_column(std::move(left_indices));
+  auto right_col = indices_to_column(std::move(right_indices));
+
+  std::vector<std::unique_ptr<cudf::column>> cols;
+  cols.push_back(std::move(left_col));
+  cols.push_back(std::move(right_col));
+  return TBL(std::make_unique<cudf::table>(std::move(cols)));
+}
+
+std::unique_ptr<Table> left_semi_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream) {
+  auto s = S(stream);
+  auto left_keys = select_columns(left.cached_view(), left_on);
+  auto right_keys = select_columns(right.cached_view(), right_on);
+  cudf::filtered_join joiner(right_keys, cudf::null_equality::EQUAL,
+                             cudf::set_as_build_table::RIGHT, s);
+  auto left_col = indices_to_column(joiner.semi_join(left_keys, s));
+
+  std::vector<std::unique_ptr<cudf::column>> cols;
+  cols.push_back(std::move(left_col));
+  return TBL(std::make_unique<cudf::table>(std::move(cols)));
+}
+
+std::unique_ptr<Table> left_anti_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream) {
+  auto s = S(stream);
+  auto left_keys = select_columns(left.cached_view(), left_on);
+  auto right_keys = select_columns(right.cached_view(), right_on);
+  cudf::filtered_join joiner(right_keys, cudf::null_equality::EQUAL,
+                             cudf::set_as_build_table::RIGHT, s);
+  auto left_col = indices_to_column(joiner.anti_join(left_keys, s));
+
+  std::vector<std::unique_ptr<cudf::column>> cols;
+  cols.push_back(std::move(left_col));
+  return TBL(std::make_unique<cudf::table>(std::move(cols)));
+}
+
 std::unique_ptr<Table> cross_join(Table const& left, Table const& right, std::size_t stream) {
   return TBL(cudf::cross_join(left.cached_view(), right.cached_view(), S(stream)));
 }

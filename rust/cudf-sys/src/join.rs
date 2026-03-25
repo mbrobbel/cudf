@@ -58,6 +58,58 @@ pub mod ffi {
             stream: usize,
         ) -> Result<UniquePtr<Table>>;
 
+        // -- Index-only join variants --
+
+        /// Inner join returning raw gather map indices (2-column table:
+        /// left indices, right indices) without materializing gathered rows.
+        fn inner_join_indices(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Left join returning raw gather map indices (2-column table:
+        /// left indices, right indices) without materializing gathered rows.
+        fn left_join_indices(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Full outer join returning raw gather map indices (2-column table:
+        /// left indices, right indices) without materializing gathered rows.
+        fn full_join_indices(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Left semi join returning raw gather map indices (single-column
+        /// table: left indices) without materializing gathered rows.
+        fn left_semi_join_indices(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
+        /// Left anti join returning raw gather map indices (single-column
+        /// table: left indices) without materializing gathered rows.
+        fn left_anti_join_indices(
+            left: &Table,
+            right: &Table,
+            left_on: &[i32],
+            right_on: &[i32],
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
         /// Compute the cross join (Cartesian product) of two tables.
         fn cross_join(left: &Table, right: &Table, stream: usize) -> Result<UniquePtr<Table>>;
 
