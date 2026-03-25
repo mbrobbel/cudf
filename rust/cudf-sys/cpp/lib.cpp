@@ -89,6 +89,26 @@ int32_t column_view_type_id(cudf::column_view const& view) {
   return static_cast<int32_t>(view.type().id());
 }
 
+std::size_t column_view_data_ptr(cudf::column_view const& view) {
+  return reinterpret_cast<std::size_t>(view.head());
+}
+
+std::size_t column_view_null_mask_ptr(cudf::column_view const& view) {
+  return reinterpret_cast<std::size_t>(view.null_mask());
+}
+
+int32_t column_view_type_size(cudf::column_view const& view) {
+  return static_cast<int32_t>(cudf::size_of(view.type()));
+}
+
+int32_t column_view_chars_size(cudf::column_view const& view, std::size_t /*stream*/) {
+  // String columns store char data in child(1).
+  if (view.num_children() >= 2) {
+    return static_cast<int32_t>(view.child(1).size());
+  }
+  return 0;
+}
+
 // -- Table --
 
 Table::Table(std::unique_ptr<cudf::table> tbl) : table_(std::move(tbl)) {}

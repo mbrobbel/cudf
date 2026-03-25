@@ -3377,6 +3377,43 @@ impl ColumnView<'_> {
         }
     }
 
+    // -- Device pointer access (for direct D2H/H2D) --
+
+    /// Returns the raw device pointer to this column's data buffer.
+    ///
+    /// For fixed-width types, this points to the contiguous array of elements.
+    /// For STRING columns, this points to the character data. For STRUCT/LIST
+    /// columns, this returns 0 (data is in child columns).
+    ///
+    /// The returned `usize` is an opaque device pointer. Pass it to
+    /// [`rmm::memory_resource::memcpy_d2h`] for host readback.
+    pub fn data_ptr(&self) -> usize {
+        cudf_sys::ffi::column_view_data_ptr(self.0)
+    }
+
+    /// Returns the raw device pointer to the null mask (validity bitmap).
+    ///
+    /// Returns 0 if this column has no null mask (i.e. `!has_nulls()`).
+    pub fn null_mask_ptr(&self) -> usize {
+        cudf_sys::ffi::column_view_null_mask_ptr(self.0)
+    }
+
+    /// Returns the size in bytes of one element of this column's type.
+    ///
+    /// For example, `INT64` returns 8, `FLOAT32` returns 4.
+    /// Returns 0 for variable-width types (STRING, LIST, STRUCT).
+    pub fn type_byte_size(&self) -> usize {
+        i32_to_usize(cudf_sys::ffi::column_view_type_size(self.0))
+    }
+
+    /// Returns the size of the character data in bytes (STRING columns only).
+    ///
+    /// This is the total byte length of all strings in the column, not the
+    /// number of elements. For non-STRING columns, this is meaningless.
+    pub fn chars_size(&self, stream: Stream) -> usize {
+        i32_to_usize(cudf_sys::ffi::column_view_chars_size(self.0, stream.as_raw()))
+    }
+
     // -- Unary ops --
 
     /// Casts every element in this column to a different type.

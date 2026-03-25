@@ -88,6 +88,10 @@ int32_t column_view_null_count(cudf::column_view const& view);
 bool column_view_has_nulls(cudf::column_view const& view);
 int32_t column_view_offset(cudf::column_view const& view);
 int32_t column_view_type_id(cudf::column_view const& view);
+std::size_t column_view_data_ptr(cudf::column_view const& view);
+std::size_t column_view_null_mask_ptr(cudf::column_view const& view);
+int32_t column_view_type_size(cudf::column_view const& view);
+int32_t column_view_chars_size(cudf::column_view const& view, std::size_t stream);
 
 // -- Table --
 

@@ -341,6 +341,18 @@ pub mod ffi {
         /// Returns the type_id of a column_view as an i32.
         fn column_view_type_id(view: &column_view) -> i32;
 
+        /// Returns the raw data pointer of a column_view as usize.
+        fn column_view_data_ptr(view: &column_view) -> usize;
+
+        /// Returns the raw null mask pointer of a column_view as usize.
+        fn column_view_null_mask_ptr(view: &column_view) -> usize;
+
+        /// Returns the size in bytes of one element of the column's data type.
+        fn column_view_type_size(view: &column_view) -> i32;
+
+        /// Returns the chars data size for string columns.
+        fn column_view_chars_size(view: &column_view, stream: usize) -> i32;
+
         // -- Column --
 
         /// RAII wrapper around `cudf::column`.
