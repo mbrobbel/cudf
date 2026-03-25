@@ -182,6 +182,40 @@ void reset_current_device_resource() {
   rmm::mr::set_current_device_resource(nullptr);
 }
 
+// ---- Pinned host memory ----
+
+std::unique_ptr<PinnedHostMemoryResource> pinned_host_memory_resource_new() {
+  return std::make_unique<PinnedHostMemoryResource>();
+}
+
+std::size_t pinned_host_allocate(PinnedHostMemoryResource& mr, std::size_t size) {
+  return mr.allocate(size);
+}
+
+void pinned_host_deallocate(PinnedHostMemoryResource& mr, std::size_t ptr, std::size_t size) {
+  mr.deallocate(ptr, size);
+}
+
+// ---- Async memcpy ----
+
+void cuda_memcpy_d2h(rust::Slice<uint8_t> dst, std::size_t src_ptr, std::size_t stream) {
+  if (dst.empty()) return;
+  cudaMemcpyAsync(dst.data(), reinterpret_cast<const void*>(src_ptr), dst.size(),
+                  cudaMemcpyDeviceToHost,
+                  reinterpret_cast<cudaStream_t>(stream));
+}
+
+void cuda_memcpy_h2d(std::size_t dst_ptr, rust::Slice<const uint8_t> src, std::size_t stream) {
+  if (src.empty()) return;
+  cudaMemcpyAsync(reinterpret_cast<void*>(dst_ptr), src.data(), src.size(),
+                  cudaMemcpyHostToDevice,
+                  reinterpret_cast<cudaStream_t>(stream));
+}
+
+void cuda_stream_synchronize_raw(std::size_t stream) {
+  cudaStreamSynchronize(reinterpret_cast<cudaStream_t>(stream));
+}
+
 // ---- ScopedDevice ----
 
 std::unique_ptr<ScopedDevice> scoped_device_new(int32_t device_id) {

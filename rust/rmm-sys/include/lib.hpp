@@ -15,6 +15,7 @@
 #include <rmm/mr/managed_memory_resource.hpp>
 #include <rmm/mr/per_device_resource.hpp>
 #include <rmm/mr/pool_memory_resource.hpp>
+#include <rmm/mr/pinned_host_memory_resource.hpp>
 #include <rmm/prefetch.hpp>
 
 #include <cuda_runtime_api.h>
@@ -23,6 +24,8 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+
+#include "rust/cxx.h"
 
 namespace rmm_sys {
 
@@ -298,6 +301,37 @@ class ScopedDevice {
 };
 
 std::unique_ptr<ScopedDevice> scoped_device_new(int32_t device_id);
+
+// ---------- Pinned host memory ----------
+
+class PinnedHostMemoryResource {
+ public:
+  PinnedHostMemoryResource() = default;
+  PinnedHostMemoryResource(const PinnedHostMemoryResource&) = delete;
+  PinnedHostMemoryResource& operator=(const PinnedHostMemoryResource&) = delete;
+  PinnedHostMemoryResource(PinnedHostMemoryResource&&) = delete;
+  PinnedHostMemoryResource& operator=(PinnedHostMemoryResource&&) = delete;
+  ~PinnedHostMemoryResource() = default;
+  std::size_t allocate(std::size_t size) {
+    void* ptr = mr_.allocate(rmm::cuda_stream_view{}, size);
+    return reinterpret_cast<std::size_t>(ptr);
+  }
+  void deallocate(std::size_t ptr, std::size_t size) {
+    mr_.deallocate(rmm::cuda_stream_view{}, reinterpret_cast<void*>(ptr), size);
+  }
+ private:
+  rmm::mr::pinned_host_memory_resource mr_;
+};
+
+std::unique_ptr<PinnedHostMemoryResource> pinned_host_memory_resource_new();
+std::size_t pinned_host_allocate(PinnedHostMemoryResource& mr, std::size_t size);
+void pinned_host_deallocate(PinnedHostMemoryResource& mr, std::size_t ptr, std::size_t size);
+
+// ---------- Async memcpy ----------
+
+void cuda_memcpy_d2h(rust::Slice<uint8_t> dst, std::size_t src_ptr, std::size_t stream);
+void cuda_memcpy_h2d(std::size_t dst_ptr, rust::Slice<const uint8_t> src, std::size_t stream);
+void cuda_stream_synchronize_raw(std::size_t stream);
 
 // ---------- Prefetch ----------
 

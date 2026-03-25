@@ -324,6 +324,34 @@ pub mod ffi {
         /// (`cuda_memory_resource`).
         fn reset_current_device_resource();
 
+        // ---- Pinned host memory ----
+
+        type PinnedHostMemoryResource;
+
+        fn pinned_host_memory_resource_new() -> UniquePtr<PinnedHostMemoryResource>;
+
+        fn pinned_host_allocate(
+            mr: Pin<&mut PinnedHostMemoryResource>,
+            size: usize,
+        ) -> usize;
+
+        fn pinned_host_deallocate(
+            mr: Pin<&mut PinnedHostMemoryResource>,
+            ptr: usize,
+            size: usize,
+        );
+
+        // ---- Async memcpy ----
+
+        /// D2H: copies `dst.len()` bytes from device pointer `src_ptr` to `dst`.
+        fn cuda_memcpy_d2h(dst: &mut [u8], src_ptr: usize, stream: usize);
+
+        /// H2D: copies `src.len()` bytes from `src` to device pointer `dst_ptr`.
+        fn cuda_memcpy_h2d(dst_ptr: usize, src: &[u8], stream: usize);
+
+        /// Block until all operations on `stream` complete.
+        fn cuda_stream_synchronize_raw(stream: usize);
+
         // ---- ScopedDevice ----
 
         /// RAII guard that sets the CUDA device on construction and restores

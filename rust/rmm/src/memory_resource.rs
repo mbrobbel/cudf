@@ -274,3 +274,48 @@ pub fn set_current_device_resource(mr: &MemoryResourceRef) -> MemoryResourceRef 
 pub fn reset_current_device_resource() {
     rmm_sys::ffi::reset_current_device_resource();
 }
+
+/// A memory resource that allocates page-locked (pinned) host memory.
+///
+/// Pinned memory is registered with the CUDA driver, enabling DMA transfers
+/// at full `PCIe` bandwidth. Use this for host-side buffers that will be
+/// transferred to/from the GPU via `cudaMemcpyAsync`.
+pub struct PinnedHostMemoryResource(UniquePtr<rmm_sys::ffi::PinnedHostMemoryResource>);
+
+impl PinnedHostMemoryResource {
+    /// Creates a new pinned host memory resource.
+    pub fn new() -> Result<Self> {
+        Ok(Self(rmm_sys::ffi::pinned_host_memory_resource_new()))
+    }
+
+    /// Allocates `size` bytes of pinned host memory. Returns raw pointer as `usize`.
+    pub fn allocate(&mut self, size: usize) -> usize {
+        rmm_sys::ffi::pinned_host_allocate(self.0.pin_mut(), size)
+    }
+
+    /// Deallocates pinned host memory.
+    pub fn deallocate(&mut self, ptr: usize, size: usize) {
+        rmm_sys::ffi::pinned_host_deallocate(self.0.pin_mut(), ptr, size);
+    }
+}
+
+/// Asynchronous device-to-host memory copy.
+///
+/// Copies `dst.len()` bytes from the device pointer `src_ptr` to the host
+/// slice `dst`. For maximum throughput, `dst` should be in pinned memory.
+pub fn memcpy_d2h(dst: &mut [u8], src_ptr: usize, stream: usize) {
+    rmm_sys::ffi::cuda_memcpy_d2h(dst, src_ptr, stream);
+}
+
+/// Asynchronous host-to-device memory copy.
+///
+/// Copies `src.len()` bytes from the host slice `src` to the device pointer
+/// `dst_ptr`. For maximum throughput, `src` should be in pinned memory.
+pub fn memcpy_h2d(dst_ptr: usize, src: &[u8], stream: usize) {
+    rmm_sys::ffi::cuda_memcpy_h2d(dst_ptr, src, stream);
+}
+
+/// Synchronizes a CUDA stream, blocking until all operations complete.
+pub fn stream_synchronize(stream: usize) {
+    rmm_sys::ffi::cuda_stream_synchronize_raw(stream);
+}
