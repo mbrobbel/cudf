@@ -9,6 +9,10 @@
 //   3. Wrap result   (unique_ptr<Column/Table>)
 //
 // These helpers collapse each step to a single short call.
+//
+// Slice→vector helpers use thread-local vectors to avoid heap allocation
+// on every FFI call. The vectors are resized-and-reused, so after warmup
+// they never allocate.
 
 #pragma once
 
@@ -38,25 +42,31 @@ inline cudf::data_type DT(int32_t id) {
   return cudf::data_type{static_cast<cudf::type_id>(id)};
 }
 
-/// int32_t slice → std::vector<cudf::size_type>
-inline std::vector<cudf::size_type> VEC(rust::Slice<int32_t const> s) {
-  return {s.begin(), s.end()};
+/// int32_t slice → std::vector<cudf::size_type> (thread-local, zero-alloc after warmup)
+inline std::vector<cudf::size_type> const& VEC(rust::Slice<int32_t const> s) {
+  thread_local std::vector<cudf::size_type> tl;
+  tl.assign(s.begin(), s.end());
+  return tl;
 }
 
-/// int32_t slice → std::vector<cudf::order>
-inline std::vector<cudf::order> ORDERS(rust::Slice<int32_t const> s) {
-  std::vector<cudf::order> v;
-  v.reserve(s.size());
-  for (auto o : s) v.push_back(static_cast<cudf::order>(o));
-  return v;
+/// int32_t slice → std::vector<cudf::order> (thread-local, zero-alloc after warmup)
+inline std::vector<cudf::order> const& ORDERS(rust::Slice<int32_t const> s) {
+  thread_local std::vector<cudf::order> tl;
+  tl.resize(s.size());
+  for (std::size_t i = 0; i < s.size(); ++i) {
+    tl[i] = static_cast<cudf::order>(s[i]);
+  }
+  return tl;
 }
 
-/// int32_t slice → std::vector<cudf::null_order>
-inline std::vector<cudf::null_order> NULL_ORDERS(rust::Slice<int32_t const> s) {
-  std::vector<cudf::null_order> v;
-  v.reserve(s.size());
-  for (auto n : s) v.push_back(static_cast<cudf::null_order>(n));
-  return v;
+/// int32_t slice → std::vector<cudf::null_order> (thread-local, zero-alloc after warmup)
+inline std::vector<cudf::null_order> const& NULL_ORDERS(rust::Slice<int32_t const> s) {
+  thread_local std::vector<cudf::null_order> tl;
+  tl.resize(s.size());
+  for (std::size_t i = 0; i < s.size(); ++i) {
+    tl[i] = static_cast<cudf::null_order>(s[i]);
+  }
+  return tl;
 }
 
 /// Generic int32_t → enum cast
