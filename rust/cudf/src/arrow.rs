@@ -140,13 +140,30 @@ macro_rules! primitive_to_gpu {
     }};
 }
 
-/// If the Arrow array has nulls, create a boolean validity mask and apply it.
+/// If the Arrow array has nulls, apply the bitmask directly to the GPU column.
+///
+/// When the null buffer has zero bit-offset (the common case), this passes
+/// the Arrow validity bitmask bytes straight to the GPU via a single
+/// host-to-device copy — avoiding the intermediate `Vec<bool>` +
+/// `from_slice_bool` + `bools_to_mask` round-trip that
+/// `with_null_mask_from_bools` would require.
+///
+/// For the rare case of a non-zero bit-offset (sliced Arrow arrays), falls
+/// back to the boolean-column path.
 fn apply_arrow_nulls(col: Column, array: &dyn Array) -> Result<Column> {
     let Some(null_buf) = array.nulls() else {
         return Ok(col);
     };
-    // Use the NullBuffer's iterator to bulk-extract validity bits
-    // instead of calling is_valid(i) per element.
+    // Fast path: zero bit-offset means the raw bytes are directly usable as
+    // a cudf bitmask (both use LSB-first layout).
+    if null_buf.offset() == 0 {
+        let null_count = null_buf.null_count();
+        let mask_bytes = null_buf.inner().inner().as_slice();
+        let nc = i32::try_from(null_count).unwrap_or(i32::MAX);
+        return col.with_null_mask(mask_bytes, nc).call();
+    }
+    // Slow path: non-zero offset requires bit-shifting; fall back to the
+    // boolean column approach.
     let validity: Vec<bool> = null_buf.iter().collect();
     let mask_col = Column::from_slice_bool(&validity).call()?;
     col.with_null_mask_from_bools(&mask_col.view()).call()

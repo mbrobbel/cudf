@@ -749,6 +749,19 @@ pub mod ffi {
             stream: usize,
         ) -> Result<UniquePtr<Column>>;
 
+        // -- Column with null mask from raw bitmask --
+
+        /// Creates a copy of the column with a null mask from a raw bitmask buffer.
+        ///
+        /// `mask_bytes` is an Arrow-compatible validity bitmask (LSB-first).
+        /// `null_count` is the pre-computed number of null (unset) bits.
+        fn column_with_null_mask(
+            col: &Column,
+            mask_bytes: &[u8],
+            null_count: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
+
         // -- JIT cache control --
 
         /// Enables or disables the JIT program cache.

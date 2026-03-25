@@ -10,6 +10,7 @@
 #include <cudf/scalar/scalar_factories.hpp>
 #include <cudf/transform.hpp>
 #include <cudf/types.hpp>
+#include <cudf/strings/strings_column_view.hpp>
 #include <cudf/unary.hpp>
 #include <cudf/utilities/type_checks.hpp>
 #include <cudf/context.hpp>
@@ -94,19 +95,19 @@ std::size_t column_view_data_ptr(cudf::column_view const& view) {
 }
 
 std::size_t column_view_null_mask_ptr(cudf::column_view const& view) {
-  return reinterpret_cast<std::size_t>(view.null_mask());
+  auto const* mask = view.null_mask();
+  return mask ? reinterpret_cast<std::size_t>(mask) : 0;
 }
 
 int32_t column_view_type_size(cudf::column_view const& view) {
-  return static_cast<int32_t>(cudf::size_of(view.type()));
-}
-
-int32_t column_view_chars_size(cudf::column_view const& view, std::size_t /*stream*/) {
-  // String columns store char data in child(1).
-  if (view.num_children() >= 2) {
-    return static_cast<int32_t>(view.child(1).size());
+  if (cudf::is_fixed_width(view.type())) {
+    return static_cast<int32_t>(cudf::size_of(view.type()));
   }
   return 0;
+}
+
+int32_t column_view_chars_size(cudf::column_view const& view, std::size_t stream) {
+  return cudf::strings_column_view(view).chars_size(S(stream));
 }
 
 // -- Table --
@@ -725,6 +726,20 @@ std::unique_ptr<Column> column_with_null_mask_from_bools(Column const& col, cudf
   auto [null_mask, null_count] = cudf::bools_to_mask(validity, s);
   auto result = std::make_unique<cudf::column>(col.cached_view(), s);
   result->set_null_mask(std::move(*null_mask), null_count);
+  return COL(std::move(result));
+}
+
+// -- Column with null mask from raw bitmask --
+
+std::unique_ptr<Column> column_with_null_mask(
+    Column const& col,
+    rust::Slice<uint8_t const> mask_bytes,
+    int32_t null_count,
+    std::size_t stream) {
+  auto s = S(stream);
+  auto d_mask = rmm::device_buffer(mask_bytes.data(), mask_bytes.size(), s);
+  auto result = std::make_unique<cudf::column>(col.cached_view(), s);
+  result->set_null_mask(std::move(d_mask), null_count);
   return COL(std::move(result));
 }
 
