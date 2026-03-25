@@ -587,6 +587,39 @@ std::unique_ptr<Column> make_string_column(rust::Vec<rust::String> strings, std:
   return COL(cudf::concatenate(views, s));
 }
 
+std::unique_ptr<Column> make_string_column_from_offsets(
+    rust::Slice<uint8_t const> chars,
+    rust::Slice<int32_t const> offsets,
+    std::size_t stream) {
+  auto s = S(stream);
+  auto num_strings = static_cast<cudf::size_type>(offsets.size() - 1);
+
+  if (num_strings == 0) {
+    return COL(cudf::make_empty_column(cudf::type_id::STRING));
+  }
+
+  // Copy chars to device
+  auto d_chars = rmm::device_buffer(chars.data(), chars.size(), s);
+
+  // Copy offsets to device and wrap as an INT32 column
+  auto d_offsets = rmm::device_buffer(
+      offsets.data(), offsets.size() * sizeof(int32_t), s);
+  auto offsets_col = std::make_unique<cudf::column>(
+      cudf::data_type{cudf::type_id::INT32},
+      static_cast<cudf::size_type>(offsets.size()),
+      std::move(d_offsets),
+      rmm::device_buffer{},
+      0);
+
+  // No nulls, so pass zero null_count and empty null mask
+  return COL(cudf::make_strings_column(
+      num_strings,
+      std::move(offsets_col),
+      std::move(d_chars),
+      0,
+      rmm::device_buffer{}));
+}
+
 static rust::Vec<rust::String> strings_to_host(cudf::column_view const& view, std::size_t stream) {
   auto s = S(stream);
   auto size = view.size();

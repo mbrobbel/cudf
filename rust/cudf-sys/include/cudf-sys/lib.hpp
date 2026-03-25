@@ -475,6 +475,38 @@ std::unique_ptr<Table> left_anti_join(
     rust::Slice<int32_t const> right_on,
     std::size_t stream);
 
+// -- Index-only join variants --
+
+std::unique_ptr<Table> inner_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
+
+std::unique_ptr<Table> left_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
+
+std::unique_ptr<Table> full_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
+
+std::unique_ptr<Table> left_semi_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
+
+std::unique_ptr<Table> left_anti_join_indices(
+    Table const& left, Table const& right,
+    rust::Slice<int32_t const> left_on,
+    rust::Slice<int32_t const> right_on,
+    std::size_t stream);
+
 // -- String operations --
 
 std::unique_ptr<Column> strings_to_lower(cudf::column_view const& col, std::size_t stream);
@@ -521,6 +553,11 @@ std::unique_ptr<Column> strings_to_floats(cudf::column_view const& col, int32_t 
 // -- String column construction --
 
 std::unique_ptr<Column> make_string_column(rust::Vec<rust::String> strings, std::size_t stream);
+
+std::unique_ptr<Column> make_string_column_from_offsets(
+    rust::Slice<uint8_t const> chars,
+    rust::Slice<int32_t const> offsets,
+    std::size_t stream);
 
 // -- String column extraction (device -> host) --
 
@@ -1207,6 +1244,7 @@ class PackedColumns {
   rust::Vec<uint8_t> metadata_to_host() const;
   std::size_t metadata_size() const;
   std::size_t gpu_data_size() const;
+  rust::Vec<uint8_t> gpu_data_to_host() const;
  private:
   cudf::packed_columns packed_;
 };
@@ -1224,6 +1262,7 @@ std::unique_ptr<PackedColumns> pack_table(Table const& tbl, std::size_t stream);
 std::size_t packed_size_of(Table const& tbl, std::size_t stream);
 std::unique_ptr<Table> unpack_packed(PackedColumns const& packed);
 std::unique_ptr<PackedTableVec> contiguous_split_table(Table const& tbl, rust::Slice<int32_t const> splits, std::size_t stream);
+std::unique_ptr<PackedColumns> make_packed_from_host_parts(rust::Slice<uint8_t const> metadata, rust::Slice<uint8_t const> gpu_data, std::size_t stream);
 
 // -- GroupBy shift --
 
@@ -1331,6 +1370,14 @@ std::unique_ptr<Scalar> repeat_string_scalar(Scalar const& input, int32_t repeat
 // -- Column with null mask from bools --
 
 std::unique_ptr<Column> column_with_null_mask_from_bools(Column const& col, cudf::column_view const& validity, std::size_t stream);
+
+// -- Column with null mask from raw bitmask --
+
+std::unique_ptr<Column> column_with_null_mask(
+    Column const& col,
+    rust::Slice<uint8_t const> mask_bytes,
+    int32_t null_count,
+    std::size_t stream);
 
 // -- MarkJoin --
 

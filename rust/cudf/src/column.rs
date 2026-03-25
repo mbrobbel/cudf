@@ -450,15 +450,36 @@ impl crate::stream::GpuOp for FromStrings<'_> {
         self
     }
     fn call(self) -> Result<Self::Output> {
-        let strings: Vec<String> = self
-            .values
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect();
-        Ok(Column(cudf_sys::strings::ffi::make_string_column(
-            strings,
-            self.stream.as_raw(),
-        )))
+        // Build a flat chars buffer and an offsets array so that the FFI
+        // function creates the GPU column in one shot (two H2D copies)
+        // instead of N scalar allocations + concatenation.
+        let total_bytes: usize = self.values.iter().map(|s| s.len()).sum();
+        let mut chars = Vec::with_capacity(total_bytes);
+        let mut offsets = Vec::with_capacity(self.values.len() + 1);
+        let mut offset: i32 = 0;
+        for s in self.values {
+            offsets.push(offset);
+            chars.extend_from_slice(s.as_bytes());
+            offset = offset
+                .checked_add(i32::try_from(s.len()).map_err(|_| {
+                    crate::error::Error::InvalidArgument(
+                        "string length exceeds i32::MAX".into(),
+                    )
+                })?)
+                .ok_or_else(|| {
+                    crate::error::Error::InvalidArgument(
+                        "total string bytes exceed i32::MAX".into(),
+                    )
+                })?;
+        }
+        offsets.push(offset);
+        Ok(Column(
+            cudf_sys::strings::ffi::make_string_column_from_offsets(
+                &chars,
+                &offsets,
+                self.stream.as_raw(),
+            ),
+        ))
     }
 }
 
@@ -573,6 +594,30 @@ impl crate::stream::GpuOp for WithNullMaskFromBools<'_> {
         let c = cudf_sys::ffi::column_with_null_mask_from_bools(
             &self.col.0,
             self.validity.0,
+            self.stream.as_raw(),
+        )?;
+        Ok(Column(c))
+    }
+}
+
+/// Builder for [`Column::with_null_mask`].
+pub struct WithNullMask<'a> {
+    col: &'a Column,
+    mask_bytes: &'a [u8],
+    null_count: i32,
+    stream: Stream,
+}
+impl crate::stream::GpuOp for WithNullMask<'_> {
+    type Output = Column;
+    fn stream(mut self, stream: Stream) -> Self {
+        self.stream = stream;
+        self
+    }
+    fn call(self) -> Result<Self::Output> {
+        let c = cudf_sys::ffi::column_with_null_mask(
+            &self.col.0,
+            self.mask_bytes,
+            self.null_count,
             self.stream.as_raw(),
         )?;
         Ok(Column(c))
@@ -1386,10 +1431,20 @@ impl Column {
     }
 
     #[doc(alias = "make_string_column")]
+    #[doc(alias = "make_string_column_from_offsets")]
     /// Creates a `STRING` column by copying `values` from host to GPU.
+    ///
+    /// All strings are concatenated into a single chars buffer and paired
+    /// with an offsets array, so the GPU column is created in one shot
+    /// (two host-to-device copies) rather than one allocation per string.
     ///
     /// Each element in `values` becomes one row. The resulting column has
     /// no null mask; all rows are valid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InvalidArgument`](crate::error::Error::InvalidArgument)
+    /// if the total byte length of all strings exceeds `i32::MAX`.
     ///
     /// # Examples
     ///
@@ -1536,6 +1591,35 @@ impl Column {
         WithNullMaskFromBools {
             col: self,
             validity,
+            stream: Stream::default_stream(),
+        }
+    }
+
+    /// Returns a new column with the same data as `self` but a null mask
+    /// set from a raw bitmask buffer.
+    ///
+    /// `mask_bytes` is an Arrow-compatible LSB-first validity bitmask: bit
+    /// *i* is set when row *i* is valid. `null_count` is the pre-computed
+    /// number of null (unset) bits.
+    ///
+    /// This is more efficient than [`with_null_mask_from_bools`](Column::with_null_mask_from_bools)
+    /// when the caller already has a packed bitmask (e.g. from Arrow),
+    /// because it avoids creating an intermediate boolean column and the
+    /// `bools_to_mask` GPU kernel.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a GPU error occurs.
+    #[doc(alias = "set_null_mask")]
+    pub fn with_null_mask<'a>(
+        &'a self,
+        mask_bytes: &'a [u8],
+        null_count: i32,
+    ) -> WithNullMask<'a> {
+        WithNullMask {
+            col: self,
+            mask_bytes,
+            null_count,
             stream: Stream::default_stream(),
         }
     }

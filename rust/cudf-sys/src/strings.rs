@@ -710,6 +710,20 @@ pub mod ffi {
         /// Creates a string column from a vector of strings.
         fn make_string_column(strings: Vec<String>, stream: usize) -> UniquePtr<Column>;
 
+        /// Creates a string column from pre-built chars and offsets buffers.
+        ///
+        /// `chars` is the concatenation of all string bytes.
+        /// `offsets` is an `i32` array of length `n + 1` where `offsets[i]` is the
+        /// byte start of string `i` and `offsets[n]` equals `chars.len()`.
+        ///
+        /// This performs two host-to-device copies (chars + offsets) and builds
+        /// the column in one shot, avoiding per-string GPU allocations.
+        fn make_string_column_from_offsets(
+            chars: &[u8],
+            offsets: &[i32],
+            stream: usize,
+        ) -> UniquePtr<Column>;
+
         /// Copies string column data to a host vector of strings.
         fn column_to_host_strings(col: &Column, stream: usize) -> Vec<String>;
 
