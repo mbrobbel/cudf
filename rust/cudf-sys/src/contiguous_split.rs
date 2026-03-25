@@ -35,6 +35,9 @@ pub mod ffi {
         /// Returns the size of the GPU data in bytes.
         fn gpu_data_size(self: &PackedColumns) -> usize;
 
+        /// Copies the packed GPU data to a host byte vector (D2H).
+        fn gpu_data_to_host(self: &PackedColumns) -> Vec<u8>;
+
         // -- Contiguous split --
 
         /// Splits a table into contiguous partitions.
@@ -49,5 +52,12 @@ pub mod ffi {
 
         /// Unpacks partition at `index` into an owned table.
         fn unpack_at(self: &PackedTableVec, index: usize) -> Result<UniquePtr<Table>>;
+
+        /// Reconstructs packed columns from host metadata and data bytes (H2D).
+        fn make_packed_from_host_parts(
+            metadata: &[u8],
+            gpu_data: &[u8],
+            stream: usize,
+        ) -> Result<UniquePtr<PackedColumns>>;
     }
 }

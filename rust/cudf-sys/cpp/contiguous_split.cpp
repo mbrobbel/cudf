@@ -31,6 +31,17 @@ std::size_t PackedColumns::gpu_data_size() const {
   return packed_.gpu_data ? packed_.gpu_data->size() : 0;
 }
 
+rust::Vec<uint8_t> PackedColumns::gpu_data_to_host() const {
+  rust::Vec<uint8_t> out;
+  if (packed_.gpu_data && packed_.gpu_data->size() > 0) {
+    auto const sz = packed_.gpu_data->size();
+    out.reserve(sz);
+    for (std::size_t i = 0; i < sz; ++i) { out.push_back(0); }
+    cudaMemcpy(out.data(), packed_.gpu_data->data(), sz, cudaMemcpyDeviceToHost);
+  }
+  return out;
+}
+
 // -- PackedTableVec --
 
 std::size_t PackedTableVec::size() const {
@@ -65,6 +76,23 @@ std::unique_ptr<PackedTableVec> contiguous_split_table(Table const& tbl, rust::S
   std::vector<cudf::size_type> split_vec(splits.begin(), splits.end());
   auto result = cudf::contiguous_split(tbl.cached_view(), split_vec, S(stream));
   return std::make_unique<PackedTableVec>(std::move(result));
+}
+
+std::unique_ptr<PackedColumns> make_packed_from_host_parts(
+    rust::Slice<uint8_t const> metadata,
+    rust::Slice<uint8_t const> gpu_data,
+    std::size_t stream) {
+  cudf::packed_columns pc;
+  pc.metadata = std::make_unique<std::vector<uint8_t>>(metadata.begin(), metadata.end());
+  if (gpu_data.size() > 0) {
+    auto buf = rmm::device_buffer(gpu_data.size(), S(stream));
+    cudaMemcpyAsync(buf.data(), gpu_data.data(), gpu_data.size(),
+                    cudaMemcpyHostToDevice,
+                    reinterpret_cast<cudaStream_t>(stream));
+    cudaStreamSynchronize(reinterpret_cast<cudaStream_t>(stream));
+    pc.gpu_data = std::make_unique<rmm::device_buffer>(std::move(buf));
+  }
+  return std::make_unique<PackedColumns>(std::move(pc));
 }
 
 }  // namespace cudf_sys

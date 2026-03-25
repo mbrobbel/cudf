@@ -73,6 +73,21 @@ impl PackedColumns {
     pub fn gpu_data_size(&self) -> usize {
         self.0.gpu_data_size()
     }
+
+    /// Copies the packed GPU data to a host byte vector (D2H).
+    pub fn gpu_data_to_host(&self) -> Vec<u8> {
+        self.0.gpu_data_to_host()
+    }
+
+    /// Reconstructs packed columns from host metadata and data bytes (H2D + unpack).
+    pub fn from_host_parts(metadata: &[u8], gpu_data: &[u8]) -> Result<Self> {
+        let inner = cudf_sys::contiguous_split::ffi::make_packed_from_host_parts(
+            metadata,
+            gpu_data,
+            Stream::default_stream().as_raw(),
+        )?;
+        Ok(Self(inner))
+    }
 }
 
 /// A vector of table partitions from [`Table::contiguous_split`].
