@@ -216,6 +216,42 @@ void cuda_stream_synchronize_raw(std::size_t stream) {
   cudaStreamSynchronize(reinterpret_cast<cudaStream_t>(stream));
 }
 
+static void memcpy_batch_impl(
+    rust::Slice<const std::size_t> dst_ptrs,
+    rust::Slice<const std::size_t> src_ptrs,
+    rust::Slice<const std::size_t> sizes,
+    std::size_t stream,
+    cudaMemcpySrcAccessOrder src_order) {
+  auto const n = dst_ptrs.size();
+  if (n == 0) return;
+  auto s = reinterpret_cast<cudaStream_t>(stream);
+  cudaMemcpyAttributes attr{};
+  attr.srcAccessOrder = src_order;
+  attr.flags = cudaMemcpyFlagDefault;
+  // CUDA 13 API: (dsts, srcs, sizes, count, attrs, attrsIdxs, numAttrs, stream)
+  // Pass single attr for all transfers: attrsIdxs=nullptr, numAttrs=1
+  cudaMemcpyBatchAsync(
+      reinterpret_cast<void* const*>(dst_ptrs.data()),
+      reinterpret_cast<void const* const*>(src_ptrs.data()),
+      sizes.data(), n, &attr, nullptr, 1, s);
+}
+
+void cuda_memcpy_batch_d2h(
+    rust::Slice<const std::size_t> dst_ptrs,
+    rust::Slice<const std::size_t> src_ptrs,
+    rust::Slice<const std::size_t> sizes,
+    std::size_t stream) {
+  memcpy_batch_impl(dst_ptrs, src_ptrs, sizes, stream, cudaMemcpySrcAccessOrderStream);
+}
+
+void cuda_memcpy_batch_h2d(
+    rust::Slice<const std::size_t> dst_ptrs,
+    rust::Slice<const std::size_t> src_ptrs,
+    rust::Slice<const std::size_t> sizes,
+    std::size_t stream) {
+  memcpy_batch_impl(dst_ptrs, src_ptrs, sizes, stream, cudaMemcpySrcAccessOrderDuringApiCall);
+}
+
 // ---- ScopedDevice ----
 
 std::unique_ptr<ScopedDevice> scoped_device_new(int32_t device_id) {

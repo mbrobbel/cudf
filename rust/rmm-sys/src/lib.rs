@@ -352,6 +352,22 @@ pub mod ffi {
         /// Block until all operations on `stream` complete.
         fn cuda_stream_synchronize_raw(stream: usize);
 
+        /// Batched D2H: fires all copies in a single `cudaMemcpyBatchAsync` call.
+        fn cuda_memcpy_batch_d2h(
+            dst_ptrs: &[usize],
+            src_ptrs: &[usize],
+            sizes: &[usize],
+            stream: usize,
+        );
+
+        /// Batched H2D: fires all copies in a single `cudaMemcpyBatchAsync` call.
+        fn cuda_memcpy_batch_h2d(
+            dst_ptrs: &[usize],
+            src_ptrs: &[usize],
+            sizes: &[usize],
+            stream: usize,
+        );
+
         // ---- ScopedDevice ----
 
         /// RAII guard that sets the CUDA device on construction and restores

@@ -319,3 +319,22 @@ pub fn memcpy_h2d(dst_ptr: usize, src: &[u8], stream: usize) {
 pub fn stream_synchronize(stream: usize) {
     rmm_sys::ffi::cuda_stream_synchronize_raw(stream);
 }
+
+/// Batched device-to-host copy via `cudaMemcpyBatchAsync` (CUDA 12.8+).
+///
+/// Fires all copies in a single driver call. All three slices must have the
+/// same length. Each element `i` copies `sizes[i]` bytes from device pointer
+/// `src_ptrs[i]` to host pointer `dst_ptrs[i]`.
+pub fn memcpy_batch_d2h(dst_ptrs: &[usize], src_ptrs: &[usize], sizes: &[usize], stream: usize) {
+    rmm_sys::ffi::cuda_memcpy_batch_d2h(dst_ptrs, src_ptrs, sizes, stream);
+}
+
+/// Batched host-to-device copy via `cudaMemcpyBatchAsync` (CUDA 12.8+).
+///
+/// Fires all copies in a single driver call. All three slices must have the
+/// same length. Each element `i` copies `sizes[i]` bytes from host pointer
+/// `src_ptrs[i]` to device pointer `dst_ptrs[i]`.
+pub fn memcpy_batch_h2d(dst_ptrs: &[usize], src_ptrs: &[usize], sizes: &[usize], stream: usize) {
+    rmm_sys::ffi::cuda_memcpy_batch_h2d(dst_ptrs, src_ptrs, sizes, stream);
+}
+

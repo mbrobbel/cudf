@@ -333,6 +333,21 @@ void cuda_memcpy_d2h(rust::Slice<uint8_t> dst, std::size_t src_ptr, std::size_t 
 void cuda_memcpy_h2d(std::size_t dst_ptr, rust::Slice<const uint8_t> src, std::size_t stream);
 void cuda_stream_synchronize_raw(std::size_t stream);
 
+/// Batched D2H: copies multiple (dst_ptr, src_device_ptr, size) tuples in one driver call.
+/// Arrays must be the same length. Uses cudaMemcpyBatchAsync on CUDA 12.8+.
+void cuda_memcpy_batch_d2h(
+    rust::Slice<const std::size_t> dst_ptrs,
+    rust::Slice<const std::size_t> src_ptrs,
+    rust::Slice<const std::size_t> sizes,
+    std::size_t stream);
+
+/// Batched H2D: same but host→device.
+void cuda_memcpy_batch_h2d(
+    rust::Slice<const std::size_t> dst_ptrs,
+    rust::Slice<const std::size_t> src_ptrs,
+    rust::Slice<const std::size_t> sizes,
+    std::size_t stream);
+
 // ---------- Prefetch ----------
 
 void prefetch(std::size_t ptr, std::size_t size, int32_t device, std::size_t stream);
