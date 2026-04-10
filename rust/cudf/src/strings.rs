@@ -15,7 +15,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```no_run
 //! use cudf::column::Column;
 //! use cudf::strings::StringExt;
 //! use cudf::stream::GpuOp;
@@ -26,12 +26,12 @@
 //! # Ok::<(), cudf::error::Error>(())
 //! ```
 
-use crate::column::{Column, ColumnView};
+use crate::column::ColumnView;
 use crate::data_type::TypeId;
 use crate::error::Result;
 use crate::scalar::Scalar;
 use crate::stream::Stream;
-use crate::table::Table;
+use crate::table::UnboundTable;
 
 #[doc(alias = "side_type")]
 /// Specifies which side(s) of a string to operate on for padding and stripping.
@@ -69,7 +69,8 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
@@ -87,10 +88,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello", "World"]).call()?;
     /// let upper = col.view().to_upper().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -104,11 +107,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["abc", "def"]).call()?;
     /// let target = Scalar::from_string("abc");
     /// let found = col.view().str_contains(&target).call()?;
     /// # Ok::<(), cudf::error::Error>(())
@@ -121,11 +126,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["http://example.com", "file.txt"]).call()?;
     /// let prefix = Scalar::from_string("http");
     /// let result = col.view().str_starts_with(&prefix).call()?;
     /// # Ok::<(), cudf::error::Error>(())
@@ -138,11 +145,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["notes.txt", "image.png"]).call()?;
     /// let suffix = Scalar::from_string(".txt");
     /// let result = col.view().str_ends_with(&suffix).call()?;
     /// # Ok::<(), cudf::error::Error>(())
@@ -157,11 +166,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello world", "goodbye"]).call()?;
     /// let target = Scalar::from_string("lo");
     /// let positions = col.view().str_find(&target).call()?;
     /// // "hello world" => 3, "goodbye" => -1
@@ -176,11 +187,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello", "world"]).call()?;
     /// let target = Scalar::from_string("o");
     /// let repl = Scalar::from_string("0");
     /// let result = col.view().str_replace(&target, &repl).call()?;
@@ -195,10 +208,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["  hello  ", " world"]).call()?;
     /// let stripped = col.view().str_strip().call()?;
     /// // "  hello  " => "hello"
     /// # Ok::<(), cudf::error::Error>(())
@@ -211,10 +226,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["  hello  ", " world"]).call()?;
     /// let stripped = col.view().str_lstrip().call()?;
     /// // "  hello  " => "hello  "
     /// # Ok::<(), cudf::error::Error>(())
@@ -227,10 +244,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["  hello  ", " world"]).call()?;
     /// let stripped = col.view().str_rstrip().call()?;
     /// // "  hello  " => "  hello"
     /// # Ok::<(), cudf::error::Error>(())
@@ -245,10 +264,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello", ""]).call()?;
     /// let lengths = col.view().count_characters().call()?;
     /// // "hello" => 5, "" => 0
     /// # Ok::<(), cudf::error::Error>(())
@@ -263,10 +284,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello", "caf\u{e9}"]).call()?;
     /// let byte_lens = col.view().count_bytes().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -279,10 +302,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let int_col = Column::from_slice_i32(&[1, 2, 3]).call()?;
     /// let strings = int_col.view().str_from_integers().call()?;
     /// // [1, 2, 3] => ["1", "2", "3"]
     /// # Ok::<(), cudf::error::Error>(())
@@ -299,11 +324,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::data_type::TypeId;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["10", "20"]).call()?;
     /// let ints = col.view().str_to_integers(TypeId::INT32).call()?;
     /// // ["10", "20"] => [10, 20]
     /// # Ok::<(), cudf::error::Error>(())
@@ -317,10 +344,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let float_col = Column::from_slice_f64(&[1.5, 2.5]).call()?;
     /// let strings = float_col.view().str_from_floats().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -335,11 +364,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::data_type::TypeId;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["1.5", "2.5"]).call()?;
     /// let floats = col.view().str_to_floats(TypeId::FLOAT64).call()?;
     /// // ["1.5", "2.5"] => [1.5, 2.5]
     /// # Ok::<(), cudf::error::Error>(())
@@ -357,10 +388,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// use cudf::strings::{StringExt, SideType};
+    /// ```no_run
+    /// # use cudf::column::Column;
+    /// use cudf::strings::{SideType, StringExt};
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hi", "hello"]).call()?;
     /// let padded = col.view().str_pad(10, SideType::LEFT, " ").call()?;
     /// // "hi" => "        hi"
     /// # Ok::<(), cudf::error::Error>(())
@@ -377,10 +410,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["42", "-7"]).call()?;
     /// let zfilled = col.view().str_zfill(5).call()?;
     /// // "42" => "00042", "-7" => "-0007"
     /// # Ok::<(), cudf::error::Error>(())
@@ -406,10 +441,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello", "world"]).call()?;
     /// let sliced = col.view().str_slice(0, 3, 1).call()?;
     /// // "hello" => "hel"
     /// # Ok::<(), cudf::error::Error>(())
@@ -422,10 +459,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["ab", "cd"]).call()?;
     /// let repeated = col.view().str_repeat(3).call()?;
     /// // "ab" => "ababab"
     /// # Ok::<(), cudf::error::Error>(())
@@ -442,11 +481,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["a,b,c", "x,y"]).call()?;
     /// let delim = Scalar::from_string(",");
     /// let parts = col.view().str_split(&delim, -1).call()?;
     /// # Ok::<(), cudf::error::Error>(())
@@ -470,11 +511,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["a/b/c", "d/e"]).call()?;
     /// let delim = Scalar::from_string("/");
     /// let part = col.view().str_split_part(&delim, 1).call()?;
     /// // "a/b/c" => "b"
@@ -492,11 +535,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["a", "b", "c"]).call()?;
     /// let sep = Scalar::from_string(", ");
     /// let na = Scalar::from_string("");
     /// let joined = col.view().str_join(&sep, &na).call()?;
@@ -515,10 +560,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello", "well hello there"]).call()?;
     /// let matched = col.view().str_like("%hello%", "\\").call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -532,10 +579,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["abc123", "def"]).call()?;
     /// let found = col.view().str_contains_re("\\d+").call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -548,10 +597,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["Apple", "banana"]).call()?;
     /// let matched = col.view().str_matches_re("[A-Z].*").call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -563,10 +614,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["a1b2c3", "x"]).call()?;
     /// let counts = col.view().str_count_re("\\d").call()?;
     /// // "a1b2c3" => 3
     /// # Ok::<(), cudf::error::Error>(())
@@ -582,10 +635,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["abc123def", "456"]).call()?;
     /// let result = col.view().str_replace_re("\\d+", "NUM").call()?;
     /// // "abc123def" => "abcNUMdef"
     /// # Ok::<(), cudf::error::Error>(())
@@ -599,10 +654,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["Hello"]).call()?;
     /// let swapped = col.view().swapcase().call()?;
     /// // "Hello" => "hELLO"
     /// # Ok::<(), cudf::error::Error>(())
@@ -619,10 +676,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// use cudf::strings::{StringExt, SideType};
+    /// ```no_run
+    /// # use cudf::column::Column;
+    /// use cudf::strings::{SideType, StringExt};
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["xyzhelloxyz", "xyzworld"]).call()?;
     /// let stripped = col.view().str_strip_chars(SideType::BOTH, "xyz").call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -638,10 +697,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["foo baz", "no match"]).call()?;
     /// let result = col.view().str_replace_literal("foo", "bar", -1).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -660,10 +721,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["xxabcxx", "def"]).call()?;
     /// let pos = col.view().str_find_str("abc", 0, -1).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -699,10 +762,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello", "world"]).call()?;
     /// let reversed = col.view().str_reverse().call()?;
     /// // "hello" => "olleh"
     /// # Ok::<(), cudf::error::Error>(())
@@ -719,10 +784,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["user@host", "admin@site"]).call()?;
     /// let parts = col.view().str_extract("(\\w+)@(\\w+)").call()?;
     /// // Two columns: user part and domain part
     /// # Ok::<(), cudf::error::Error>(())
@@ -738,10 +805,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["a1b2c3", "no digits"]).call()?;
     /// let all_matches = col.view().str_extract_all("\\d+").call()?;
     /// // "a1b2c3" => ["1", "2", "3"]
     /// # Ok::<(), cudf::error::Error>(())
@@ -767,10 +836,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello WORLD"]).call()?;
     /// let result = col.view().capitalize().call()?;
     /// // "hello WORLD" => "Hello world"
     /// # Ok::<(), cudf::error::Error>(())
@@ -784,10 +855,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["hello world"]).call()?;
     /// let titled = col.view().title().call()?;
     /// // "hello world" => "Hello World"
     /// # Ok::<(), cudf::error::Error>(())
@@ -816,11 +889,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::data_type::TypeId;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["2026-04-10", "2026-04-11"]).call()?;
     /// let ts = col.view().str_to_timestamps(
     ///     TypeId::TIMESTAMP_SECONDS, "%Y-%m-%d",
     /// ).call()?;
@@ -852,10 +927,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["True", "False", "True"]).call()?;
     /// let bools = col.view().str_to_booleans("True").call()?;
     /// // ["True", "False", "True"] => [true, false, true]
     /// # Ok::<(), cudf::error::Error>(())
@@ -967,10 +1044,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["user@host", "admin@site"]).call()?;
     /// let parts = col.view().str_partition("@").call()?;
     /// // "user@host" => ["user", "@", "host"]
     /// # Ok::<(), cudf::error::Error>(())
@@ -991,10 +1070,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["user@host"]).call()?;
     /// let result = col.view().str_replace_with_backrefs(
     ///     "(\\w+)@(\\w+)", "\\2@\\1",
     /// ).call()?;
@@ -1041,11 +1122,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::strings::char_types;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["abc", "xyz"]).call()?;
     /// let is_alpha = col.view().all_characters_of_type(
     ///     char_types::ALPHA, char_types::ALL_TYPES,
     /// ).call()?;
@@ -1109,10 +1192,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["abcde"]).call()?;
     /// let result = col.view().str_replace_slice("XY", 1, 3).call()?;
     /// // "abcde" => "aXYde"
     /// # Ok::<(), cudf::error::Error>(())
@@ -1141,11 +1226,13 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["a,b,c", "x,y"]).call()?;
     /// let delim = Scalar::from_string(",");
     /// let lists = col.view().str_split_record(&delim, -1).call()?;
     /// // "a,b,c" => ["a", "b", "c"]
@@ -1169,10 +1256,14 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3]).call()?;
+    /// # let values = Column::from_strings(&["a", "b", "c"]).call()?;
+    /// # let list_col = Column::from_lists(1, offsets, values).call()?;
     /// let joined = list_col.view().str_join_list_elements(", ", "NULL").call()?;
     /// // [["a","b","c"]] => ["a, b, c"]
     /// # Ok::<(), cudf::error::Error>(())
@@ -1249,10 +1340,12 @@ pub trait StringExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::strings::StringExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let col = Column::from_strings(&["user@host", "admin@site"]).call()?;
     /// let domains = col.view().str_extract_single("@(\\w+)", 0).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -1305,7 +1398,7 @@ pub trait StringExt: private::Sealed {
 // ---------------------------------------------------------------------------
 
 macro_rules! simple_builder {
-    ($name:ident -> $ret:ident, $body:expr) => {
+    ($name:ident -> $ret:ty, $body:expr) => {
         impl crate::stream::GpuOp for $name<'_> {
             type Output = $ret;
             fn stream(mut self, stream: Stream) -> Self {
@@ -1324,9 +1417,9 @@ pub struct ToLower<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(ToLower -> Column, |s: ToLower<'_>| {
+simple_builder!(ToLower -> crate::column::UnboundColumn, |s: ToLower<'_>| {
     let c = cudf_sys::strings::ffi::strings_to_lower(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::to_upper`].
@@ -1334,9 +1427,9 @@ pub struct ToUpper<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(ToUpper -> Column, |s: ToUpper<'_>| {
+simple_builder!(ToUpper -> crate::column::UnboundColumn, |s: ToUpper<'_>| {
     let c = cudf_sys::strings::ffi::strings_to_upper(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_contains`].
@@ -1345,10 +1438,10 @@ pub struct StrContains<'a> {
     target: &'a Scalar,
     stream: Stream,
 }
-simple_builder!(StrContains -> Column, |s: StrContains<'_>| {
-    let ffi = crate::scalar::scalar_to_ffi(s.target);
+simple_builder!(StrContains -> crate::column::UnboundColumn, |s: StrContains<'_>| {
+    let ffi = crate::scalar::scalar_to_ffi(s.target)?;
     let c = cudf_sys::strings::ffi::strings_contains(s.view.0, &ffi, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_starts_with`].
@@ -1357,10 +1450,10 @@ pub struct StrStartsWith<'a> {
     target: &'a Scalar,
     stream: Stream,
 }
-simple_builder!(StrStartsWith -> Column, |s: StrStartsWith<'_>| {
-    let ffi = crate::scalar::scalar_to_ffi(s.target);
+simple_builder!(StrStartsWith -> crate::column::UnboundColumn, |s: StrStartsWith<'_>| {
+    let ffi = crate::scalar::scalar_to_ffi(s.target)?;
     let c = cudf_sys::strings::ffi::strings_starts_with(s.view.0, &ffi, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_ends_with`].
@@ -1369,10 +1462,10 @@ pub struct StrEndsWith<'a> {
     target: &'a Scalar,
     stream: Stream,
 }
-simple_builder!(StrEndsWith -> Column, |s: StrEndsWith<'_>| {
-    let ffi = crate::scalar::scalar_to_ffi(s.target);
+simple_builder!(StrEndsWith -> crate::column::UnboundColumn, |s: StrEndsWith<'_>| {
+    let ffi = crate::scalar::scalar_to_ffi(s.target)?;
     let c = cudf_sys::strings::ffi::strings_ends_with(s.view.0, &ffi, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_find`].
@@ -1381,10 +1474,10 @@ pub struct StrFind<'a> {
     target: &'a Scalar,
     stream: Stream,
 }
-simple_builder!(StrFind -> Column, |s: StrFind<'_>| {
-    let ffi = crate::scalar::scalar_to_ffi(s.target);
+simple_builder!(StrFind -> crate::column::UnboundColumn, |s: StrFind<'_>| {
+    let ffi = crate::scalar::scalar_to_ffi(s.target)?;
     let c = cudf_sys::strings::ffi::strings_find(s.view.0, &ffi, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_replace`].
@@ -1394,13 +1487,13 @@ pub struct StrReplace<'a> {
     replacement: &'a Scalar,
     stream: Stream,
 }
-simple_builder!(StrReplace -> Column, |s: StrReplace<'_>| {
-    let target_ffi = crate::scalar::scalar_to_ffi(s.target);
-    let replacement_ffi = crate::scalar::scalar_to_ffi(s.replacement);
+simple_builder!(StrReplace -> crate::column::UnboundColumn, |s: StrReplace<'_>| {
+    let target_ffi = crate::scalar::scalar_to_ffi(s.target)?;
+    let replacement_ffi = crate::scalar::scalar_to_ffi(s.replacement)?;
     let c = cudf_sys::strings::ffi::strings_replace(
         s.view.0, &target_ffi, &replacement_ffi, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_strip`].
@@ -1408,9 +1501,9 @@ pub struct StrStrip<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrStrip -> Column, |s: StrStrip<'_>| {
+simple_builder!(StrStrip -> crate::column::UnboundColumn, |s: StrStrip<'_>| {
     let c = cudf_sys::strings::ffi::strings_strip(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_lstrip`].
@@ -1418,9 +1511,9 @@ pub struct StrLstrip<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrLstrip -> Column, |s: StrLstrip<'_>| {
+simple_builder!(StrLstrip -> crate::column::UnboundColumn, |s: StrLstrip<'_>| {
     let c = cudf_sys::strings::ffi::strings_lstrip(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_rstrip`].
@@ -1428,9 +1521,9 @@ pub struct StrRstrip<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrRstrip -> Column, |s: StrRstrip<'_>| {
+simple_builder!(StrRstrip -> crate::column::UnboundColumn, |s: StrRstrip<'_>| {
     let c = cudf_sys::strings::ffi::strings_rstrip(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::count_characters`].
@@ -1438,9 +1531,9 @@ pub struct CountCharacters<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(CountCharacters -> Column, |s: CountCharacters<'_>| {
+simple_builder!(CountCharacters -> crate::column::UnboundColumn, |s: CountCharacters<'_>| {
     let c = cudf_sys::strings::ffi::strings_count_characters(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::count_bytes`].
@@ -1448,9 +1541,9 @@ pub struct CountBytes<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(CountBytes -> Column, |s: CountBytes<'_>| {
+simple_builder!(CountBytes -> crate::column::UnboundColumn, |s: CountBytes<'_>| {
     let c = cudf_sys::strings::ffi::strings_count_bytes(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_from_integers`].
@@ -1458,9 +1551,9 @@ pub struct StrFromIntegers<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrFromIntegers -> Column, |s: StrFromIntegers<'_>| {
+simple_builder!(StrFromIntegers -> crate::column::UnboundColumn, |s: StrFromIntegers<'_>| {
     let c = cudf_sys::strings::ffi::strings_from_integers(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_to_integers`].
@@ -1469,9 +1562,9 @@ pub struct StrToIntegers<'a> {
     output_type: TypeId,
     stream: Stream,
 }
-simple_builder!(StrToIntegers -> Column, |s: StrToIntegers<'_>| {
+simple_builder!(StrToIntegers -> crate::column::UnboundColumn, |s: StrToIntegers<'_>| {
     let c = cudf_sys::strings::ffi::strings_to_integers(s.view.0, s.output_type.repr, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_from_floats`].
@@ -1479,9 +1572,9 @@ pub struct StrFromFloats<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrFromFloats -> Column, |s: StrFromFloats<'_>| {
+simple_builder!(StrFromFloats -> crate::column::UnboundColumn, |s: StrFromFloats<'_>| {
     let c = cudf_sys::strings::ffi::strings_from_floats(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_to_floats`].
@@ -1490,9 +1583,9 @@ pub struct StrToFloats<'a> {
     output_type: TypeId,
     stream: Stream,
 }
-simple_builder!(StrToFloats -> Column, |s: StrToFloats<'_>| {
+simple_builder!(StrToFloats -> crate::column::UnboundColumn, |s: StrToFloats<'_>| {
     let c = cudf_sys::strings::ffi::strings_to_floats(s.view.0, s.output_type.repr, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_pad`].
@@ -1503,11 +1596,11 @@ pub struct StrPad<'a> {
     fill_char: &'a str,
     stream: Stream,
 }
-simple_builder!(StrPad -> Column, |s: StrPad<'_>| {
+simple_builder!(StrPad -> crate::column::UnboundColumn, |s: StrPad<'_>| {
     let c = cudf_sys::strings::ffi::strings_pad(
         s.view.0, crate::usize_to_i32(s.width), s.side.repr, s.fill_char, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_zfill`].
@@ -1516,9 +1609,9 @@ pub struct StrZfill<'a> {
     width: usize,
     stream: Stream,
 }
-simple_builder!(StrZfill -> Column, |s: StrZfill<'_>| {
+simple_builder!(StrZfill -> crate::column::UnboundColumn, |s: StrZfill<'_>| {
     let c = cudf_sys::strings::ffi::strings_zfill(s.view.0, crate::usize_to_i32(s.width), s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_zfill_by_widths`].
@@ -1527,9 +1620,9 @@ pub struct StrZfillByWidths<'a> {
     widths: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrZfillByWidths -> Column, |s: StrZfillByWidths<'_>| {
+simple_builder!(StrZfillByWidths -> crate::column::UnboundColumn, |s: StrZfillByWidths<'_>| {
     let c = cudf_sys::strings::ffi::strings_zfill_by_widths(s.view.0, s.widths.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_slice`].
@@ -1540,9 +1633,9 @@ pub struct StrSlice<'a> {
     step: i32,
     stream: Stream,
 }
-simple_builder!(StrSlice -> Column, |s: StrSlice<'_>| {
+simple_builder!(StrSlice -> crate::column::UnboundColumn, |s: StrSlice<'_>| {
     let c = cudf_sys::strings::ffi::strings_slice(s.view.0, s.start, s.stop, s.step, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_repeat`].
@@ -1551,9 +1644,9 @@ pub struct StrRepeat<'a> {
     times: usize,
     stream: Stream,
 }
-simple_builder!(StrRepeat -> Column, |s: StrRepeat<'_>| {
+simple_builder!(StrRepeat -> crate::column::UnboundColumn, |s: StrRepeat<'_>| {
     let c = cudf_sys::strings::ffi::strings_repeat(s.view.0, crate::usize_to_i32(s.times), s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_split`].
@@ -1563,10 +1656,10 @@ pub struct StrSplit<'a> {
     maxsplit: i32,
     stream: Stream,
 }
-simple_builder!(StrSplit -> Table, |s: StrSplit<'_>| {
-    let ffi = crate::scalar::scalar_to_ffi(s.delimiter);
+simple_builder!(StrSplit -> crate::table::UnboundTable, |s: StrSplit<'_>| {
+    let ffi = crate::scalar::scalar_to_ffi(s.delimiter)?;
     let t = cudf_sys::strings::ffi::strings_split_to_table(s.view.0, &ffi, s.maxsplit, s.stream.as_raw())?;
-    Ok(Table(t))
+    Ok(crate::table::RawTable(t))
 });
 
 /// Builder for [`StringExt::str_rsplit`].
@@ -1576,10 +1669,10 @@ pub struct StrRsplit<'a> {
     maxsplit: i32,
     stream: Stream,
 }
-simple_builder!(StrRsplit -> Table, |s: StrRsplit<'_>| {
-    let ffi = crate::scalar::scalar_to_ffi(s.delimiter);
+simple_builder!(StrRsplit -> crate::table::UnboundTable, |s: StrRsplit<'_>| {
+    let ffi = crate::scalar::scalar_to_ffi(s.delimiter)?;
     let t = cudf_sys::strings::ffi::strings_rsplit_to_table(s.view.0, &ffi, s.maxsplit, s.stream.as_raw())?;
-    Ok(Table(t))
+    Ok(crate::table::RawTable(t))
 });
 
 /// Builder for [`StringExt::str_split_part`].
@@ -1589,10 +1682,10 @@ pub struct StrSplitPart<'a> {
     index: i32,
     stream: Stream,
 }
-simple_builder!(StrSplitPart -> Column, |s: StrSplitPart<'_>| {
-    let ffi = crate::scalar::scalar_to_ffi(s.delimiter);
+simple_builder!(StrSplitPart -> crate::column::UnboundColumn, |s: StrSplitPart<'_>| {
+    let ffi = crate::scalar::scalar_to_ffi(s.delimiter)?;
     let c = cudf_sys::strings::ffi::strings_split_part(s.view.0, &ffi, s.index, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_join`].
@@ -1602,11 +1695,11 @@ pub struct StrJoin<'a> {
     narep: &'a Scalar,
     stream: Stream,
 }
-simple_builder!(StrJoin -> Column, |s: StrJoin<'_>| {
-    let sep_ffi = crate::scalar::scalar_to_ffi(s.separator);
-    let na_ffi = crate::scalar::scalar_to_ffi(s.narep);
+simple_builder!(StrJoin -> crate::column::UnboundColumn, |s: StrJoin<'_>| {
+    let sep_ffi = crate::scalar::scalar_to_ffi(s.separator)?;
+    let na_ffi = crate::scalar::scalar_to_ffi(s.narep)?;
     let c = cudf_sys::strings::ffi::strings_join(s.view.0, &sep_ffi, &na_ffi, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_like`].
@@ -1616,9 +1709,9 @@ pub struct StrLike<'a> {
     escape_char: &'a str,
     stream: Stream,
 }
-simple_builder!(StrLike -> Column, |s: StrLike<'_>| {
+simple_builder!(StrLike -> crate::column::UnboundColumn, |s: StrLike<'_>| {
     let c = cudf_sys::strings::ffi::strings_like(s.view.0, s.pattern, s.escape_char, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_contains_re`].
@@ -1627,9 +1720,9 @@ pub struct StrContainsRe<'a> {
     pattern: &'a str,
     stream: Stream,
 }
-simple_builder!(StrContainsRe -> Column, |s: StrContainsRe<'_>| {
+simple_builder!(StrContainsRe -> crate::column::UnboundColumn, |s: StrContainsRe<'_>| {
     let c = cudf_sys::strings::ffi::strings_contains_re(s.view.0, s.pattern, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_matches_re`].
@@ -1638,9 +1731,9 @@ pub struct StrMatchesRe<'a> {
     pattern: &'a str,
     stream: Stream,
 }
-simple_builder!(StrMatchesRe -> Column, |s: StrMatchesRe<'_>| {
+simple_builder!(StrMatchesRe -> crate::column::UnboundColumn, |s: StrMatchesRe<'_>| {
     let c = cudf_sys::strings::ffi::strings_matches_re(s.view.0, s.pattern, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_count_re`].
@@ -1649,9 +1742,9 @@ pub struct StrCountRe<'a> {
     pattern: &'a str,
     stream: Stream,
 }
-simple_builder!(StrCountRe -> Column, |s: StrCountRe<'_>| {
+simple_builder!(StrCountRe -> crate::column::UnboundColumn, |s: StrCountRe<'_>| {
     let c = cudf_sys::strings::ffi::strings_count_re(s.view.0, s.pattern, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_replace_re`].
@@ -1661,9 +1754,9 @@ pub struct StrReplaceRe<'a> {
     replacement: &'a str,
     stream: Stream,
 }
-simple_builder!(StrReplaceRe -> Column, |s: StrReplaceRe<'_>| {
+simple_builder!(StrReplaceRe -> crate::column::UnboundColumn, |s: StrReplaceRe<'_>| {
     let c = cudf_sys::strings::ffi::strings_replace_re(s.view.0, s.pattern, s.replacement, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::swapcase`].
@@ -1671,9 +1764,9 @@ pub struct Swapcase<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(Swapcase -> Column, |s: Swapcase<'_>| {
+simple_builder!(Swapcase -> crate::column::UnboundColumn, |s: Swapcase<'_>| {
     let c = cudf_sys::strings::ffi::strings_swapcase(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_strip_chars`].
@@ -1683,9 +1776,9 @@ pub struct StrStripChars<'a> {
     to_strip: &'a str,
     stream: Stream,
 }
-simple_builder!(StrStripChars -> Column, |s: StrStripChars<'_>| {
+simple_builder!(StrStripChars -> crate::column::UnboundColumn, |s: StrStripChars<'_>| {
     let c = cudf_sys::strings::ffi::strings_strip_chars(s.view.0, s.side.repr, s.to_strip, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_replace_literal`].
@@ -1696,9 +1789,9 @@ pub struct StrReplaceLiteral<'a> {
     maxrepl: i32,
     stream: Stream,
 }
-simple_builder!(StrReplaceLiteral -> Column, |s: StrReplaceLiteral<'_>| {
+simple_builder!(StrReplaceLiteral -> crate::column::UnboundColumn, |s: StrReplaceLiteral<'_>| {
     let c = cudf_sys::strings::ffi::strings_replace_literal(s.view.0, s.target, s.repl, s.maxrepl, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_find_str`].
@@ -1709,9 +1802,9 @@ pub struct StrFindStr<'a> {
     stop: i32,
     stream: Stream,
 }
-simple_builder!(StrFindStr -> Column, |s: StrFindStr<'_>| {
+simple_builder!(StrFindStr -> crate::column::UnboundColumn, |s: StrFindStr<'_>| {
     let c = cudf_sys::strings::ffi::strings_find_str(s.view.0, s.target, s.start, s.stop, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_rfind`].
@@ -1722,9 +1815,9 @@ pub struct StrRfind<'a> {
     stop: i32,
     stream: Stream,
 }
-simple_builder!(StrRfind -> Column, |s: StrRfind<'_>| {
+simple_builder!(StrRfind -> crate::column::UnboundColumn, |s: StrRfind<'_>| {
     let c = cudf_sys::strings::ffi::strings_rfind(s.view.0, s.target, s.start, s.stop, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_contains_literal`].
@@ -1733,9 +1826,9 @@ pub struct StrContainsLiteral<'a> {
     target: &'a str,
     stream: Stream,
 }
-simple_builder!(StrContainsLiteral -> Column, |s: StrContainsLiteral<'_>| {
+simple_builder!(StrContainsLiteral -> crate::column::UnboundColumn, |s: StrContainsLiteral<'_>| {
     let c = cudf_sys::strings::ffi::strings_contains_str(s.view.0, s.target, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_starts_with_str`].
@@ -1744,9 +1837,9 @@ pub struct StrStartsWithStr<'a> {
     target: &'a str,
     stream: Stream,
 }
-simple_builder!(StrStartsWithStr -> Column, |s: StrStartsWithStr<'_>| {
+simple_builder!(StrStartsWithStr -> crate::column::UnboundColumn, |s: StrStartsWithStr<'_>| {
     let c = cudf_sys::strings::ffi::strings_starts_with_str(s.view.0, s.target, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_ends_with_str`].
@@ -1755,9 +1848,9 @@ pub struct StrEndsWithStr<'a> {
     target: &'a str,
     stream: Stream,
 }
-simple_builder!(StrEndsWithStr -> Column, |s: StrEndsWithStr<'_>| {
+simple_builder!(StrEndsWithStr -> crate::column::UnboundColumn, |s: StrEndsWithStr<'_>| {
     let c = cudf_sys::strings::ffi::strings_ends_with_str(s.view.0, s.target, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_reverse`].
@@ -1765,9 +1858,9 @@ pub struct StrReverse<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrReverse -> Column, |s: StrReverse<'_>| {
+simple_builder!(StrReverse -> crate::column::UnboundColumn, |s: StrReverse<'_>| {
     let c = cudf_sys::strings::ffi::strings_reverse(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_extract`].
@@ -1776,9 +1869,9 @@ pub struct StrExtract<'a> {
     pattern: &'a str,
     stream: Stream,
 }
-simple_builder!(StrExtract -> Table, |s: StrExtract<'_>| {
+simple_builder!(StrExtract -> crate::table::UnboundTable, |s: StrExtract<'_>| {
     let t = cudf_sys::strings::ffi::strings_extract(s.view.0, s.pattern, s.stream.as_raw())?;
-    Ok(Table(t))
+    Ok(crate::table::RawTable(t))
 });
 
 /// Builder for [`StringExt::str_extract_all`].
@@ -1787,9 +1880,9 @@ pub struct StrExtractAll<'a> {
     pattern: &'a str,
     stream: Stream,
 }
-simple_builder!(StrExtractAll -> Column, |s: StrExtractAll<'_>| {
+simple_builder!(StrExtractAll -> crate::column::UnboundColumn, |s: StrExtractAll<'_>| {
     let c = cudf_sys::strings::ffi::strings_extract_all_record(s.view.0, s.pattern, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_findall`].
@@ -1798,9 +1891,9 @@ pub struct StrFindall<'a> {
     pattern: &'a str,
     stream: Stream,
 }
-simple_builder!(StrFindall -> Column, |s: StrFindall<'_>| {
+simple_builder!(StrFindall -> crate::column::UnboundColumn, |s: StrFindall<'_>| {
     let c = cudf_sys::strings::ffi::strings_findall(s.view.0, s.pattern, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_find_re`].
@@ -1809,9 +1902,9 @@ pub struct StrFindRe<'a> {
     pattern: &'a str,
     stream: Stream,
 }
-simple_builder!(StrFindRe -> Column, |s: StrFindRe<'_>| {
+simple_builder!(StrFindRe -> crate::column::UnboundColumn, |s: StrFindRe<'_>| {
     let c = cudf_sys::strings::ffi::strings_find_re(s.view.0, s.pattern, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::capitalize`].
@@ -1819,9 +1912,9 @@ pub struct Capitalize<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(Capitalize -> Column, |s: Capitalize<'_>| {
+simple_builder!(Capitalize -> crate::column::UnboundColumn, |s: Capitalize<'_>| {
     let c = cudf_sys::strings::ffi::strings_capitalize(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::title`].
@@ -1829,9 +1922,9 @@ pub struct Title<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(Title -> Column, |s: Title<'_>| {
+simple_builder!(Title -> crate::column::UnboundColumn, |s: Title<'_>| {
     let c = cudf_sys::strings::ffi::strings_title(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::is_title`].
@@ -1839,9 +1932,9 @@ pub struct IsTitle<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(IsTitle -> Column, |s: IsTitle<'_>| {
+simple_builder!(IsTitle -> crate::column::UnboundColumn, |s: IsTitle<'_>| {
     let c = cudf_sys::strings::ffi::strings_is_title(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::wrap`].
@@ -1850,9 +1943,9 @@ pub struct Wrap<'a> {
     width: i32,
     stream: Stream,
 }
-simple_builder!(Wrap -> Column, |s: Wrap<'_>| {
+simple_builder!(Wrap -> crate::column::UnboundColumn, |s: Wrap<'_>| {
     let c = cudf_sys::strings::ffi::strings_wrap(s.view.0, s.width, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_to_timestamps`].
@@ -1862,11 +1955,11 @@ pub struct StrToTimestamps<'a> {
     format: &'a str,
     stream: Stream,
 }
-simple_builder!(StrToTimestamps -> Column, |s: StrToTimestamps<'_>| {
+simple_builder!(StrToTimestamps -> crate::column::UnboundColumn, |s: StrToTimestamps<'_>| {
     let c = cudf_sys::strings::ffi::strings_to_timestamps(
         s.view.0, s.timestamp_type.repr, s.format, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_from_timestamps`].
@@ -1875,9 +1968,9 @@ pub struct StrFromTimestamps<'a> {
     format: &'a str,
     stream: Stream,
 }
-simple_builder!(StrFromTimestamps -> Column, |s: StrFromTimestamps<'_>| {
+simple_builder!(StrFromTimestamps -> crate::column::UnboundColumn, |s: StrFromTimestamps<'_>| {
     let c = cudf_sys::strings::ffi::strings_from_timestamps(s.view.0, s.format, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_is_timestamp`].
@@ -1886,9 +1979,9 @@ pub struct StrIsTimestamp<'a> {
     format: &'a str,
     stream: Stream,
 }
-simple_builder!(StrIsTimestamp -> Column, |s: StrIsTimestamp<'_>| {
+simple_builder!(StrIsTimestamp -> crate::column::UnboundColumn, |s: StrIsTimestamp<'_>| {
     let c = cudf_sys::strings::ffi::strings_is_timestamp(s.view.0, s.format, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_to_booleans`].
@@ -1897,9 +1990,9 @@ pub struct StrToBooleans<'a> {
     true_string: &'a str,
     stream: Stream,
 }
-simple_builder!(StrToBooleans -> Column, |s: StrToBooleans<'_>| {
+simple_builder!(StrToBooleans -> crate::column::UnboundColumn, |s: StrToBooleans<'_>| {
     let c = cudf_sys::strings::ffi::strings_to_booleans(s.view.0, s.true_string, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_from_booleans`].
@@ -1909,11 +2002,11 @@ pub struct StrFromBooleans<'a> {
     false_string: &'a str,
     stream: Stream,
 }
-simple_builder!(StrFromBooleans -> Column, |s: StrFromBooleans<'_>| {
+simple_builder!(StrFromBooleans -> crate::column::UnboundColumn, |s: StrFromBooleans<'_>| {
     let c = cudf_sys::strings::ffi::strings_from_booleans(
         s.view.0, s.true_string, s.false_string, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_to_durations`].
@@ -1923,11 +2016,11 @@ pub struct StrToDurations<'a> {
     format: &'a str,
     stream: Stream,
 }
-simple_builder!(StrToDurations -> Column, |s: StrToDurations<'_>| {
+simple_builder!(StrToDurations -> crate::column::UnboundColumn, |s: StrToDurations<'_>| {
     let c = cudf_sys::strings::ffi::strings_to_durations(
         s.view.0, s.duration_type.repr, s.format, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_from_durations`].
@@ -1936,9 +2029,9 @@ pub struct StrFromDurations<'a> {
     format: &'a str,
     stream: Stream,
 }
-simple_builder!(StrFromDurations -> Column, |s: StrFromDurations<'_>| {
+simple_builder!(StrFromDurations -> crate::column::UnboundColumn, |s: StrFromDurations<'_>| {
     let c = cudf_sys::strings::ffi::strings_from_durations(s.view.0, s.format, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_to_fixed_point`].
@@ -1948,11 +2041,11 @@ pub struct StrToFixedPoint<'a> {
     scale: i32,
     stream: Stream,
 }
-simple_builder!(StrToFixedPoint -> Column, |s: StrToFixedPoint<'_>| {
+simple_builder!(StrToFixedPoint -> crate::column::UnboundColumn, |s: StrToFixedPoint<'_>| {
     let c = cudf_sys::strings::ffi::strings_to_fixed_point(
         s.view.0, s.type_id.repr, s.scale, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_from_fixed_point`].
@@ -1960,9 +2053,9 @@ pub struct StrFromFixedPoint<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrFromFixedPoint -> Column, |s: StrFromFixedPoint<'_>| {
+simple_builder!(StrFromFixedPoint -> crate::column::UnboundColumn, |s: StrFromFixedPoint<'_>| {
     let c = cudf_sys::strings::ffi::strings_from_fixed_point(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_is_fixed_point`].
@@ -1972,11 +2065,11 @@ pub struct StrIsFixedPoint<'a> {
     scale: i32,
     stream: Stream,
 }
-simple_builder!(StrIsFixedPoint -> Column, |s: StrIsFixedPoint<'_>| {
+simple_builder!(StrIsFixedPoint -> crate::column::UnboundColumn, |s: StrIsFixedPoint<'_>| {
     let c = cudf_sys::strings::ffi::strings_is_fixed_point(
         s.view.0, s.type_id.repr, s.scale, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::url_encode`].
@@ -1984,9 +2077,9 @@ pub struct UrlEncode<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(UrlEncode -> Column, |s: UrlEncode<'_>| {
+simple_builder!(UrlEncode -> crate::column::UnboundColumn, |s: UrlEncode<'_>| {
     let c = cudf_sys::strings::ffi::strings_url_encode(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::url_decode`].
@@ -1994,9 +2087,9 @@ pub struct UrlDecode<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(UrlDecode -> Column, |s: UrlDecode<'_>| {
+simple_builder!(UrlDecode -> crate::column::UnboundColumn, |s: UrlDecode<'_>| {
     let c = cudf_sys::strings::ffi::strings_url_decode(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::ipv4_to_integers`].
@@ -2004,9 +2097,9 @@ pub struct Ipv4ToIntegers<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(Ipv4ToIntegers -> Column, |s: Ipv4ToIntegers<'_>| {
+simple_builder!(Ipv4ToIntegers -> crate::column::UnboundColumn, |s: Ipv4ToIntegers<'_>| {
     let c = cudf_sys::strings::ffi::strings_ipv4_to_integers(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::integers_to_ipv4`].
@@ -2014,9 +2107,9 @@ pub struct IntegersToIpv4<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(IntegersToIpv4 -> Column, |s: IntegersToIpv4<'_>| {
+simple_builder!(IntegersToIpv4 -> crate::column::UnboundColumn, |s: IntegersToIpv4<'_>| {
     let c = cudf_sys::strings::ffi::strings_integers_to_ipv4(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::is_ipv4`].
@@ -2024,9 +2117,9 @@ pub struct IsIpv4<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(IsIpv4 -> Column, |s: IsIpv4<'_>| {
+simple_builder!(IsIpv4 -> crate::column::UnboundColumn, |s: IsIpv4<'_>| {
     let c = cudf_sys::strings::ffi::strings_is_ipv4(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_split_re`].
@@ -2036,9 +2129,9 @@ pub struct StrSplitRe<'a> {
     maxsplit: i32,
     stream: Stream,
 }
-simple_builder!(StrSplitRe -> Table, |s: StrSplitRe<'_>| {
+simple_builder!(StrSplitRe -> crate::table::UnboundTable, |s: StrSplitRe<'_>| {
     let t = cudf_sys::strings::ffi::strings_split_re(s.view.0, s.pattern, s.maxsplit, s.stream.as_raw())?;
-    Ok(Table(t))
+    Ok(crate::table::RawTable(t))
 });
 
 /// Builder for [`StringExt::str_rsplit_re`].
@@ -2048,9 +2141,9 @@ pub struct StrRsplitRe<'a> {
     maxsplit: i32,
     stream: Stream,
 }
-simple_builder!(StrRsplitRe -> Table, |s: StrRsplitRe<'_>| {
+simple_builder!(StrRsplitRe -> crate::table::UnboundTable, |s: StrRsplitRe<'_>| {
     let t = cudf_sys::strings::ffi::strings_rsplit_re(s.view.0, s.pattern, s.maxsplit, s.stream.as_raw())?;
-    Ok(Table(t))
+    Ok(crate::table::RawTable(t))
 });
 
 /// Builder for [`StringExt::str_split_record_re`].
@@ -2060,9 +2153,9 @@ pub struct StrSplitRecordRe<'a> {
     maxsplit: i32,
     stream: Stream,
 }
-simple_builder!(StrSplitRecordRe -> Column, |s: StrSplitRecordRe<'_>| {
+simple_builder!(StrSplitRecordRe -> crate::column::UnboundColumn, |s: StrSplitRecordRe<'_>| {
     let c = cudf_sys::strings::ffi::strings_split_record_re(s.view.0, s.pattern, s.maxsplit, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_rsplit_record_re`].
@@ -2072,9 +2165,9 @@ pub struct StrRsplitRecordRe<'a> {
     maxsplit: i32,
     stream: Stream,
 }
-simple_builder!(StrRsplitRecordRe -> Column, |s: StrRsplitRecordRe<'_>| {
+simple_builder!(StrRsplitRecordRe -> crate::column::UnboundColumn, |s: StrRsplitRecordRe<'_>| {
     let c = cudf_sys::strings::ffi::strings_rsplit_record_re(s.view.0, s.pattern, s.maxsplit, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_partition`].
@@ -2083,9 +2176,9 @@ pub struct StrPartition<'a> {
     delimiter: &'a str,
     stream: Stream,
 }
-simple_builder!(StrPartition -> Table, |s: StrPartition<'_>| {
+simple_builder!(StrPartition -> crate::table::UnboundTable, |s: StrPartition<'_>| {
     let t = cudf_sys::strings::ffi::strings_partition(s.view.0, s.delimiter, s.stream.as_raw())?;
-    Ok(Table(t))
+    Ok(crate::table::RawTable(t))
 });
 
 /// Builder for [`StringExt::str_rpartition`].
@@ -2094,9 +2187,9 @@ pub struct StrRpartition<'a> {
     delimiter: &'a str,
     stream: Stream,
 }
-simple_builder!(StrRpartition -> Table, |s: StrRpartition<'_>| {
+simple_builder!(StrRpartition -> crate::table::UnboundTable, |s: StrRpartition<'_>| {
     let t = cudf_sys::strings::ffi::strings_rpartition(s.view.0, s.delimiter, s.stream.as_raw())?;
-    Ok(Table(t))
+    Ok(crate::table::RawTable(t))
 });
 
 /// Builder for [`StringExt::str_replace_with_backrefs`].
@@ -2106,11 +2199,11 @@ pub struct StrReplaceWithBackrefs<'a> {
     replacement: &'a str,
     stream: Stream,
 }
-simple_builder!(StrReplaceWithBackrefs -> Column, |s: StrReplaceWithBackrefs<'_>| {
+simple_builder!(StrReplaceWithBackrefs -> crate::column::UnboundColumn, |s: StrReplaceWithBackrefs<'_>| {
     let c = cudf_sys::strings::ffi::strings_replace_with_backrefs(
         s.view.0, s.pattern, s.replacement, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_repeat_column`].
@@ -2119,9 +2212,9 @@ pub struct StrRepeatColumn<'a> {
     repeat_times: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrRepeatColumn -> Column, |s: StrRepeatColumn<'_>| {
+simple_builder!(StrRepeatColumn -> crate::column::UnboundColumn, |s: StrRepeatColumn<'_>| {
     let c = cudf_sys::strings::ffi::strings_repeat_column(s.view.0, s.repeat_times.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_contains_multiple`].
@@ -2130,9 +2223,9 @@ pub struct StrContainsMultiple<'a> {
     targets: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrContainsMultiple -> Table, |s: StrContainsMultiple<'_>| {
+simple_builder!(StrContainsMultiple -> crate::table::UnboundTable, |s: StrContainsMultiple<'_>| {
     let t = cudf_sys::strings::ffi::strings_contains_multiple(s.view.0, s.targets.0, s.stream.as_raw())?;
-    Ok(Table(t))
+    Ok(crate::table::RawTable(t))
 });
 
 /// Builder for [`StringExt::str_find_multiple`].
@@ -2141,9 +2234,9 @@ pub struct StrFindMultiple<'a> {
     targets: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrFindMultiple -> Column, |s: StrFindMultiple<'_>| {
+simple_builder!(StrFindMultiple -> crate::column::UnboundColumn, |s: StrFindMultiple<'_>| {
     let c = cudf_sys::strings::ffi::strings_find_multiple(s.view.0, s.targets.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::all_characters_of_type`].
@@ -2153,11 +2246,11 @@ pub struct AllCharactersOfType<'a> {
     verify_types: u32,
     stream: Stream,
 }
-simple_builder!(AllCharactersOfType -> Column, |s: AllCharactersOfType<'_>| {
+simple_builder!(AllCharactersOfType -> crate::column::UnboundColumn, |s: AllCharactersOfType<'_>| {
     let c = cudf_sys::strings::ffi::strings_all_characters_of_type(
         s.view.0, s.types, s.verify_types, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::filter_characters_of_type`].
@@ -2168,11 +2261,11 @@ pub struct FilterCharactersOfType<'a> {
     types_to_keep: u32,
     stream: Stream,
 }
-simple_builder!(FilterCharactersOfType -> Column, |s: FilterCharactersOfType<'_>| {
+simple_builder!(FilterCharactersOfType -> crate::column::UnboundColumn, |s: FilterCharactersOfType<'_>| {
     let c = cudf_sys::strings::ffi::strings_filter_characters_of_type(
         s.view.0, s.types_to_remove, s.replacement, s.types_to_keep, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_is_integer`].
@@ -2180,9 +2273,9 @@ pub struct StrIsInteger<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrIsInteger -> Column, |s: StrIsInteger<'_>| {
+simple_builder!(StrIsInteger -> crate::column::UnboundColumn, |s: StrIsInteger<'_>| {
     let c = cudf_sys::strings::ffi::strings_is_integer(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_is_integer_with_type`].
@@ -2191,9 +2284,9 @@ pub struct StrIsIntegerWithType<'a> {
     int_type: TypeId,
     stream: Stream,
 }
-simple_builder!(StrIsIntegerWithType -> Column, |s: StrIsIntegerWithType<'_>| {
+simple_builder!(StrIsIntegerWithType -> crate::column::UnboundColumn, |s: StrIsIntegerWithType<'_>| {
     let c = cudf_sys::strings::ffi::strings_is_integer_with_type(s.view.0, s.int_type.repr, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_is_float`].
@@ -2201,9 +2294,9 @@ pub struct StrIsFloat<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrIsFloat -> Column, |s: StrIsFloat<'_>| {
+simple_builder!(StrIsFloat -> crate::column::UnboundColumn, |s: StrIsFloat<'_>| {
     let c = cudf_sys::strings::ffi::strings_is_float(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_hex_to_integers`].
@@ -2212,9 +2305,9 @@ pub struct StrHexToIntegers<'a> {
     output_type: TypeId,
     stream: Stream,
 }
-simple_builder!(StrHexToIntegers -> Column, |s: StrHexToIntegers<'_>| {
+simple_builder!(StrHexToIntegers -> crate::column::UnboundColumn, |s: StrHexToIntegers<'_>| {
     let c = cudf_sys::strings::ffi::strings_hex_to_integers(s.view.0, s.output_type.repr, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_is_hex`].
@@ -2222,9 +2315,9 @@ pub struct StrIsHex<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrIsHex -> Column, |s: StrIsHex<'_>| {
+simple_builder!(StrIsHex -> crate::column::UnboundColumn, |s: StrIsHex<'_>| {
     let c = cudf_sys::strings::ffi::strings_is_hex(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_integers_to_hex`].
@@ -2232,9 +2325,9 @@ pub struct StrIntegersToHex<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrIntegersToHex -> Column, |s: StrIntegersToHex<'_>| {
+simple_builder!(StrIntegersToHex -> crate::column::UnboundColumn, |s: StrIntegersToHex<'_>| {
     let c = cudf_sys::strings::ffi::strings_integers_to_hex(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_replace_slice`].
@@ -2245,11 +2338,11 @@ pub struct StrReplaceSlice<'a> {
     stop: i32,
     stream: Stream,
 }
-simple_builder!(StrReplaceSlice -> Column, |s: StrReplaceSlice<'_>| {
+simple_builder!(StrReplaceSlice -> crate::column::UnboundColumn, |s: StrReplaceSlice<'_>| {
     let c = cudf_sys::strings::ffi::strings_replace_slice(
         s.view.0, s.repl, s.start, s.stop, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_replace_multiple`].
@@ -2259,11 +2352,11 @@ pub struct StrReplaceMultiple<'a> {
     repls: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrReplaceMultiple -> Column, |s: StrReplaceMultiple<'_>| {
+simple_builder!(StrReplaceMultiple -> crate::column::UnboundColumn, |s: StrReplaceMultiple<'_>| {
     let c = cudf_sys::strings::ffi::strings_replace_multiple(
         s.view.0, s.targets.0, s.repls.0, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_split_record`].
@@ -2273,10 +2366,10 @@ pub struct StrSplitRecord<'a> {
     maxsplit: i32,
     stream: Stream,
 }
-simple_builder!(StrSplitRecord -> Column, |s: StrSplitRecord<'_>| {
-    let ffi = crate::scalar::scalar_to_ffi(s.delimiter);
+simple_builder!(StrSplitRecord -> crate::column::UnboundColumn, |s: StrSplitRecord<'_>| {
+    let ffi = crate::scalar::scalar_to_ffi(s.delimiter)?;
     let c = cudf_sys::strings::ffi::strings_split_record(s.view.0, &ffi, s.maxsplit, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_rsplit_record`].
@@ -2286,10 +2379,10 @@ pub struct StrRsplitRecord<'a> {
     maxsplit: i32,
     stream: Stream,
 }
-simple_builder!(StrRsplitRecord -> Column, |s: StrRsplitRecord<'_>| {
-    let ffi = crate::scalar::scalar_to_ffi(s.delimiter);
+simple_builder!(StrRsplitRecord -> crate::column::UnboundColumn, |s: StrRsplitRecord<'_>| {
+    let ffi = crate::scalar::scalar_to_ffi(s.delimiter)?;
     let c = cudf_sys::strings::ffi::strings_rsplit_record(s.view.0, &ffi, s.maxsplit, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_join_list_elements`].
@@ -2299,11 +2392,11 @@ pub struct StrJoinListElements<'a> {
     narep: &'a str,
     stream: Stream,
 }
-simple_builder!(StrJoinListElements -> Column, |s: StrJoinListElements<'_>| {
+simple_builder!(StrJoinListElements -> crate::column::UnboundColumn, |s: StrJoinListElements<'_>| {
     let c = cudf_sys::strings::ffi::strings_join_list_elements(
         s.view.0, s.separator, s.narep, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_translate`].
@@ -2313,11 +2406,11 @@ pub struct StrTranslate<'a> {
     to_chars: &'a [u32],
     stream: Stream,
 }
-simple_builder!(StrTranslate -> Column, |s: StrTranslate<'_>| {
+simple_builder!(StrTranslate -> crate::column::UnboundColumn, |s: StrTranslate<'_>| {
     let c = cudf_sys::strings::ffi::strings_translate(
         s.view.0, s.from_chars, s.to_chars, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_filter_characters`].
@@ -2329,11 +2422,11 @@ pub struct StrFilterCharacters<'a> {
     replacement: &'a str,
     stream: Stream,
 }
-simple_builder!(StrFilterCharacters -> Column, |s: StrFilterCharacters<'_>| {
+simple_builder!(StrFilterCharacters -> crate::column::UnboundColumn, |s: StrFilterCharacters<'_>| {
     let c = cudf_sys::strings::ffi::strings_filter_characters(
         s.view.0, s.from_chars, s.to_chars, s.keep, s.replacement, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::code_points`].
@@ -2341,9 +2434,9 @@ pub struct CodePoints<'a> {
     view: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(CodePoints -> Column, |s: CodePoints<'_>| {
+simple_builder!(CodePoints -> crate::column::UnboundColumn, |s: CodePoints<'_>| {
     let c = cudf_sys::strings::ffi::strings_code_points(s.view.0, s.stream.as_raw())?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_cast_to_integer`].
@@ -2353,11 +2446,11 @@ pub struct StrCastToInteger<'a> {
     big_endian: bool,
     stream: Stream,
 }
-simple_builder!(StrCastToInteger -> Column, |s: StrCastToInteger<'_>| {
+simple_builder!(StrCastToInteger -> crate::column::UnboundColumn, |s: StrCastToInteger<'_>| {
     let c = cudf_sys::strings::ffi::strings_cast_to_integer(
         s.view.0, s.output_type.repr, s.big_endian, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_cast_from_integer`].
@@ -2366,11 +2459,11 @@ pub struct StrCastFromInteger<'a> {
     big_endian: bool,
     stream: Stream,
 }
-simple_builder!(StrCastFromInteger -> Column, |s: StrCastFromInteger<'_>| {
+simple_builder!(StrCastFromInteger -> crate::column::UnboundColumn, |s: StrCastFromInteger<'_>| {
     let c = cudf_sys::strings::ffi::strings_cast_from_integer(
         s.view.0, s.big_endian, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_slice_column`].
@@ -2380,11 +2473,11 @@ pub struct StrSliceColumn<'a> {
     stops: &'a ColumnView<'a>,
     stream: Stream,
 }
-simple_builder!(StrSliceColumn -> Column, |s: StrSliceColumn<'_>| {
+simple_builder!(StrSliceColumn -> crate::column::UnboundColumn, |s: StrSliceColumn<'_>| {
     let c = cudf_sys::strings::ffi::strings_slice_column(
         s.view.0, s.starts.0, s.stops.0, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_extract_single`].
@@ -2394,11 +2487,11 @@ pub struct StrExtractSingle<'a> {
     group_index: i32,
     stream: Stream,
 }
-simple_builder!(StrExtractSingle -> Column, |s: StrExtractSingle<'_>| {
+simple_builder!(StrExtractSingle -> crate::column::UnboundColumn, |s: StrExtractSingle<'_>| {
     let c = cudf_sys::strings::ffi::strings_extract_single(
         s.view.0, s.pattern, s.group_index, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_join_list_elements_column`].
@@ -2409,11 +2502,11 @@ pub struct StrJoinListElementsColumn<'a> {
     string_narep: &'a str,
     stream: Stream,
 }
-simple_builder!(StrJoinListElementsColumn -> Column, |s: StrJoinListElementsColumn<'_>| {
+simple_builder!(StrJoinListElementsColumn -> crate::column::UnboundColumn, |s: StrJoinListElementsColumn<'_>| {
     let c = cudf_sys::strings::ffi::strings_join_list_elements_column(
         s.view.0, s.separators.0, s.separator_narep, s.string_narep, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_join_strings`].
@@ -2423,11 +2516,11 @@ pub struct StrJoinStrings<'a> {
     narep: &'a str,
     stream: Stream,
 }
-simple_builder!(StrJoinStrings -> Column, |s: StrJoinStrings<'_>| {
+simple_builder!(StrJoinStrings -> crate::column::UnboundColumn, |s: StrJoinStrings<'_>| {
     let c = cudf_sys::strings::ffi::strings_join_strings(
         s.view.0, s.separator, s.narep, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_find_instance`].
@@ -2437,11 +2530,11 @@ pub struct StrFindInstance<'a> {
     instance: i32,
     stream: Stream,
 }
-simple_builder!(StrFindInstance -> Column, |s: StrFindInstance<'_>| {
+simple_builder!(StrFindInstance -> crate::column::UnboundColumn, |s: StrFindInstance<'_>| {
     let c = cudf_sys::strings::ffi::strings_find_instance(
         s.view.0, s.target, s.instance, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`StringExt::str_like_column`].
@@ -2451,11 +2544,11 @@ pub struct StrLikeColumn<'a> {
     escape_char: &'a str,
     stream: Stream,
 }
-simple_builder!(StrLikeColumn -> Column, |s: StrLikeColumn<'_>| {
+simple_builder!(StrLikeColumn -> crate::column::UnboundColumn, |s: StrLikeColumn<'_>| {
     let c = cudf_sys::strings::ffi::strings_like_column(
         s.view.0, s.patterns.0, s.escape_char, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`concatenate_strings_with_separator`].
@@ -2463,17 +2556,17 @@ simple_builder!(StrLikeColumn -> Column, |s: StrLikeColumn<'_>| {
 /// Created by [`concatenate_strings_with_separator`]. Call `.call()` to
 /// execute, or chain `.stream(s)` to run on a specific CUDA stream.
 pub struct ConcatenateStringsWithSeparator<'a> {
-    tbl: &'a Table,
+    tbl: &'a UnboundTable,
     separators: &'a ColumnView<'a>,
     separator_narep: &'a str,
     col_narep: &'a str,
     stream: Stream,
 }
-simple_builder!(ConcatenateStringsWithSeparator -> Column, |s: ConcatenateStringsWithSeparator<'_>| {
+simple_builder!(ConcatenateStringsWithSeparator -> crate::column::UnboundColumn, |s: ConcatenateStringsWithSeparator<'_>| {
     let c = cudf_sys::strings::ffi::strings_concatenate_columns_sep_col(
         &s.tbl.0, s.separators.0, s.separator_narep, s.col_narep, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 /// Builder for [`get_json_object`].
@@ -2488,786 +2581,20 @@ pub struct GetJsonObject<'a> {
     missing_fields_as_nulls: bool,
     stream: Stream,
 }
-simple_builder!(GetJsonObject -> Column, |s: GetJsonObject<'_>| {
+simple_builder!(GetJsonObject -> crate::column::UnboundColumn, |s: GetJsonObject<'_>| {
     let c = cudf_sys::strings::ffi::get_json_object(
         s.col.0, s.json_path, s.allow_single_quotes, s.strip_quotes,
         s.missing_fields_as_nulls, s.stream.as_raw(),
     )?;
-    Ok(Column(c))
+    Ok(crate::column::RawColumn(c))
 });
 
 // ---------------------------------------------------------------------------
 // Trait implementation
 // ---------------------------------------------------------------------------
 
-impl StringExt for ColumnView<'_> {
-    fn to_lower(&self) -> ToLower<'_> {
-        ToLower {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn to_upper(&self) -> ToUpper<'_> {
-        ToUpper {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_contains<'a>(&'a self, target: &'a Scalar) -> StrContains<'a> {
-        StrContains {
-            view: self,
-            target,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_starts_with<'a>(&'a self, target: &'a Scalar) -> StrStartsWith<'a> {
-        StrStartsWith {
-            view: self,
-            target,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_ends_with<'a>(&'a self, target: &'a Scalar) -> StrEndsWith<'a> {
-        StrEndsWith {
-            view: self,
-            target,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_find<'a>(&'a self, target: &'a Scalar) -> StrFind<'a> {
-        StrFind {
-            view: self,
-            target,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_replace<'a>(&'a self, target: &'a Scalar, replacement: &'a Scalar) -> StrReplace<'a> {
-        StrReplace {
-            view: self,
-            target,
-            replacement,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_strip(&self) -> StrStrip<'_> {
-        StrStrip {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_lstrip(&self) -> StrLstrip<'_> {
-        StrLstrip {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_rstrip(&self) -> StrRstrip<'_> {
-        StrRstrip {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn count_characters(&self) -> CountCharacters<'_> {
-        CountCharacters {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn count_bytes(&self) -> CountBytes<'_> {
-        CountBytes {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_from_integers(&self) -> StrFromIntegers<'_> {
-        StrFromIntegers {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_to_integers(&self, output_type: TypeId) -> StrToIntegers<'_> {
-        StrToIntegers {
-            view: self,
-            output_type,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_from_floats(&self) -> StrFromFloats<'_> {
-        StrFromFloats {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_to_floats(&self, output_type: TypeId) -> StrToFloats<'_> {
-        StrToFloats {
-            view: self,
-            output_type,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_pad<'a>(&'a self, width: usize, side: SideType, fill_char: &'a str) -> StrPad<'a> {
-        StrPad {
-            view: self,
-            width,
-            side,
-            fill_char,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_zfill(&self, width: usize) -> StrZfill<'_> {
-        StrZfill {
-            view: self,
-            width,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_zfill_by_widths<'a>(&'a self, widths: &'a ColumnView<'a>) -> StrZfillByWidths<'a> {
-        StrZfillByWidths {
-            view: self,
-            widths,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_slice(&self, start: i32, stop: i32, step: i32) -> StrSlice<'_> {
-        StrSlice {
-            view: self,
-            start,
-            stop,
-            step,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_repeat(&self, times: usize) -> StrRepeat<'_> {
-        StrRepeat {
-            view: self,
-            times,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_split<'a>(&'a self, delimiter: &'a Scalar, maxsplit: i32) -> StrSplit<'a> {
-        StrSplit {
-            view: self,
-            delimiter,
-            maxsplit,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_rsplit<'a>(&'a self, delimiter: &'a Scalar, maxsplit: i32) -> StrRsplit<'a> {
-        StrRsplit {
-            view: self,
-            delimiter,
-            maxsplit,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_split_part<'a>(&'a self, delimiter: &'a Scalar, index: i32) -> StrSplitPart<'a> {
-        StrSplitPart {
-            view: self,
-            delimiter,
-            index,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_join<'a>(&'a self, separator: &'a Scalar, narep: &'a Scalar) -> StrJoin<'a> {
-        StrJoin {
-            view: self,
-            separator,
-            narep,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_like<'a>(&'a self, pattern: &'a str, escape_char: &'a str) -> StrLike<'a> {
-        StrLike {
-            view: self,
-            pattern,
-            escape_char,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_contains_re<'a>(&'a self, pattern: &'a str) -> StrContainsRe<'a> {
-        StrContainsRe {
-            view: self,
-            pattern,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_matches_re<'a>(&'a self, pattern: &'a str) -> StrMatchesRe<'a> {
-        StrMatchesRe {
-            view: self,
-            pattern,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_count_re<'a>(&'a self, pattern: &'a str) -> StrCountRe<'a> {
-        StrCountRe {
-            view: self,
-            pattern,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_replace_re<'a>(&'a self, pattern: &'a str, replacement: &'a str) -> StrReplaceRe<'a> {
-        StrReplaceRe {
-            view: self,
-            pattern,
-            replacement,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn swapcase(&self) -> Swapcase<'_> {
-        Swapcase {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_strip_chars<'a>(&'a self, side: SideType, to_strip: &'a str) -> StrStripChars<'a> {
-        StrStripChars {
-            view: self,
-            side,
-            to_strip,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_replace_literal<'a>(
-        &'a self,
-        target: &'a str,
-        repl: &'a str,
-        maxrepl: i32,
-    ) -> StrReplaceLiteral<'a> {
-        StrReplaceLiteral {
-            view: self,
-            target,
-            repl,
-            maxrepl,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_find_str<'a>(&'a self, target: &'a str, start: i32, stop: i32) -> StrFindStr<'a> {
-        StrFindStr {
-            view: self,
-            target,
-            start,
-            stop,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_rfind<'a>(&'a self, target: &'a str, start: i32, stop: i32) -> StrRfind<'a> {
-        StrRfind {
-            view: self,
-            target,
-            start,
-            stop,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_contains_literal<'a>(&'a self, target: &'a str) -> StrContainsLiteral<'a> {
-        StrContainsLiteral {
-            view: self,
-            target,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_starts_with_str<'a>(&'a self, target: &'a str) -> StrStartsWithStr<'a> {
-        StrStartsWithStr {
-            view: self,
-            target,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_ends_with_str<'a>(&'a self, target: &'a str) -> StrEndsWithStr<'a> {
-        StrEndsWithStr {
-            view: self,
-            target,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_reverse(&self) -> StrReverse<'_> {
-        StrReverse {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_extract<'a>(&'a self, pattern: &'a str) -> StrExtract<'a> {
-        StrExtract {
-            view: self,
-            pattern,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_extract_all<'a>(&'a self, pattern: &'a str) -> StrExtractAll<'a> {
-        StrExtractAll {
-            view: self,
-            pattern,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_findall<'a>(&'a self, pattern: &'a str) -> StrFindall<'a> {
-        StrFindall {
-            view: self,
-            pattern,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_find_re<'a>(&'a self, pattern: &'a str) -> StrFindRe<'a> {
-        StrFindRe {
-            view: self,
-            pattern,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn capitalize(&self) -> Capitalize<'_> {
-        Capitalize {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn title(&self) -> Title<'_> {
-        Title {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn is_title(&self) -> IsTitle<'_> {
-        IsTitle {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn wrap(&self, width: i32) -> Wrap<'_> {
-        Wrap {
-            view: self,
-            width,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_to_timestamps<'a>(
-        &'a self,
-        timestamp_type: TypeId,
-        format: &'a str,
-    ) -> StrToTimestamps<'a> {
-        StrToTimestamps {
-            view: self,
-            timestamp_type,
-            format,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_from_timestamps<'a>(&'a self, format: &'a str) -> StrFromTimestamps<'a> {
-        StrFromTimestamps {
-            view: self,
-            format,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_is_timestamp<'a>(&'a self, format: &'a str) -> StrIsTimestamp<'a> {
-        StrIsTimestamp {
-            view: self,
-            format,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_to_booleans<'a>(&'a self, true_string: &'a str) -> StrToBooleans<'a> {
-        StrToBooleans {
-            view: self,
-            true_string,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_from_booleans<'a>(
-        &'a self,
-        true_string: &'a str,
-        false_string: &'a str,
-    ) -> StrFromBooleans<'a> {
-        StrFromBooleans {
-            view: self,
-            true_string,
-            false_string,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_to_durations<'a>(
-        &'a self,
-        duration_type: TypeId,
-        format: &'a str,
-    ) -> StrToDurations<'a> {
-        StrToDurations {
-            view: self,
-            duration_type,
-            format,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_from_durations<'a>(&'a self, format: &'a str) -> StrFromDurations<'a> {
-        StrFromDurations {
-            view: self,
-            format,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_to_fixed_point(&self, type_id: TypeId, scale: i32) -> StrToFixedPoint<'_> {
-        StrToFixedPoint {
-            view: self,
-            type_id,
-            scale,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_from_fixed_point(&self) -> StrFromFixedPoint<'_> {
-        StrFromFixedPoint {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_is_fixed_point(&self, type_id: TypeId, scale: i32) -> StrIsFixedPoint<'_> {
-        StrIsFixedPoint {
-            view: self,
-            type_id,
-            scale,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn url_encode(&self) -> UrlEncode<'_> {
-        UrlEncode {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn url_decode(&self) -> UrlDecode<'_> {
-        UrlDecode {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn ipv4_to_integers(&self) -> Ipv4ToIntegers<'_> {
-        Ipv4ToIntegers {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn integers_to_ipv4(&self) -> IntegersToIpv4<'_> {
-        IntegersToIpv4 {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn is_ipv4(&self) -> IsIpv4<'_> {
-        IsIpv4 {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_split_re<'a>(&'a self, pattern: &'a str, maxsplit: i32) -> StrSplitRe<'a> {
-        StrSplitRe {
-            view: self,
-            pattern,
-            maxsplit,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_rsplit_re<'a>(&'a self, pattern: &'a str, maxsplit: i32) -> StrRsplitRe<'a> {
-        StrRsplitRe {
-            view: self,
-            pattern,
-            maxsplit,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_split_record_re<'a>(&'a self, pattern: &'a str, maxsplit: i32) -> StrSplitRecordRe<'a> {
-        StrSplitRecordRe {
-            view: self,
-            pattern,
-            maxsplit,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_rsplit_record_re<'a>(
-        &'a self,
-        pattern: &'a str,
-        maxsplit: i32,
-    ) -> StrRsplitRecordRe<'a> {
-        StrRsplitRecordRe {
-            view: self,
-            pattern,
-            maxsplit,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_partition<'a>(&'a self, delimiter: &'a str) -> StrPartition<'a> {
-        StrPartition {
-            view: self,
-            delimiter,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_rpartition<'a>(&'a self, delimiter: &'a str) -> StrRpartition<'a> {
-        StrRpartition {
-            view: self,
-            delimiter,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_replace_with_backrefs<'a>(
-        &'a self,
-        pattern: &'a str,
-        replacement: &'a str,
-    ) -> StrReplaceWithBackrefs<'a> {
-        StrReplaceWithBackrefs {
-            view: self,
-            pattern,
-            replacement,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_repeat_column<'a>(&'a self, repeat_times: &'a ColumnView<'a>) -> StrRepeatColumn<'a> {
-        StrRepeatColumn {
-            view: self,
-            repeat_times,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_contains_multiple<'a>(&'a self, targets: &'a ColumnView<'a>) -> StrContainsMultiple<'a> {
-        StrContainsMultiple {
-            view: self,
-            targets,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_find_multiple<'a>(&'a self, targets: &'a ColumnView<'a>) -> StrFindMultiple<'a> {
-        StrFindMultiple {
-            view: self,
-            targets,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn all_characters_of_type(&self, types: u32, verify_types: u32) -> AllCharactersOfType<'_> {
-        AllCharactersOfType {
-            view: self,
-            types,
-            verify_types,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn filter_characters_of_type<'a>(
-        &'a self,
-        types_to_remove: u32,
-        replacement: &'a str,
-        types_to_keep: u32,
-    ) -> FilterCharactersOfType<'a> {
-        FilterCharactersOfType {
-            view: self,
-            types_to_remove,
-            replacement,
-            types_to_keep,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_is_integer(&self) -> StrIsInteger<'_> {
-        StrIsInteger {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_is_integer_with_type(&self, int_type: TypeId) -> StrIsIntegerWithType<'_> {
-        StrIsIntegerWithType {
-            view: self,
-            int_type,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_is_float(&self) -> StrIsFloat<'_> {
-        StrIsFloat {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_hex_to_integers(&self, output_type: TypeId) -> StrHexToIntegers<'_> {
-        StrHexToIntegers {
-            view: self,
-            output_type,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_is_hex(&self) -> StrIsHex<'_> {
-        StrIsHex {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_integers_to_hex(&self) -> StrIntegersToHex<'_> {
-        StrIntegersToHex {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_replace_slice<'a>(
-        &'a self,
-        repl: &'a str,
-        start: i32,
-        stop: i32,
-    ) -> StrReplaceSlice<'a> {
-        StrReplaceSlice {
-            view: self,
-            repl,
-            start,
-            stop,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_replace_multiple<'a>(
-        &'a self,
-        targets: &'a ColumnView<'a>,
-        repls: &'a ColumnView<'a>,
-    ) -> StrReplaceMultiple<'a> {
-        StrReplaceMultiple {
-            view: self,
-            targets,
-            repls,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_split_record<'a>(&'a self, delimiter: &'a Scalar, maxsplit: i32) -> StrSplitRecord<'a> {
-        StrSplitRecord {
-            view: self,
-            delimiter,
-            maxsplit,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_rsplit_record<'a>(
-        &'a self,
-        delimiter: &'a Scalar,
-        maxsplit: i32,
-    ) -> StrRsplitRecord<'a> {
-        StrRsplitRecord {
-            view: self,
-            delimiter,
-            maxsplit,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_join_list_elements<'a>(
-        &'a self,
-        separator: &'a str,
-        narep: &'a str,
-    ) -> StrJoinListElements<'a> {
-        StrJoinListElements {
-            view: self,
-            separator,
-            narep,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_translate<'a>(&'a self, from_chars: &'a [u32], to_chars: &'a [u32]) -> StrTranslate<'a> {
-        StrTranslate {
-            view: self,
-            from_chars,
-            to_chars,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_filter_characters<'a>(
-        &'a self,
-        from_chars: &'a [u32],
-        to_chars: &'a [u32],
-        keep: bool,
-        replacement: &'a str,
-    ) -> StrFilterCharacters<'a> {
-        StrFilterCharacters {
-            view: self,
-            from_chars,
-            to_chars,
-            keep,
-            replacement,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn code_points(&self) -> CodePoints<'_> {
-        CodePoints {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_cast_to_integer(&self, output_type: TypeId, big_endian: bool) -> StrCastToInteger<'_> {
-        StrCastToInteger {
-            view: self,
-            output_type,
-            big_endian,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_cast_from_integer(&self, big_endian: bool) -> StrCastFromInteger<'_> {
-        StrCastFromInteger {
-            view: self,
-            big_endian,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_slice_column<'a>(
-        &'a self,
-        starts: &'a ColumnView<'a>,
-        stops: &'a ColumnView<'a>,
-    ) -> StrSliceColumn<'a> {
-        StrSliceColumn {
-            view: self,
-            starts,
-            stops,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_extract_single<'a>(
-        &'a self,
-        pattern: &'a str,
-        group_index: i32,
-    ) -> StrExtractSingle<'a> {
-        StrExtractSingle {
-            view: self,
-            pattern,
-            group_index,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_join_list_elements_column<'a>(
-        &'a self,
-        separators: &'a ColumnView<'a>,
-        separator_narep: &'a str,
-        string_narep: &'a str,
-    ) -> StrJoinListElementsColumn<'a> {
-        StrJoinListElementsColumn {
-            view: self,
-            separators,
-            separator_narep,
-            string_narep,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_join_strings<'a>(&'a self, separator: &'a str, narep: &'a str) -> StrJoinStrings<'a> {
-        StrJoinStrings {
-            view: self,
-            separator,
-            narep,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_find_instance<'a>(&'a self, target: &'a str, instance: i32) -> StrFindInstance<'a> {
-        StrFindInstance {
-            view: self,
-            target,
-            instance,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn str_like_column<'a>(
-        &'a self,
-        patterns: &'a ColumnView<'a>,
-        escape_char: &'a str,
-    ) -> StrLikeColumn<'a> {
-        StrLikeColumn {
-            view: self,
-            patterns,
-            escape_char,
-            stream: Stream::default_stream(),
-        }
-    }
-}
+#[path = "strings/ext_impl.rs"]
+mod ext_impl;
 
 // ---------------------------------------------------------------------------
 // Free functions
@@ -3289,17 +2616,24 @@ impl StringExt for ColumnView<'_> {
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use cudf::strings::concatenate_strings_with_separator;
+/// ```no_run
+/// # use cudf::column::Column;
 /// use cudf::stream::GpuOp;
+/// use cudf::strings::concatenate_strings_with_separator;
+/// use cudf::table::Table;
 ///
+/// # let tbl = Table::from_columns(vec![
+/// #     Column::from_strings(&["a", "b"]).call()?,
+/// #     Column::from_strings(&["x", "y"]).call()?,
+/// # ])?;
+/// # let separators = Column::from_strings(&["-", "/"]).call()?;
 /// let result = concatenate_strings_with_separator(
 ///     &tbl, &separators.view(), "-", "N/A",
 /// ).call()?;
 /// # Ok::<(), cudf::error::Error>(())
 /// ```
 pub fn concatenate_strings_with_separator<'a>(
-    tbl: &'a Table,
+    tbl: &'a UnboundTable,
     separators: &'a ColumnView<'a>,
     separator_narep: &'a str,
     col_narep: &'a str,
@@ -3335,10 +2669,12 @@ pub fn concatenate_strings_with_separator<'a>(
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use cudf::strings::get_json_object;
+/// ```no_run
+/// # use cudf::column::Column;
 /// use cudf::stream::GpuOp;
+/// use cudf::strings::get_json_object;
 ///
+/// # let json_col = Column::from_strings(&[r#"{"name":"Ada"}"#]).call()?;
 /// let values = get_json_object(
 ///     &json_col.view(), "$.name", false, true, true,
 /// ).call()?;
@@ -3397,7 +2733,7 @@ mod tests {
     use crate::scalar::Scalar;
     use crate::stream::GpuOp;
 
-    fn make_string_col(values: &[&str]) -> Column {
+    fn make_string_col(values: &[&str]) -> crate::column::UnboundColumn {
         Column::from_strings(values).call().unwrap()
     }
 
@@ -3545,7 +2881,7 @@ mod tests {
         let float_col = Column::from_scalar(&col, 2).call().unwrap();
         let result = float_col.view().str_from_floats().call().unwrap();
         assert_eq!(result.len(), 2);
-        let strs = result.to_vec_string().call().unwrap();
+        let strs: Vec<String> = result.to_vec_string().call().unwrap();
         assert!(strs.iter().all(|s| !s.is_empty()));
     }
 

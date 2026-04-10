@@ -17,18 +17,29 @@
 //!
 //! # Examples
 //!
-//! ```ignore
-//! use cudf::ast::{ExpressionTree, AstOp};
+//! ```no_run
+//! use cudf::ast::ExpressionTree;
+//! use cudf::column::Column;
 //! use cudf::stream::GpuOp;
+//! use cudf::table::Table;
 //!
 //! // Compute: col(0) + col(1)
+//! let table = Table::from_columns(vec![
+//!     Column::from_slice_i32(&[1, 2, 3]).call()?,
+//!     Column::from_slice_i32(&[10, 20, 30]).call()?,
+//! ])?;
 //! let mut tree = ExpressionTree::new();
 //! let a = tree.col(0);
 //! let b = tree.col(1);
 //! let sum = tree.add(a, b);
-//! let result = table.compute_column(&tree, sum).call()?;
+//! let result = table.compute_column(tree.root(sum)?).call()?;
 //! # Ok::<(), cudf::error::Error>(())
 //! ```
+
+use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT_EXPRESSION_TREE_ID: AtomicU64 = AtomicU64::new(1);
 
 /// A lightweight, copyable index into an [`ExpressionTree`].
 ///
@@ -39,8 +50,17 @@
 /// [`compute_column`](crate::table::Table::compute_column).
 ///
 /// An `ExprRef` is only valid for the tree that created it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ExprRef(usize);
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ExprRef {
+    tree_id: u64,
+    index: usize,
+}
+
+impl fmt::Debug for ExprRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ExprRef({})", self.index)
+    }
+}
 
 impl ExprRef {
     /// Returns the raw index value.
@@ -48,8 +68,19 @@ impl ExprRef {
     /// This is the zero-based position of the expression node within its
     /// [`ExpressionTree`].
     pub fn index(self) -> usize {
-        self.0
+        self.index
     }
+}
+
+/// A validated root expression bound to a specific [`ExpressionTree`].
+///
+/// `RootExpr` is created by [`ExpressionTree::root`] and is the safe handle
+/// passed to execution APIs such as AST-based filtering, computed columns,
+/// conditional joins, and predicate pushdown.
+#[derive(Clone, Copy)]
+pub struct RootExpr<'tree> {
+    pub(crate) tree: &'tree ExpressionTree,
+    pub(crate) index: usize,
 }
 
 /// Identifies which table a column reference belongs to in a two-table
@@ -284,8 +315,8 @@ impl AstOp {
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use cudf::ast::{ExpressionTree, AstOp, TableSide};
+/// ```no_run
+/// use cudf::ast::{ExpressionTree, TableSide};
 ///
 /// let mut tree = ExpressionTree::new();
 ///
@@ -300,7 +331,10 @@ impl AstOp {
 /// let join_pred = tree.eq(lc, rc);
 /// ```
 #[doc(alias = "cudf::ast::tree")]
-pub struct ExpressionTree(cxx::UniquePtr<cudf_sys::ast::ffi::ExpressionTree>);
+pub struct ExpressionTree {
+    raw: cxx::UniquePtr<cudf_sys::ast::ffi::ExpressionTree>,
+    id: u64,
+}
 
 impl ExpressionTree {
     /// Creates an empty expression tree with no nodes.
@@ -308,12 +342,15 @@ impl ExpressionTree {
     /// Use methods like [`col`](Self::col), [`lit_i32`](Self::lit_i32), and
     /// [`add`](Self::add) to populate the tree.
     pub fn new() -> Self {
-        Self(cudf_sys::ast::ffi::new_expression_tree())
+        Self {
+            raw: cudf_sys::ast::ffi::new_expression_tree(),
+            id: NEXT_EXPRESSION_TREE_ID.fetch_add(1, Ordering::Relaxed),
+        }
     }
 
     /// Returns the number of expression nodes in the tree.
     pub fn len(&self) -> usize {
-        cudf_sys::ast::ffi::expression_tree_len(&self.0)
+        cudf_sys::ast::ffi::expression_tree_len(&self.raw)
     }
 
     /// Returns `true` if the tree contains no expression nodes.
@@ -327,45 +364,123 @@ impl ExpressionTree {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// use cudf::ast::ExpressionTree;
+    ///
     /// let mut tree = ExpressionTree::new();
     /// let lit = tree.lit_i32(42);
     /// ```
     pub fn lit_i32(&mut self, value: i32) -> ExprRef {
-        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_i32(self.0.pin_mut(), value);
-        ExprRef(idx)
+        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_i32(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
     }
 
     /// Adds a 64-bit integer literal to the tree.
     pub fn lit_i64(&mut self, value: i64) -> ExprRef {
-        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_i64(self.0.pin_mut(), value);
-        ExprRef(idx)
+        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_i64(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
     }
 
     /// Adds a 32-bit floating-point literal to the tree.
     pub fn lit_f32(&mut self, value: f32) -> ExprRef {
-        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_f32(self.0.pin_mut(), value);
-        ExprRef(idx)
+        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_f32(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
     }
 
     /// Adds a 64-bit floating-point literal to the tree.
     pub fn lit_f64(&mut self, value: f64) -> ExprRef {
-        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_f64(self.0.pin_mut(), value);
-        ExprRef(idx)
+        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_f64(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
     }
 
     /// Adds a boolean literal to the tree.
     pub fn lit_bool(&mut self, value: bool) -> ExprRef {
-        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_bool(self.0.pin_mut(), value);
-        ExprRef(idx)
+        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_bool(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
     }
 
     /// Adds a string literal to the tree.
     ///
     /// String literals can be used with string comparison operators.
     pub fn lit_str(&mut self, value: &str) -> ExprRef {
-        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_string(self.0.pin_mut(), value);
-        ExprRef(idx)
+        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_string(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
+    }
+
+    /// Adds a timestamp-seconds literal to the tree.
+    pub fn lit_timestamp_s(&mut self, value: i64) -> ExprRef {
+        let idx =
+            cudf_sys::ast::ffi::expression_tree_add_literal_timestamp_s(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
+    }
+
+    /// Adds a timestamp-milliseconds literal to the tree.
+    pub fn lit_timestamp_ms(&mut self, value: i64) -> ExprRef {
+        let idx =
+            cudf_sys::ast::ffi::expression_tree_add_literal_timestamp_ms(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
+    }
+
+    /// Adds a timestamp-microseconds literal to the tree.
+    pub fn lit_timestamp_us(&mut self, value: i64) -> ExprRef {
+        let idx =
+            cudf_sys::ast::ffi::expression_tree_add_literal_timestamp_us(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
+    }
+
+    /// Adds a timestamp-nanoseconds literal to the tree.
+    pub fn lit_timestamp_ns(&mut self, value: i64) -> ExprRef {
+        let idx =
+            cudf_sys::ast::ffi::expression_tree_add_literal_timestamp_ns(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
+    }
+
+    /// Adds a duration-seconds literal to the tree.
+    pub fn lit_duration_s(&mut self, value: i64) -> ExprRef {
+        let idx =
+            cudf_sys::ast::ffi::expression_tree_add_literal_duration_s(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
+    }
+
+    /// Adds a duration-milliseconds literal to the tree.
+    pub fn lit_duration_ms(&mut self, value: i64) -> ExprRef {
+        let idx =
+            cudf_sys::ast::ffi::expression_tree_add_literal_duration_ms(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
+    }
+
+    /// Adds a duration-microseconds literal to the tree.
+    pub fn lit_duration_us(&mut self, value: i64) -> ExprRef {
+        let idx =
+            cudf_sys::ast::ffi::expression_tree_add_literal_duration_us(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
+    }
+
+    /// Adds a duration-nanoseconds literal to the tree.
+    pub fn lit_duration_ns(&mut self, value: i64) -> ExprRef {
+        let idx =
+            cudf_sys::ast::ffi::expression_tree_add_literal_duration_ns(self.raw.pin_mut(), value);
+        self.expr_ref(idx)
+    }
+
+    /// Adds a DECIMAL32 literal using an already-scaled integer representation.
+    pub fn lit_decimal32(&mut self, value: i32, scale: i32) -> ExprRef {
+        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_decimal32(
+            self.raw.pin_mut(),
+            value,
+            scale,
+        );
+        self.expr_ref(idx)
+    }
+
+    /// Adds a DECIMAL64 literal using an already-scaled integer representation.
+    pub fn lit_decimal64(&mut self, value: i64, scale: i32) -> ExprRef {
+        let idx = cudf_sys::ast::ffi::expression_tree_add_literal_decimal64(
+            self.raw.pin_mut(),
+            value,
+            scale,
+        );
+        self.expr_ref(idx)
     }
 
     // -- Column references --
@@ -379,17 +494,19 @@ impl ExpressionTree {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// use cudf::ast::ExpressionTree;
+    ///
     /// let mut tree = ExpressionTree::new();
     /// let first_col = tree.col(0);
     /// ```
     pub fn col(&mut self, index: usize) -> ExprRef {
         let idx = cudf_sys::ast::ffi::expression_tree_add_column_ref(
-            self.0.pin_mut(),
+            self.raw.pin_mut(),
             crate::usize_to_i32(index),
             TableSide::Left.to_i32(),
         );
-        ExprRef(idx)
+        self.expr_ref(idx)
     }
 
     /// Adds a column reference with an explicit [`TableSide`].
@@ -399,8 +516,9 @@ impl ExpressionTree {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::ast::TableSide;
+    /// use cudf::ast::ExpressionTree;
     ///
     /// let mut tree = ExpressionTree::new();
     /// let left_col = tree.col_in(0, TableSide::Left);
@@ -409,11 +527,11 @@ impl ExpressionTree {
     /// ```
     pub fn col_in(&mut self, index: usize, side: TableSide) -> ExprRef {
         let idx = cudf_sys::ast::ffi::expression_tree_add_column_ref(
-            self.0.pin_mut(),
+            self.raw.pin_mut(),
             crate::usize_to_i32(index),
             side.to_i32(),
         );
-        ExprRef(idx)
+        self.expr_ref(idx)
     }
 
     /// Adds a column reference by name.
@@ -423,15 +541,17 @@ impl ExpressionTree {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// use cudf::ast::ExpressionTree;
+    ///
     /// let mut tree = ExpressionTree::new();
     /// let col = tree.col_name("price");
     /// let threshold = tree.lit_f64(100.0);
     /// let pred = tree.gt(col, threshold);
     /// ```
     pub fn col_name(&mut self, name: &str) -> ExprRef {
-        let idx = cudf_sys::ast::ffi::expression_tree_add_column_name_ref(self.0.pin_mut(), name);
-        ExprRef(idx)
+        let idx = cudf_sys::ast::ffi::expression_tree_add_column_name_ref(self.raw.pin_mut(), name);
+        self.expr_ref(idx)
     }
 
     // -- Operations --
@@ -444,12 +564,13 @@ impl ExpressionTree {
     ///   [`Not`](AstOp::Not), [`Abs`](AstOp::Abs), [`IsNull`](AstOp::IsNull)).
     /// * `operand` -- The expression to apply the operator to.
     pub fn unary_op(&mut self, op: AstOp, operand: ExprRef) -> ExprRef {
+        let operand_index = self.expect_expr_ref(operand, "unary operand");
         let idx = cudf_sys::ast::ffi::expression_tree_add_unary_op(
-            self.0.pin_mut(),
+            self.raw.pin_mut(),
             op.to_i32(),
-            operand.0,
+            operand_index,
         );
-        ExprRef(idx)
+        self.expr_ref(idx)
     }
 
     /// Adds a binary operation node to the tree.
@@ -461,13 +582,15 @@ impl ExpressionTree {
     /// * `left` -- The left operand expression.
     /// * `right` -- The right operand expression.
     pub fn binary_op(&mut self, op: AstOp, left: ExprRef, right: ExprRef) -> ExprRef {
+        let left_index = self.expect_expr_ref(left, "binary left operand");
+        let right_index = self.expect_expr_ref(right, "binary right operand");
         let idx = cudf_sys::ast::ffi::expression_tree_add_binary_op(
-            self.0.pin_mut(),
+            self.raw.pin_mut(),
             op.to_i32(),
-            left.0,
-            right.0,
+            left_index,
+            right_index,
         );
-        ExprRef(idx)
+        self.expr_ref(idx)
     }
 
     // -- Convenience binary operators --
@@ -562,7 +685,43 @@ impl ExpressionTree {
     ///
     /// Used internally to pass the tree to cudf-sys functions.
     pub(crate) fn raw(&self) -> &cudf_sys::ast::ffi::ExpressionTree {
-        &self.0
+        &self.raw
+    }
+
+    /// Validates `expr` against this tree and returns a root handle that can
+    /// be passed to execution APIs.
+    pub fn root(&self, expr: ExprRef) -> crate::Result<RootExpr<'_>> {
+        Ok(RootExpr {
+            tree: self,
+            index: self.validate_expr_ref(expr)?,
+        })
+    }
+
+    fn expr_ref(&self, index: usize) -> ExprRef {
+        ExprRef {
+            tree_id: self.id,
+            index,
+        }
+    }
+
+    fn validate_expr_ref(&self, expr: ExprRef) -> crate::Result<usize> {
+        if expr.tree_id != self.id {
+            return Err(crate::error::Error::InvalidArgument(
+                "expression reference belongs to a different ExpressionTree".into(),
+            ));
+        }
+        if expr.index >= self.len() {
+            return Err(crate::error::Error::OutOfBounds {
+                index: expr.index,
+                len: self.len(),
+            });
+        }
+        Ok(expr.index)
+    }
+
+    fn expect_expr_ref(&self, expr: ExprRef, role: &str) -> usize {
+        self.validate_expr_ref(expr)
+            .unwrap_or_else(|e| panic!("{role} is invalid: {e}"))
     }
 }
 
@@ -576,17 +735,23 @@ impl Default for ExpressionTree {
 mod tests {
     use super::*;
     use crate::column::Column;
+    use crate::error::Error;
     use crate::stream::GpuOp;
-    use crate::table::{Table, TableBuilder};
+    use crate::table::{TableBuilder, UnboundTable};
 
     /// Helper to build a two-column i32 table.
-    fn make_two_col_table(col0: &[i32], col1: &[i32]) -> Table {
+    fn make_two_col_table(col0: &[i32], col1: &[i32]) -> UnboundTable {
         let c0 = Column::from_slice_i32(col0).call().unwrap();
         let c1 = Column::from_slice_i32(col1).call().unwrap();
         let mut builder = TableBuilder::new();
         builder.push_column(c0);
         builder.push_column(c1);
         builder.build().unwrap()
+    }
+
+    fn make_string_table(values: &[&str]) -> UnboundTable {
+        let col = Column::from_strings(values).call().unwrap();
+        UnboundTable::from_columns(vec![col]).unwrap()
     }
 
     #[test]
@@ -616,7 +781,10 @@ mod tests {
         let b = tree.col(1);
         let sum = tree.add(a, b);
 
-        let result = table.compute_column(&tree, sum).call().unwrap();
+        let result = table
+            .compute_column(tree.root(sum).unwrap())
+            .call()
+            .unwrap();
         assert_eq!(result.len(), 3);
         let vals: Vec<i32> = result.view().to_vec_i32().call().unwrap();
         assert_eq!(vals, vec![11, 22, 33]);
@@ -634,7 +802,10 @@ mod tests {
         let threshold = tree.lit_i32(8);
         let pred = tree.gt(col, threshold);
 
-        let result = table.compute_column(&tree, pred).call().unwrap();
+        let result = table
+            .compute_column(tree.root(pred).unwrap())
+            .call()
+            .unwrap();
         assert_eq!(result.len(), 4);
         // Should be [false, false, true, true]
         let vals: Vec<bool> = result.view().to_vec_bool().call().unwrap();
@@ -653,7 +824,7 @@ mod tests {
         let pred = tree.eq(lc, rc);
 
         let result = left
-            .conditional_inner_join(&right, &tree, pred)
+            .conditional_inner_join(&right, tree.root(pred).unwrap())
             .call()
             .unwrap();
         assert_eq!(result.columns_len(), 4);
@@ -672,9 +843,238 @@ mod tests {
         let threshold = tree.lit_i32(25);
         let pred = tree.gt(sum, threshold);
 
-        let result = table.compute_column(&tree, pred).call().unwrap();
+        let result = table
+            .compute_column(tree.root(pred).unwrap())
+            .call()
+            .unwrap();
         let vals: Vec<bool> = result.view().to_vec_bool().call().unwrap();
         assert_eq!(vals, vec![false, false, true]);
+    }
+
+    #[test]
+    fn filter_with_ast_basic() {
+        let table = make_two_col_table(&[1, 2, 3, 4], &[10, 20, 30, 40]);
+
+        let mut tree = ExpressionTree::new();
+        let col = tree.col(0);
+        let threshold = tree.lit_i32(2);
+        let pred = tree.gt(col, threshold);
+
+        let result = table
+            .filter_with_ast(&table, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        assert_eq!(result.columns_len(), 2);
+        assert_eq!(result.len(), 2);
+        let vals: Vec<i32> = result.column(0).unwrap().to_vec_i32().call().unwrap();
+        assert_eq!(vals, vec![3, 4]);
+    }
+
+    #[test]
+    fn filter_with_ast_string_literal() {
+        let table = make_string_table(&["alpha", "beta", "gamma"]);
+
+        let mut tree = ExpressionTree::new();
+        let col = tree.col(0);
+        let needle = tree.lit_str("beta");
+        let pred = tree.eq(col, needle);
+
+        let result = table
+            .filter_with_ast(&table, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result.column(0).unwrap().to_vec_string().call().unwrap(),
+            vec!["beta"]
+        );
+    }
+
+    #[test]
+    fn conditional_join_variants_basic() {
+        let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
+        let right = make_two_col_table(&[2, 3, 4], &[200, 300, 400]);
+
+        let mut tree = ExpressionTree::new();
+        let lc = tree.col_in(0, TableSide::Left);
+        let rc = tree.col_in(0, TableSide::Right);
+        let pred = tree.eq(lc, rc);
+
+        let left_join = left
+            .conditional_left_join(&right, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        assert_eq!(left_join.columns_len(), 4);
+        assert_eq!(left_join.len(), 3);
+
+        let full_join = left
+            .conditional_full_join(&right, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        assert_eq!(full_join.columns_len(), 4);
+        assert_eq!(full_join.len(), 4);
+
+        let left_semi = left
+            .conditional_left_semi_join(&right, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        assert_eq!(left_semi.columns_len(), 2);
+        assert_eq!(left_semi.len(), 2);
+
+        let left_anti = left
+            .conditional_left_anti_join(&right, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        assert_eq!(left_anti.columns_len(), 2);
+        assert_eq!(left_anti.len(), 1);
+    }
+
+    #[test]
+    fn conditional_join_sizes_match_results() {
+        let left = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
+        let right = make_two_col_table(&[2, 3, 4], &[200, 300, 400]);
+
+        let mut tree = ExpressionTree::new();
+        let lc = tree.col_in(0, TableSide::Left);
+        let rc = tree.col_in(0, TableSide::Right);
+        let pred = tree.eq(lc, rc);
+
+        let inner_size = left
+            .conditional_inner_join_size(&right, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        let left_size = left
+            .conditional_left_join_size(&right, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        let semi_size = left
+            .conditional_left_semi_join_size(&right, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        let anti_size = left
+            .conditional_left_anti_join_size(&right, tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+
+        assert_eq!(
+            inner_size,
+            left.conditional_inner_join(&right, tree.root(pred).unwrap())
+                .call()
+                .unwrap()
+                .len()
+        );
+        assert_eq!(
+            left_size,
+            left.conditional_left_join(&right, tree.root(pred).unwrap())
+                .call()
+                .unwrap()
+                .len()
+        );
+        assert_eq!(
+            semi_size,
+            left.conditional_left_semi_join(&right, tree.root(pred).unwrap())
+                .call()
+                .unwrap()
+                .len()
+        );
+        assert_eq!(
+            anti_size,
+            left.conditional_left_anti_join(&right, tree.root(pred).unwrap())
+                .call()
+                .unwrap()
+                .len()
+        );
+    }
+
+    #[test]
+    fn compute_column_timestamp_literal_comparison() {
+        let ts = Column::from_timestamps_s(&[10, 20, 30]).call().unwrap();
+        let table = UnboundTable::from_columns(vec![ts]).unwrap();
+
+        let mut tree = ExpressionTree::new();
+        let col = tree.col(0);
+        let lit = tree.lit_timestamp_s(20);
+        let pred = tree.gt(col, lit);
+
+        let result = table
+            .compute_column(tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        assert_eq!(
+            result.to_vec_bool().call().unwrap(),
+            vec![false, false, true]
+        );
+    }
+
+    #[test]
+    fn compute_column_duration_literal_comparison() {
+        let dur = Column::from_durations_ms(&[100, 250, 400]).call().unwrap();
+        let table = UnboundTable::from_columns(vec![dur]).unwrap();
+
+        let mut tree = ExpressionTree::new();
+        let col = tree.col(0);
+        let lit = tree.lit_duration_ms(200);
+        let pred = tree.ge(col, lit);
+
+        let result = table
+            .compute_column(tree.root(pred).unwrap())
+            .call()
+            .unwrap();
+        assert_eq!(
+            result.to_vec_bool().call().unwrap(),
+            vec![false, true, true]
+        );
+    }
+
+    #[test]
+    fn compute_column_logical_and_not() {
+        let table = make_two_col_table(&[-1, 5, 7], &[0, 1, 0]);
+
+        let mut tree = ExpressionTree::new();
+        let left_col = tree.col(0);
+        let zero = tree.lit_i32(0);
+        let left_positive = tree.gt(left_col, zero);
+        let right_col = tree.col(1);
+        let one = tree.lit_i32(1);
+        let right_truthy = tree.eq(right_col, one);
+        let both = tree.and(left_positive, right_truthy);
+        let not_both = tree.not(both);
+        let result = table
+            .compute_column(tree.root(not_both).unwrap())
+            .call()
+            .unwrap();
+
+        assert_eq!(
+            result.to_vec_bool().call().unwrap(),
+            vec![true, false, true]
+        );
+    }
+
+    #[test]
+    fn compute_column_rejects_expr_from_different_tree() {
+        let table = make_two_col_table(&[1, 2, 3], &[10, 20, 30]);
+
+        let mut left_tree = ExpressionTree::new();
+        let left_a = left_tree.col(0);
+        let left_b = left_tree.col(1);
+        let good = left_tree.add(left_a, left_b);
+
+        let mut other_tree = ExpressionTree::new();
+        let other_col = other_tree.col(0);
+        let other_zero = other_tree.lit_i32(0);
+        let foreign = other_tree.gt(other_col, other_zero);
+
+        match left_tree.root(foreign) {
+            Err(Error::InvalidArgument(_)) => {}
+            Err(other) => panic!("expected InvalidArgument, got {other}"),
+            Ok(_) => panic!("expected InvalidArgument for foreign ExprRef"),
+        }
+
+        let ok = table
+            .compute_column(left_tree.root(good).unwrap())
+            .call()
+            .unwrap();
+        assert_eq!(ok.to_vec_i32().call().unwrap(), vec![11, 22, 33]);
     }
 
     #[test]

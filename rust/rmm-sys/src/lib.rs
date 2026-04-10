@@ -63,7 +63,7 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if allocation fails.
-        fn device_buffer_new(size: usize, stream: usize) -> UniquePtr<DeviceBuffer>;
+        fn device_buffer_new(size: usize, stream: usize) -> Result<UniquePtr<DeviceBuffer>>;
 
         /// Returns the size in bytes of the device buffer.
         fn device_buffer_size(buf: &DeviceBuffer) -> usize;
@@ -84,7 +84,11 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if reallocation fails.
-        fn device_buffer_resize(buf: Pin<&mut DeviceBuffer>, new_size: usize, stream: usize);
+        fn device_buffer_resize(
+            buf: Pin<&mut DeviceBuffer>,
+            new_size: usize,
+            stream: usize,
+        ) -> Result<()>;
 
         /// Increases the capacity to at least `new_capacity` bytes without
         /// changing the logical size.
@@ -95,14 +99,18 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if allocation fails.
-        fn device_buffer_reserve(buf: Pin<&mut DeviceBuffer>, new_capacity: usize, stream: usize);
+        fn device_buffer_reserve(
+            buf: Pin<&mut DeviceBuffer>,
+            new_capacity: usize,
+            stream: usize,
+        ) -> Result<()>;
 
         /// Releases any excess capacity so that `capacity == size`.
         ///
         /// # Errors
         ///
         /// Throws a C++ exception if reallocation fails.
-        fn device_buffer_shrink_to_fit(buf: Pin<&mut DeviceBuffer>, stream: usize);
+        fn device_buffer_shrink_to_fit(buf: Pin<&mut DeviceBuffer>, stream: usize) -> Result<()>;
 
         /// Returns the raw device pointer as `usize`.
         ///
@@ -128,7 +136,10 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if stream creation fails.
-        fn cuda_stream_new() -> UniquePtr<CudaStream>;
+        fn cuda_stream_new() -> Result<UniquePtr<CudaStream>>;
+
+        /// Returns the raw default `cudaStream_t` handle as `usize`.
+        fn cuda_stream_default_view() -> usize;
 
         /// Returns the raw `cudaStream_t` handle as `usize`.
         fn cuda_stream_view(stream: &CudaStream) -> usize;
@@ -138,10 +149,50 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if synchronization fails.
-        fn cuda_stream_synchronize(stream: &CudaStream);
+        fn cuda_stream_synchronize(stream: &CudaStream) -> Result<()>;
 
         /// Returns `true` if the stream handle is valid (non-null).
         fn cuda_stream_is_valid(stream: &CudaStream) -> bool;
+
+        // ---- CudaEvent ----
+
+        /// Opaque wrapper around `cudaEvent_t`.
+        type CudaEvent;
+
+        /// Creates a new CUDA event with timing disabled.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if event creation fails.
+        fn cuda_event_new() -> Result<UniquePtr<CudaEvent>>;
+
+        /// Records the event on `stream`.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if the record fails.
+        fn cuda_event_record(event: Pin<&mut CudaEvent>, stream: usize) -> Result<()>;
+
+        /// Synchronizes the event, blocking until the record completes.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if synchronization fails.
+        fn cuda_event_synchronize(event: &CudaEvent) -> Result<()>;
+
+        /// Returns `true` if the event has completed.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if querying the event fails.
+        fn cuda_event_query(event: &CudaEvent) -> Result<bool>;
+
+        /// Enqueues a wait for `event` on `stream`.
+        ///
+        /// # Errors
+        ///
+        /// Throws a C++ exception if the wait cannot be enqueued.
+        fn cuda_stream_wait_event_raw(stream: usize, event: &CudaEvent) -> Result<()>;
 
         // ---- CudaStreamPool ----
 
@@ -158,7 +209,7 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if `pool_size` is zero or stream creation fails.
-        fn cuda_stream_pool_new(pool_size: usize) -> UniquePtr<CudaStreamPool>;
+        fn cuda_stream_pool_new(pool_size: usize) -> Result<UniquePtr<CudaStreamPool>>;
 
         /// Returns a stream handle (`cudaStream_t` as `usize`) from the pool.
         ///
@@ -183,7 +234,7 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if construction fails.
-        fn cuda_memory_resource_new() -> UniquePtr<CudaMemoryResource>;
+        fn cuda_memory_resource_new() -> Result<UniquePtr<CudaMemoryResource>>;
 
         /// Opaque wrapper around `rmm::mr::cuda_async_memory_resource`.
         ///
@@ -198,7 +249,7 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if `cudaMallocAsync` is not supported.
-        fn cuda_async_memory_resource_new() -> UniquePtr<CudaAsyncMemoryResource>;
+        fn cuda_async_memory_resource_new() -> Result<UniquePtr<CudaAsyncMemoryResource>>;
 
         /// Creates a new `CudaAsyncMemoryResource` with explicit pool parameters.
         ///
@@ -215,7 +266,7 @@ pub mod ffi {
         fn cuda_async_memory_resource_with_size(
             initial_pool_size: usize,
             release_threshold: usize,
-        ) -> UniquePtr<CudaAsyncMemoryResource>;
+        ) -> Result<UniquePtr<CudaAsyncMemoryResource>>;
 
         /// Opaque wrapper around `rmm::mr::managed_memory_resource`.
         ///
@@ -230,7 +281,7 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if construction fails.
-        fn managed_memory_resource_new() -> UniquePtr<ManagedMemoryResource>;
+        fn managed_memory_resource_new() -> Result<UniquePtr<ManagedMemoryResource>>;
 
         /// Opaque wrapper around `rmm::mr::pool_memory_resource<cuda_memory_resource>`.
         ///
@@ -247,7 +298,7 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if the initial pool allocation fails.
-        fn pool_memory_resource_new() -> UniquePtr<PoolMemoryResource>;
+        fn pool_memory_resource_new() -> Result<UniquePtr<PoolMemoryResource>>;
 
         /// Creates a new `PoolMemoryResource` with explicit size parameters.
         ///
@@ -266,7 +317,7 @@ pub mod ffi {
         fn pool_memory_resource_with_size(
             initial_size: usize,
             maximum_size: usize,
-        ) -> UniquePtr<PoolMemoryResource>;
+        ) -> Result<UniquePtr<PoolMemoryResource>>;
 
         /// Returns the current total pool size in bytes, including both
         /// allocated and free regions.
@@ -282,24 +333,23 @@ pub mod ffi {
         type MemoryResourceRef;
 
         /// Creates a [`MemoryResourceRef`] pointing to a [`CudaMemoryResource`].
-        fn memory_resource_ref_from_cuda(
-            mr: Pin<&mut CudaMemoryResource>,
-        ) -> UniquePtr<MemoryResourceRef>;
+        fn memory_resource_ref_from_cuda(mr: &CudaMemoryResource) -> UniquePtr<MemoryResourceRef>;
 
         /// Creates a [`MemoryResourceRef`] pointing to a [`PoolMemoryResource`].
-        fn memory_resource_ref_from_pool(
-            mr: Pin<&mut PoolMemoryResource>,
-        ) -> UniquePtr<MemoryResourceRef>;
+        fn memory_resource_ref_from_pool(mr: &PoolMemoryResource) -> UniquePtr<MemoryResourceRef>;
 
         /// Creates a [`MemoryResourceRef`] pointing to a [`CudaAsyncMemoryResource`].
         fn memory_resource_ref_from_async(
-            mr: Pin<&mut CudaAsyncMemoryResource>,
+            mr: &CudaAsyncMemoryResource,
         ) -> UniquePtr<MemoryResourceRef>;
 
         /// Creates a [`MemoryResourceRef`] pointing to a [`ManagedMemoryResource`].
         fn memory_resource_ref_from_managed(
-            mr: Pin<&mut ManagedMemoryResource>,
+            mr: &ManagedMemoryResource,
         ) -> UniquePtr<MemoryResourceRef>;
+
+        /// Clones a non-owning [`MemoryResourceRef`].
+        fn memory_resource_ref_clone(mr: &MemoryResourceRef) -> UniquePtr<MemoryResourceRef>;
 
         // ---- Per-device resource management ----
 
@@ -328,29 +378,45 @@ pub mod ffi {
 
         type PinnedHostMemoryResource;
 
-        fn pinned_host_memory_resource_new() -> UniquePtr<PinnedHostMemoryResource>;
+        fn pinned_host_memory_resource_new() -> Result<UniquePtr<PinnedHostMemoryResource>>;
 
         fn pinned_host_allocate(
             mr: Pin<&mut PinnedHostMemoryResource>,
             size: usize,
-        ) -> usize;
+        ) -> Result<usize>;
 
-        fn pinned_host_deallocate(
-            mr: Pin<&mut PinnedHostMemoryResource>,
-            ptr: usize,
-            size: usize,
-        );
+        fn pinned_host_deallocate(mr: Pin<&mut PinnedHostMemoryResource>, ptr: usize, size: usize);
+
+        fn pinned_host_copy_to_slice(ptr: usize, dst: &mut [u8]);
+
+        fn pinned_host_copy_from_slice(ptr: usize, src: &[u8]);
 
         // ---- Async memcpy ----
 
         /// D2H: copies `dst.len()` bytes from device pointer `src_ptr` to `dst`.
-        fn cuda_memcpy_d2h(dst: &mut [u8], src_ptr: usize, stream: usize);
+        fn cuda_memcpy_d2h(dst: &mut [u8], src_ptr: usize, stream: usize) -> Result<()>;
 
         /// H2D: copies `src.len()` bytes from `src` to device pointer `dst_ptr`.
-        fn cuda_memcpy_h2d(dst_ptr: usize, src: &[u8], stream: usize);
+        fn cuda_memcpy_h2d(dst_ptr: usize, src: &[u8], stream: usize) -> Result<()>;
+
+        /// D2H: copies `size` bytes between raw pinned/host pointers.
+        fn cuda_memcpy_d2h_raw(
+            dst_ptr: usize,
+            src_ptr: usize,
+            size: usize,
+            stream: usize,
+        ) -> Result<()>;
+
+        /// H2D: copies `size` bytes between raw pinned/host pointers.
+        fn cuda_memcpy_h2d_raw(
+            dst_ptr: usize,
+            src_ptr: usize,
+            size: usize,
+            stream: usize,
+        ) -> Result<()>;
 
         /// Block until all operations on `stream` complete.
-        fn cuda_stream_synchronize_raw(stream: usize);
+        fn cuda_stream_synchronize_raw(stream: usize) -> Result<()>;
 
         /// Batched D2H: fires all copies in a single `cudaMemcpyBatchAsync` call.
         fn cuda_memcpy_batch_d2h(
@@ -358,7 +424,7 @@ pub mod ffi {
             src_ptrs: &[usize],
             sizes: &[usize],
             stream: usize,
-        );
+        ) -> Result<()>;
 
         /// Batched H2D: fires all copies in a single `cudaMemcpyBatchAsync` call.
         fn cuda_memcpy_batch_h2d(
@@ -366,7 +432,7 @@ pub mod ffi {
             src_ptrs: &[usize],
             sizes: &[usize],
             stream: usize,
-        );
+        ) -> Result<()>;
 
         // ---- ScopedDevice ----
 
@@ -383,7 +449,7 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if `device_id` is invalid.
-        fn scoped_device_new(device_id: i32) -> UniquePtr<ScopedDevice>;
+        fn scoped_device_new(device_id: i32) -> Result<UniquePtr<ScopedDevice>>;
 
         // ---- Prefetch ----
 
@@ -402,7 +468,7 @@ pub mod ffi {
         /// # Errors
         ///
         /// Throws a C++ exception if the prefetch fails.
-        fn prefetch(ptr: usize, size: usize, device: i32, stream: usize);
+        fn prefetch(ptr: usize, size: usize, device: i32, stream: usize) -> Result<()>;
 
         // ---- Alignment utilities ----
 
@@ -467,15 +533,7 @@ unsafe impl Send for ffi::PoolMemoryResource {}
 // SAFETY: pool_memory_resource uses std::mutex internally.
 unsafe impl Sync for ffi::PoolMemoryResource {}
 
-// SAFETY: MemoryResourceRef is a non-owning pointer to a thread-safe
-// device_memory_resource. It can be sent across threads provided the
-// referenced MR outlives the ref.
-unsafe impl Send for ffi::MemoryResourceRef {}
-// SAFETY: The underlying device_memory_resource is thread-safe.
-unsafe impl Sync for ffi::MemoryResourceRef {}
-
-// SAFETY: ScopedDevice wraps cuda_set_device_raii. Transferring ownership
-// across threads is valid — the destructor simply calls cudaSetDevice.
-unsafe impl Send for ffi::ScopedDevice {}
-// SAFETY: &ScopedDevice has no methods; it only restores the device on drop.
-unsafe impl Sync for ffi::ScopedDevice {}
+// MemoryResourceRef is intentionally !Send and !Sync: it is a non-owning
+// pointer to a caller-managed allocator, and moving or sharing that raw handle
+// across threads would overstate the lifetime guarantees encoded by the safe
+// rmm wrapper layer.

@@ -423,40 +423,40 @@ pub mod ffi {
         type Scalar;
 
         /// Creates an INT32 scalar.
-        fn make_int32_scalar(value: i32, valid: bool) -> UniquePtr<Scalar>;
+        fn make_int32_scalar(value: i32, valid: bool) -> Result<UniquePtr<Scalar>>;
 
         /// Creates an INT64 scalar.
-        fn make_int64_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_int64_scalar(value: i64, valid: bool) -> Result<UniquePtr<Scalar>>;
 
         /// Creates a FLOAT32 scalar.
-        fn make_float32_scalar(value: f32, valid: bool) -> UniquePtr<Scalar>;
+        fn make_float32_scalar(value: f32, valid: bool) -> Result<UniquePtr<Scalar>>;
 
         /// Creates a FLOAT64 scalar.
-        fn make_float64_scalar(value: f64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_float64_scalar(value: f64, valid: bool) -> Result<UniquePtr<Scalar>>;
 
         /// Creates a BOOL8 scalar.
-        fn make_bool_scalar(value: bool, valid: bool) -> UniquePtr<Scalar>;
+        fn make_bool_scalar(value: bool, valid: bool) -> Result<UniquePtr<Scalar>>;
 
         /// Creates a STRING scalar.
-        fn make_string_scalar(value: &str) -> UniquePtr<Scalar>;
-        fn make_int8_scalar(value: i8, valid: bool) -> UniquePtr<Scalar>;
-        fn make_int16_scalar(value: i16, valid: bool) -> UniquePtr<Scalar>;
-        fn make_uint8_scalar(value: u8, valid: bool) -> UniquePtr<Scalar>;
-        fn make_uint16_scalar(value: u16, valid: bool) -> UniquePtr<Scalar>;
-        fn make_uint32_scalar(value: u32, valid: bool) -> UniquePtr<Scalar>;
-        fn make_uint64_scalar(value: u64, valid: bool) -> UniquePtr<Scalar>;
-        fn make_timestamp_s_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
-        fn make_timestamp_ms_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
-        fn make_timestamp_us_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
-        fn make_timestamp_ns_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
-        fn make_duration_s_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
-        fn make_duration_ms_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
-        fn make_duration_us_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
-        fn make_duration_ns_scalar(value: i64, valid: bool) -> UniquePtr<Scalar>;
+        fn make_string_scalar(value: &str) -> Result<UniquePtr<Scalar>>;
+        fn make_int8_scalar(value: i8, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_int16_scalar(value: i16, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_uint8_scalar(value: u8, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_uint16_scalar(value: u16, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_uint32_scalar(value: u32, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_uint64_scalar(value: u64, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_timestamp_s_scalar(value: i64, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_timestamp_ms_scalar(value: i64, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_timestamp_us_scalar(value: i64, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_timestamp_ns_scalar(value: i64, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_duration_s_scalar(value: i64, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_duration_ms_scalar(value: i64, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_duration_us_scalar(value: i64, valid: bool) -> Result<UniquePtr<Scalar>>;
+        fn make_duration_ns_scalar(value: i64, valid: bool) -> Result<UniquePtr<Scalar>>;
         /// Create a default-constructed scalar of the given type (invalid, zero-initialized).
-        fn make_default_constructed_scalar(type_id: i32, scale: i32) -> UniquePtr<Scalar>;
+        fn make_default_constructed_scalar(type_id: i32, scale: i32) -> Result<UniquePtr<Scalar>>;
         /// Create an empty scalar with the same type as the given column.
-        fn make_empty_scalar_like(col: &column_view) -> UniquePtr<Scalar>;
+        fn make_empty_scalar_like(col: &column_view) -> Result<UniquePtr<Scalar>>;
 
         /// Returns whether the scalar holds a valid (non-null) value.
         fn scalar_is_valid(s: &Scalar) -> bool;
@@ -493,10 +493,14 @@ pub mod ffi {
         // -- Column factories --
 
         /// Creates a column by repeating a scalar value `count` times.
-        fn make_column_from_scalar(s: &Scalar, count: i32, stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_scalar(
+            s: &Scalar,
+            count: i32,
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Creates an empty column of the given type_id.
-        fn make_empty_column_by_type(type_id: i32) -> UniquePtr<Column>;
+        fn make_empty_column_by_type(type_id: i32) -> Result<UniquePtr<Column>>;
 
         /// Create an uninitialized fixed-width column.
         /// mask_state: 0=UNALLOCATED, 1=UNINITIALIZED, 2=ALL_VALID, 3=ALL_NULL.
@@ -542,126 +546,150 @@ pub mod ffi {
         // -- Column data extraction (device -> host) --
 
         /// Copies INT16 column data to a host vector.
-        fn column_to_host_i16(col: &Column, stream: usize) -> Vec<i16>;
+        fn column_to_host_i16(col: &Column, stream: usize) -> Result<Vec<i16>>;
 
         /// Copies INT32 column data to a host vector.
-        fn column_to_host_i32(col: &Column, stream: usize) -> Vec<i32>;
+        fn column_to_host_i32(col: &Column, stream: usize) -> Result<Vec<i32>>;
 
         /// Copies INT64 column data to a host vector.
-        fn column_to_host_i64(col: &Column, stream: usize) -> Vec<i64>;
+        fn column_to_host_i64(col: &Column, stream: usize) -> Result<Vec<i64>>;
 
         /// Copies FLOAT32 column data to a host vector.
-        fn column_to_host_f32(col: &Column, stream: usize) -> Vec<f32>;
+        fn column_to_host_f32(col: &Column, stream: usize) -> Result<Vec<f32>>;
 
         /// Copies FLOAT64 column data to a host vector.
-        fn column_to_host_f64(col: &Column, stream: usize) -> Vec<f64>;
+        fn column_to_host_f64(col: &Column, stream: usize) -> Result<Vec<f64>>;
 
         /// Copies INT8 column data to a host vector.
-        fn column_to_host_i8(col: &Column, stream: usize) -> Vec<i8>;
+        fn column_to_host_i8(col: &Column, stream: usize) -> Result<Vec<i8>>;
 
         /// Copies UINT8 column data to a host vector.
-        fn column_to_host_u8(col: &Column, stream: usize) -> Vec<u8>;
+        fn column_to_host_u8(col: &Column, stream: usize) -> Result<Vec<u8>>;
 
         /// Copies UINT16 column data to a host vector.
-        fn column_to_host_u16(col: &Column, stream: usize) -> Vec<u16>;
+        fn column_to_host_u16(col: &Column, stream: usize) -> Result<Vec<u16>>;
 
         /// Copies UINT32 column data to a host vector.
-        fn column_to_host_u32(col: &Column, stream: usize) -> Vec<u32>;
+        fn column_to_host_u32(col: &Column, stream: usize) -> Result<Vec<u32>>;
 
         /// Copies UINT64 column data to a host vector.
-        fn column_to_host_u64(col: &Column, stream: usize) -> Vec<u64>;
+        fn column_to_host_u64(col: &Column, stream: usize) -> Result<Vec<u64>>;
 
         /// Copies BOOL8 column data to a host vector of bools.
-        fn column_to_host_bool(col: &Column, stream: usize) -> Vec<bool>;
+        fn column_to_host_bool(col: &Column, stream: usize) -> Result<Vec<bool>>;
 
         /// Extracts per-element null mask as a host vector of bools.
-        fn column_null_mask_to_host(col: &Column, stream: usize) -> Vec<bool>;
+        fn column_null_mask_to_host(col: &Column, stream: usize) -> Result<Vec<bool>>;
 
         // -- column_view data extraction (device -> host, avoids deep copy) --
 
         /// Copies INT8 column_view data to a host vector.
-        fn view_to_host_i8(col: &column_view, stream: usize) -> Vec<i8>;
+        fn view_to_host_i8(col: &column_view, stream: usize) -> Result<Vec<i8>>;
         /// Copies INT16 column_view data to a host vector.
-        fn view_to_host_i16(col: &column_view, stream: usize) -> Vec<i16>;
+        fn view_to_host_i16(col: &column_view, stream: usize) -> Result<Vec<i16>>;
         /// Copies INT32 column_view data to a host vector.
-        fn view_to_host_i32(col: &column_view, stream: usize) -> Vec<i32>;
+        fn view_to_host_i32(col: &column_view, stream: usize) -> Result<Vec<i32>>;
         /// Copies INT64 column_view data to a host vector.
-        fn view_to_host_i64(col: &column_view, stream: usize) -> Vec<i64>;
+        fn view_to_host_i64(col: &column_view, stream: usize) -> Result<Vec<i64>>;
         /// Copies FLOAT32 column_view data to a host vector.
-        fn view_to_host_f32(col: &column_view, stream: usize) -> Vec<f32>;
+        fn view_to_host_f32(col: &column_view, stream: usize) -> Result<Vec<f32>>;
         /// Copies FLOAT64 column_view data to a host vector.
-        fn view_to_host_f64(col: &column_view, stream: usize) -> Vec<f64>;
+        fn view_to_host_f64(col: &column_view, stream: usize) -> Result<Vec<f64>>;
         /// Copies UINT8 column_view data to a host vector.
-        fn view_to_host_u8(col: &column_view, stream: usize) -> Vec<u8>;
+        fn view_to_host_u8(col: &column_view, stream: usize) -> Result<Vec<u8>>;
         /// Copies UINT16 column_view data to a host vector.
-        fn view_to_host_u16(col: &column_view, stream: usize) -> Vec<u16>;
+        fn view_to_host_u16(col: &column_view, stream: usize) -> Result<Vec<u16>>;
         /// Copies UINT32 column_view data to a host vector.
-        fn view_to_host_u32(col: &column_view, stream: usize) -> Vec<u32>;
+        fn view_to_host_u32(col: &column_view, stream: usize) -> Result<Vec<u32>>;
         /// Copies UINT64 column_view data to a host vector.
-        fn view_to_host_u64(col: &column_view, stream: usize) -> Vec<u64>;
+        fn view_to_host_u64(col: &column_view, stream: usize) -> Result<Vec<u64>>;
         /// Copies BOOL8 column_view data to a host vector of bools.
-        fn view_to_host_bool(col: &column_view, stream: usize) -> Vec<bool>;
+        fn view_to_host_bool(col: &column_view, stream: usize) -> Result<Vec<bool>>;
         /// Extracts per-element null mask from column_view as a host vector.
-        fn view_null_mask_to_host(col: &column_view, stream: usize) -> Vec<bool>;
+        fn view_null_mask_to_host(col: &column_view, stream: usize) -> Result<Vec<bool>>;
 
         // -- Column factories from host data --
 
         /// Creates an INT32 column from host data.
-        fn make_column_from_host_i32(data: &[i32], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_i32(data: &[i32], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates an INT64 column from host data.
-        fn make_column_from_host_i64(data: &[i64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_i64(data: &[i64], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates a FLOAT64 column from host data.
-        fn make_column_from_host_f64(data: &[f64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_f64(data: &[f64], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates a BOOL8 column from host data.
-        fn make_column_from_host_bool(data: &[bool], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_bool(data: &[bool], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates an INT8 column from host data.
-        fn make_column_from_host_i8(data: &[i8], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_i8(data: &[i8], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates an INT16 column from host data.
-        fn make_column_from_host_i16(data: &[i16], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_i16(data: &[i16], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates a FLOAT32 column from host data.
-        fn make_column_from_host_f32(data: &[f32], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_f32(data: &[f32], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates a UINT8 column from host data.
-        fn make_column_from_host_u8(data: &[u8], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_u8(data: &[u8], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates a UINT16 column from host data.
-        fn make_column_from_host_u16(data: &[u16], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_u16(data: &[u16], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates a UINT32 column from host data.
-        fn make_column_from_host_u32(data: &[u32], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_u32(data: &[u32], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates a UINT64 column from host data.
-        fn make_column_from_host_u64(data: &[u64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_u64(data: &[u64], stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates a TIMESTAMP_SECONDS column from host epoch-second data.
-        fn make_column_from_host_timestamp_s(data: &[i64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_timestamp_s(
+            data: &[i64],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Creates a TIMESTAMP_MILLISECONDS column from host data.
-        fn make_column_from_host_timestamp_ms(data: &[i64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_timestamp_ms(
+            data: &[i64],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Creates a TIMESTAMP_MICROSECONDS column from host data.
-        fn make_column_from_host_timestamp_us(data: &[i64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_timestamp_us(
+            data: &[i64],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Creates a TIMESTAMP_NANOSECONDS column from host data.
-        fn make_column_from_host_timestamp_ns(data: &[i64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_timestamp_ns(
+            data: &[i64],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Creates a DURATION_SECONDS column from host data.
-        fn make_column_from_host_duration_s(data: &[i64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_duration_s(
+            data: &[i64],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Creates a DURATION_MILLISECONDS column from host data.
-        fn make_column_from_host_duration_ms(data: &[i64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_duration_ms(
+            data: &[i64],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Creates a DURATION_MICROSECONDS column from host data.
-        fn make_column_from_host_duration_us(data: &[i64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_duration_us(
+            data: &[i64],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         /// Creates a DURATION_NANOSECONDS column from host data.
-        fn make_column_from_host_duration_ns(data: &[i64], stream: usize) -> UniquePtr<Column>;
+        fn make_column_from_host_duration_ns(
+            data: &[i64],
+            stream: usize,
+        ) -> Result<UniquePtr<Column>>;
 
         // -- TableBuilder --
 
@@ -775,21 +803,20 @@ pub mod ffi {
     }
 }
 
-// SAFETY: cudf::column wraps GPU memory which is globally accessible from any
-// CPU thread. The CXX UniquePtr ensures exclusive ownership.
+// SAFETY: ffi::Column owns cudf::column behind a UniquePtr. Shared references
+// only expose immutable queries and cached views through the FFI wrapper.
 unsafe impl Send for ffi::Column {}
-// SAFETY: &Column only allows immutable access through the FFI.
+// SAFETY: &Column only allows immutable access through the FFI wrapper.
 unsafe impl Sync for ffi::Column {}
 
-// SAFETY: cudf::table wraps GPU memory which is globally accessible from any
-// CPU thread. The CXX UniquePtr ensures exclusive ownership.
+// SAFETY: ffi::Table owns cudf::table behind a UniquePtr. Shared references
+// only expose immutable queries and cached views through the FFI wrapper.
 unsafe impl Send for ffi::Table {}
-// SAFETY: &Table only allows immutable access through the FFI.
+// SAFETY: &Table only allows immutable access through the FFI wrapper.
 unsafe impl Sync for ffi::Table {}
 
-// SAFETY: MarkJoin wraps a cudf::filtered_join which holds GPU hash tables.
-// GPU memory is globally accessible from any CPU thread and the CXX UniquePtr
-// ensures exclusive ownership.
+// SAFETY: MarkJoin owns cudf::mark_join behind a UniquePtr and only exposes
+// immutable probe operations through the wrapper API.
 unsafe impl Send for join::ffi::MarkJoin {}
 // SAFETY: &MarkJoin only allows immutable probe operations through the FFI.
 unsafe impl Sync for join::ffi::MarkJoin {}

@@ -71,10 +71,10 @@ mod tests {
     use crate::data_type::TypeId;
     use crate::groupby::AggregationKind;
     use crate::stream::GpuOp;
-    use crate::table::{Table, TableBuilder};
+    use crate::table::{TableBuilder, UnboundTable};
 
     /// Helper to build a two-column table: keys (i32) and values (i32).
-    fn make_kv_table(keys: &[i32], values: &[i32]) -> Table {
+    fn make_kv_table(keys: &[i32], values: &[i32]) -> UnboundTable {
         let key_col = Column::from_slice_i32(keys).call().unwrap();
         let val_col = Column::from_slice_i32(values).call().unwrap();
         let mut builder = TableBuilder::new();
@@ -83,7 +83,7 @@ mod tests {
         builder.build().unwrap()
     }
 
-    fn col_to_host_i32(tbl: &Table, col_idx: usize) -> Vec<i32> {
+    fn col_to_host_i32(tbl: &UnboundTable, col_idx: usize) -> Vec<i32> {
         let view = tbl.column(col_idx).unwrap();
         view.cast(TypeId::INT32)
             .call()
@@ -93,7 +93,7 @@ mod tests {
             .unwrap()
     }
 
-    fn col_to_host_i64(tbl: &Table, col_idx: usize) -> Vec<i64> {
+    fn col_to_host_i64(tbl: &UnboundTable, col_idx: usize) -> Vec<i64> {
         let view = tbl.column(col_idx).unwrap();
         view.cast(TypeId::INT64)
             .call()
@@ -103,7 +103,7 @@ mod tests {
             .unwrap()
     }
 
-    fn col_to_host_f64(tbl: &Table, col_idx: usize) -> Vec<f64> {
+    fn col_to_host_f64(tbl: &UnboundTable, col_idx: usize) -> Vec<f64> {
         let view = tbl.column(col_idx).unwrap();
         view.cast(TypeId::FLOAT64)
             .call()
@@ -113,17 +113,17 @@ mod tests {
             .unwrap()
     }
 
-    fn sorted_kv_i32(result: &Table) -> (Vec<i32>, Vec<i32>) {
+    fn sorted_kv_i32(result: &UnboundTable) -> (Vec<i32>, Vec<i32>) {
         let sorted = result.sort(&[], &[]).call().unwrap();
         (col_to_host_i32(&sorted, 0), col_to_host_i32(&sorted, 1))
     }
 
-    fn sorted_kv_i64(result: &Table) -> (Vec<i32>, Vec<i64>) {
+    fn sorted_kv_i64(result: &UnboundTable) -> (Vec<i32>, Vec<i64>) {
         let sorted = result.sort(&[], &[]).call().unwrap();
         (col_to_host_i32(&sorted, 0), col_to_host_i64(&sorted, 1))
     }
 
-    fn sorted_kv_f64(result: &Table) -> (Vec<i32>, Vec<f64>) {
+    fn sorted_kv_f64(result: &UnboundTable) -> (Vec<i32>, Vec<f64>) {
         let sorted = result.sort(&[], &[]).call().unwrap();
         (col_to_host_i32(&sorted, 0), col_to_host_f64(&sorted, 1))
     }

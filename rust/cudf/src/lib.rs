@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_op_in_unsafe_fn)]
 #![deny(missing_docs)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::shadow_reuse)]
@@ -32,6 +32,33 @@
 //!
 //! GPU memory management is handled by [RMM](https://github.com/rapidsai/rmm)
 //! and exposed via the [`rmm`] module.
+//!
+//! # Recommended Safe Path
+//!
+//! The preferred API shape is to allocate columns and tables from an explicit
+//! [`rmm::gpu_context::GpuContext`], then execute GPU work on an explicit
+//! execution handle from the same context:
+//!
+//! ```no_run
+//! use cudf::column::Column;
+//! use cudf::stream::GpuOp;
+//! use cudf::stream::GpuOpExt;
+//! use cudf::table::Table;
+//! use rmm::device::current_device;
+//! use rmm::gpu_context::GpuContext;
+//!
+//! let ctx = GpuContext::<()>::new(current_device())?;
+//! let alloc = ctx.default_device_allocator();
+//! let exec = ctx.default_stream();
+//!
+//! let a = Column::from_slice_i32_in(&alloc, &[3, 1, 2])?;
+//! let b = Column::from_slice_i32_in(&alloc, &[30, 10, 20])?;
+//! let table = Table::from_columns_in(&alloc, vec![a, b])?;
+//!
+//! let sorted = table.sort_ascending().in_alloc(&alloc).call_on(&exec)?;
+//! assert_eq!(sorted.column(0)?.to_vec_i32().call()?, vec![1, 2, 3]);
+//! # Ok::<(), cudf::error::Error>(())
+//! ```
 
 #[cfg(feature = "arrow")]
 pub mod arrow;
@@ -71,7 +98,7 @@ pub mod strings;
 pub mod table;
 pub mod transform;
 
-use column::{Column, ColumnView, MaskState};
+use column::{ColumnView, MaskState};
 use data_type::DataType;
 use error::Result;
 use scalar::Scalar;
@@ -116,6 +143,16 @@ pub fn state_null_count(mask_state: MaskState, num_rows: usize) -> usize {
     ))
 }
 
+#[cfg(test)]
+pub(crate) fn test_lock() -> std::sync::MutexGuard<'static, ()> {
+    use std::sync::{Mutex, OnceLock};
+
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("cudf test lock poisoned")
+}
+
 // -- Type checking utilities --
 
 /// Check if two column types are equivalent (ignoring scale for fixed-point).
@@ -129,8 +166,15 @@ pub fn columns_have_same_types(lhs: &ColumnView<'_>, rhs: &ColumnView<'_>) -> bo
 }
 
 /// Check if two tables have columns of the same types.
-pub fn tables_have_same_types(lhs: &table::Table, rhs: &table::Table) -> bool {
-    cudf_sys::ffi::tables_have_same_types(&lhs.0, &rhs.0)
+pub fn tables_have_same_types<RawL, RawR>(
+    lhs: &table::RawTable<RawL>,
+    rhs: &table::RawTable<RawR>,
+) -> bool
+where
+    RawL: table::TableOwner,
+    RawR: table::TableOwner,
+{
+    cudf_sys::ffi::tables_have_same_types(lhs.0.as_unique_ptr(), rhs.0.as_unique_ptr())
 }
 
 /// Check if a cast between two data types is supported.
@@ -163,7 +207,7 @@ pub fn calendrical_month_sequence(
 }
 
 impl crate::stream::GpuOp for CalendricalMonthSequence<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -171,14 +215,14 @@ impl crate::stream::GpuOp for CalendricalMonthSequence<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let ffi = scalar::scalar_to_ffi(self.init);
+        let ffi = scalar::scalar_to_ffi(self.init)?;
         let c = cudf_sys::filling::ffi::calendrical_month_sequence(
             usize_to_i32(self.count),
             &ffi,
             self.months,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -205,7 +249,7 @@ pub fn copy_if_else_scalars<'a>(
 }
 
 impl crate::stream::GpuOp for CopyIfElseScalars<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -213,14 +257,14 @@ impl crate::stream::GpuOp for CopyIfElseScalars<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let lhs_ffi = scalar::scalar_to_ffi(self.lhs);
-        let rhs_ffi = scalar::scalar_to_ffi(self.rhs);
+        let lhs_ffi = scalar::scalar_to_ffi(self.lhs)?;
+        let rhs_ffi = scalar::scalar_to_ffi(self.rhs)?;
         let c = cudf_sys::copying::ffi::copy_if_else_scalars(
             &lhs_ffi,
             &rhs_ffi,
             self.mask.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }

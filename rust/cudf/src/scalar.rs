@@ -465,7 +465,7 @@ impl Scalar {
     /// assert_eq!(repeated.as_str(), Some("ababab"));
     /// ```
     pub fn repeat_string(&self, times: i32) -> crate::error::Result<Self> {
-        let ffi = scalar_to_ffi(self);
+        let ffi = scalar_to_ffi(self)?;
         let result = cudf_sys::strings::ffi::repeat_string_scalar(
             &ffi,
             times,
@@ -504,29 +504,47 @@ impl std::fmt::Display for Scalar {
 }
 
 /// Converts a Rust `Scalar` enum into an FFI scalar for libcudf calls.
-pub(crate) fn scalar_to_ffi(s: &Scalar) -> UniquePtr<cudf_sys::ffi::Scalar> {
+pub(crate) fn scalar_to_ffi(s: &Scalar) -> crate::error::Result<UniquePtr<cudf_sys::ffi::Scalar>> {
     match s {
-        Scalar::Int8(v) => cudf_sys::ffi::make_int8_scalar(*v, true),
-        Scalar::Int16(v) => cudf_sys::ffi::make_int16_scalar(*v, true),
-        Scalar::Int32(v) => cudf_sys::ffi::make_int32_scalar(*v, true),
-        Scalar::Int64(v) => cudf_sys::ffi::make_int64_scalar(*v, true),
-        Scalar::UInt8(v) => cudf_sys::ffi::make_uint8_scalar(*v, true),
-        Scalar::UInt16(v) => cudf_sys::ffi::make_uint16_scalar(*v, true),
-        Scalar::UInt32(v) => cudf_sys::ffi::make_uint32_scalar(*v, true),
-        Scalar::UInt64(v) => cudf_sys::ffi::make_uint64_scalar(*v, true),
-        Scalar::Float32(v) => cudf_sys::ffi::make_float32_scalar(*v, true),
-        Scalar::Float64(v) => cudf_sys::ffi::make_float64_scalar(*v, true),
-        Scalar::Bool(v) => cudf_sys::ffi::make_bool_scalar(*v, true),
-        Scalar::String(v) => cudf_sys::ffi::make_string_scalar(v),
-        Scalar::TimestampSeconds(v) => cudf_sys::ffi::make_timestamp_s_scalar(*v, true),
-        Scalar::TimestampMilliseconds(v) => cudf_sys::ffi::make_timestamp_ms_scalar(*v, true),
-        Scalar::TimestampMicroseconds(v) => cudf_sys::ffi::make_timestamp_us_scalar(*v, true),
-        Scalar::TimestampNanoseconds(v) => cudf_sys::ffi::make_timestamp_ns_scalar(*v, true),
-        Scalar::DurationSeconds(v) => cudf_sys::ffi::make_duration_s_scalar(*v, true),
-        Scalar::DurationMilliseconds(v) => cudf_sys::ffi::make_duration_ms_scalar(*v, true),
-        Scalar::DurationMicroseconds(v) => cudf_sys::ffi::make_duration_us_scalar(*v, true),
-        Scalar::DurationNanoseconds(v) => cudf_sys::ffi::make_duration_ns_scalar(*v, true),
-        Scalar::Null(tid) => cudf_sys::ffi::make_default_constructed_scalar(tid.repr, 0),
+        Scalar::Int8(v) => cudf_sys::ffi::make_int8_scalar(*v, true).map_err(Into::into),
+        Scalar::Int16(v) => cudf_sys::ffi::make_int16_scalar(*v, true).map_err(Into::into),
+        Scalar::Int32(v) => cudf_sys::ffi::make_int32_scalar(*v, true).map_err(Into::into),
+        Scalar::Int64(v) => cudf_sys::ffi::make_int64_scalar(*v, true).map_err(Into::into),
+        Scalar::UInt8(v) => cudf_sys::ffi::make_uint8_scalar(*v, true).map_err(Into::into),
+        Scalar::UInt16(v) => cudf_sys::ffi::make_uint16_scalar(*v, true).map_err(Into::into),
+        Scalar::UInt32(v) => cudf_sys::ffi::make_uint32_scalar(*v, true).map_err(Into::into),
+        Scalar::UInt64(v) => cudf_sys::ffi::make_uint64_scalar(*v, true).map_err(Into::into),
+        Scalar::Float32(v) => cudf_sys::ffi::make_float32_scalar(*v, true).map_err(Into::into),
+        Scalar::Float64(v) => cudf_sys::ffi::make_float64_scalar(*v, true).map_err(Into::into),
+        Scalar::Bool(v) => cudf_sys::ffi::make_bool_scalar(*v, true).map_err(Into::into),
+        Scalar::String(v) => cudf_sys::ffi::make_string_scalar(v).map_err(Into::into),
+        Scalar::TimestampSeconds(v) => {
+            cudf_sys::ffi::make_timestamp_s_scalar(*v, true).map_err(Into::into)
+        }
+        Scalar::TimestampMilliseconds(v) => {
+            cudf_sys::ffi::make_timestamp_ms_scalar(*v, true).map_err(Into::into)
+        }
+        Scalar::TimestampMicroseconds(v) => {
+            cudf_sys::ffi::make_timestamp_us_scalar(*v, true).map_err(Into::into)
+        }
+        Scalar::TimestampNanoseconds(v) => {
+            cudf_sys::ffi::make_timestamp_ns_scalar(*v, true).map_err(Into::into)
+        }
+        Scalar::DurationSeconds(v) => {
+            cudf_sys::ffi::make_duration_s_scalar(*v, true).map_err(Into::into)
+        }
+        Scalar::DurationMilliseconds(v) => {
+            cudf_sys::ffi::make_duration_ms_scalar(*v, true).map_err(Into::into)
+        }
+        Scalar::DurationMicroseconds(v) => {
+            cudf_sys::ffi::make_duration_us_scalar(*v, true).map_err(Into::into)
+        }
+        Scalar::DurationNanoseconds(v) => {
+            cudf_sys::ffi::make_duration_ns_scalar(*v, true).map_err(Into::into)
+        }
+        Scalar::Null(tid) => {
+            cudf_sys::ffi::make_default_constructed_scalar(tid.repr, 0).map_err(Into::into)
+        }
     }
 }
 

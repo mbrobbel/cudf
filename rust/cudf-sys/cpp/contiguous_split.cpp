@@ -56,6 +56,16 @@ std::unique_ptr<Table> PackedTableVec::unpack_at(std::size_t index) const {
   return std::make_unique<Table>(std::make_unique<cudf::table>(view));
 }
 
+std::unique_ptr<Table> PackedTableVec::unpack_at_on_stream(std::size_t index,
+                                                           std::size_t stream) const {
+  if (index >= vec_.size()) {
+    throw std::out_of_range("PackedTableVec index out of range");
+  }
+  auto view = vec_[index].table;
+  return std::make_unique<Table>(std::make_unique<cudf::table>(
+    view, S(stream), cudf::get_current_device_resource_ref()));
+}
+
 // -- Free functions --
 
 std::unique_ptr<PackedColumns> pack_table(Table const& tbl, std::size_t stream) {
@@ -70,6 +80,12 @@ std::size_t packed_size_of(Table const& tbl, std::size_t stream) {
 std::unique_ptr<Table> unpack_packed(PackedColumns const& packed) {
   auto view = cudf::unpack(packed.inner());
   return std::make_unique<Table>(std::make_unique<cudf::table>(view));
+}
+
+std::unique_ptr<Table> unpack_packed_on_stream(PackedColumns const& packed, std::size_t stream) {
+  auto view = cudf::unpack(packed.inner());
+  return std::make_unique<Table>(std::make_unique<cudf::table>(
+    view, S(stream), cudf::get_current_device_resource_ref()));
 }
 
 std::unique_ptr<PackedTableVec> contiguous_split_table(Table const& tbl, rust::Slice<int32_t const> splits, std::size_t stream) {

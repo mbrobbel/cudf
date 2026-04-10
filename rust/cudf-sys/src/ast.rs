@@ -23,6 +23,48 @@ pub mod ffi {
         fn expression_tree_add_literal_bool(tree: Pin<&mut ExpressionTree>, value: bool) -> usize;
         fn expression_tree_add_literal_string(tree: Pin<&mut ExpressionTree>, value: &str)
         -> usize;
+        fn expression_tree_add_literal_timestamp_s(
+            tree: Pin<&mut ExpressionTree>,
+            value: i64,
+        ) -> usize;
+        fn expression_tree_add_literal_timestamp_ms(
+            tree: Pin<&mut ExpressionTree>,
+            value: i64,
+        ) -> usize;
+        fn expression_tree_add_literal_timestamp_us(
+            tree: Pin<&mut ExpressionTree>,
+            value: i64,
+        ) -> usize;
+        fn expression_tree_add_literal_timestamp_ns(
+            tree: Pin<&mut ExpressionTree>,
+            value: i64,
+        ) -> usize;
+        fn expression_tree_add_literal_duration_s(
+            tree: Pin<&mut ExpressionTree>,
+            value: i64,
+        ) -> usize;
+        fn expression_tree_add_literal_duration_ms(
+            tree: Pin<&mut ExpressionTree>,
+            value: i64,
+        ) -> usize;
+        fn expression_tree_add_literal_duration_us(
+            tree: Pin<&mut ExpressionTree>,
+            value: i64,
+        ) -> usize;
+        fn expression_tree_add_literal_duration_ns(
+            tree: Pin<&mut ExpressionTree>,
+            value: i64,
+        ) -> usize;
+        fn expression_tree_add_literal_decimal32(
+            tree: Pin<&mut ExpressionTree>,
+            value: i32,
+            scale: i32,
+        ) -> usize;
+        fn expression_tree_add_literal_decimal64(
+            tree: Pin<&mut ExpressionTree>,
+            value: i64,
+            scale: i32,
+        ) -> usize;
         fn expression_tree_add_column_ref(
             tree: Pin<&mut ExpressionTree>,
             column_index: i32,
@@ -50,6 +92,14 @@ pub mod ffi {
             root_index: usize,
             stream: usize,
         ) -> Result<UniquePtr<Column>>;
+
+        fn ast_filter(
+            predicate_table: &Table,
+            tree: &ExpressionTree,
+            root_index: usize,
+            filter_table: &Table,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         fn read_parquet_filtered(
             filepath: &str,
@@ -98,5 +148,37 @@ pub mod ffi {
             root_index: usize,
             stream: usize,
         ) -> Result<UniquePtr<Table>>;
+
+        fn conditional_inner_join_size(
+            left: &Table,
+            right: &Table,
+            tree: &ExpressionTree,
+            root_index: usize,
+            stream: usize,
+        ) -> Result<usize>;
+
+        fn conditional_left_join_size(
+            left: &Table,
+            right: &Table,
+            tree: &ExpressionTree,
+            root_index: usize,
+            stream: usize,
+        ) -> Result<usize>;
+
+        fn conditional_left_semi_join_size(
+            left: &Table,
+            right: &Table,
+            tree: &ExpressionTree,
+            root_index: usize,
+            stream: usize,
+        ) -> Result<usize>;
+
+        fn conditional_left_anti_join_size(
+            left: &Table,
+            right: &Table,
+            tree: &ExpressionTree,
+            root_index: usize,
+            stream: usize,
+        ) -> Result<usize>;
     }
 }

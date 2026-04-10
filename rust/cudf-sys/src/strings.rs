@@ -708,7 +708,7 @@ pub mod ffi {
         // -- String column construction / extraction --
 
         /// Creates a string column from a vector of strings.
-        fn make_string_column(strings: Vec<String>, stream: usize) -> UniquePtr<Column>;
+        fn make_string_column(strings: Vec<String>, stream: usize) -> Result<UniquePtr<Column>>;
 
         /// Creates a string column from pre-built chars and offsets buffers.
         ///
@@ -722,13 +722,13 @@ pub mod ffi {
             chars: &[u8],
             offsets: &[i32],
             stream: usize,
-        ) -> UniquePtr<Column>;
+        ) -> Result<UniquePtr<Column>>;
 
         /// Copies string column data to a host vector of strings.
-        fn column_to_host_strings(col: &Column, stream: usize) -> Vec<String>;
+        fn column_to_host_strings(col: &Column, stream: usize) -> Result<Vec<String>>;
 
         /// Copies string column_view data to a host vector (avoids deep copy).
-        fn view_to_host_strings(col: &column_view, stream: usize) -> Vec<String>;
+        fn view_to_host_strings(col: &column_view, stream: usize) -> Result<Vec<String>>;
 
         // -- JSON path extraction --
 

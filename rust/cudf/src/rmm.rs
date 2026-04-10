@@ -22,6 +22,7 @@ pub use rmm::aligned;
 pub use rmm::buffer;
 pub use rmm::device;
 pub use rmm::error;
+pub use rmm::gpu_context;
 pub use rmm::memory_resource;
 pub use rmm::prefetch;
 pub use rmm::stream;

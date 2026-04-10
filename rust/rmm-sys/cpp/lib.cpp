@@ -20,10 +20,23 @@
 #include <cuda_runtime_api.h>
 
 #include <cstddef>
+#include <cstring>
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <stdexcept>
 
 namespace rmm_sys {
+
+namespace {
+
+void throw_if_cuda_error(cudaError_t err, char const* context) {
+  if (err != cudaSuccess) {
+    throw std::runtime_error(std::string{context} + ": " + cudaGetErrorString(err));
+  }
+}
+
+}  // namespace
 
 // ---- Device queries ----
 
@@ -90,6 +103,10 @@ std::unique_ptr<CudaStream> cuda_stream_new() {
   return std::make_unique<CudaStream>();
 }
 
+std::size_t cuda_stream_default_view() {
+  return reinterpret_cast<std::size_t>(rmm::cuda_stream_view{}.value());
+}
+
 std::size_t cuda_stream_view(const CudaStream& stream) {
   return stream.view();
 }
@@ -100,6 +117,49 @@ void cuda_stream_synchronize(const CudaStream& stream) {
 
 bool cuda_stream_is_valid(const CudaStream& stream) {
   return stream.is_valid();
+}
+
+// ---- CudaEvent free functions ----
+
+CudaEvent::CudaEvent() : event_(nullptr) {
+  throw_if_cuda_error(
+      cudaEventCreateWithFlags(&event_, cudaEventDisableTiming), "cudaEventCreateWithFlags");
+}
+
+CudaEvent::~CudaEvent() {
+  if (event_ != nullptr) {
+    auto const err = cudaEventDestroy(event_);
+    if (err != cudaSuccess) {
+      std::terminate();
+    }
+  }
+}
+
+std::unique_ptr<CudaEvent> cuda_event_new() {
+  return std::make_unique<CudaEvent>();
+}
+
+void cuda_event_record(CudaEvent& event, std::size_t stream) {
+  throw_if_cuda_error(
+      cudaEventRecord(event.get(), reinterpret_cast<cudaStream_t>(stream)), "cudaEventRecord");
+}
+
+void cuda_event_synchronize(const CudaEvent& event) {
+  throw_if_cuda_error(cudaEventSynchronize(event.get()), "cudaEventSynchronize");
+}
+
+bool cuda_event_query(const CudaEvent& event) {
+  auto const err = cudaEventQuery(event.get());
+  if (err == cudaSuccess) return true;
+  if (err == cudaErrorNotReady) return false;
+  throw_if_cuda_error(err, "cudaEventQuery");
+  return false;
+}
+
+void cuda_stream_wait_event_raw(std::size_t stream, const CudaEvent& event) {
+  throw_if_cuda_error(
+      cudaStreamWaitEvent(reinterpret_cast<cudaStream_t>(stream), event.get(), 0),
+      "cudaStreamWaitEvent");
 }
 
 // ---- CudaStreamPool free functions ----
@@ -150,19 +210,25 @@ std::size_t pool_memory_resource_pool_size(const PoolMemoryResource& mr) {
 
 // ---- MemoryResourceRef ----
 
-std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_cuda(CudaMemoryResource& mr) {
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_cuda(const CudaMemoryResource& mr) {
   return std::make_unique<MemoryResourceRef>(mr.get());
 }
 
-std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_pool(PoolMemoryResource& mr) {
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_pool(const PoolMemoryResource& mr) {
   return std::make_unique<MemoryResourceRef>(mr.get());
 }
 
-std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_async(CudaAsyncMemoryResource& mr) {
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_async(
+    const CudaAsyncMemoryResource& mr) {
   return std::make_unique<MemoryResourceRef>(mr.get());
 }
 
-std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_managed(ManagedMemoryResource& mr) {
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_managed(
+    const ManagedMemoryResource& mr) {
+  return std::make_unique<MemoryResourceRef>(mr.get());
+}
+
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_clone(const MemoryResourceRef& mr) {
   return std::make_unique<MemoryResourceRef>(mr.get());
 }
 
@@ -196,24 +262,73 @@ void pinned_host_deallocate(PinnedHostMemoryResource& mr, std::size_t ptr, std::
   mr.deallocate(ptr, size);
 }
 
+void pinned_host_copy_to_slice(std::size_t ptr, rust::Slice<uint8_t> dst) {
+  if (dst.empty()) return;
+  std::memcpy(dst.data(), reinterpret_cast<void const*>(ptr), dst.size());
+}
+
+void pinned_host_copy_from_slice(std::size_t ptr, rust::Slice<uint8_t const> src) {
+  if (src.empty()) return;
+  std::memcpy(reinterpret_cast<void*>(ptr), src.data(), src.size());
+}
+
 // ---- Async memcpy ----
 
 void cuda_memcpy_d2h(rust::Slice<uint8_t> dst, std::size_t src_ptr, std::size_t stream) {
   if (dst.empty()) return;
-  cudaMemcpyAsync(dst.data(), reinterpret_cast<const void*>(src_ptr), dst.size(),
-                  cudaMemcpyDeviceToHost,
-                  reinterpret_cast<cudaStream_t>(stream));
+  auto const err = cudaMemcpyAsync(
+      dst.data(),
+      reinterpret_cast<void const*>(src_ptr),
+      dst.size(),
+      cudaMemcpyDeviceToHost,
+      reinterpret_cast<cudaStream_t>(stream));
+  throw_if_cuda_error(err, "cudaMemcpyAsync device-to-host");
 }
 
 void cuda_memcpy_h2d(std::size_t dst_ptr, rust::Slice<const uint8_t> src, std::size_t stream) {
   if (src.empty()) return;
-  cudaMemcpyAsync(reinterpret_cast<void*>(dst_ptr), src.data(), src.size(),
-                  cudaMemcpyHostToDevice,
-                  reinterpret_cast<cudaStream_t>(stream));
+  auto const err = cudaMemcpyAsync(
+      reinterpret_cast<void*>(dst_ptr),
+      src.data(),
+      src.size(),
+      cudaMemcpyHostToDevice,
+      reinterpret_cast<cudaStream_t>(stream));
+  throw_if_cuda_error(err, "cudaMemcpyAsync host-to-device");
+}
+
+void cuda_memcpy_d2h_raw(
+    std::size_t dst_ptr,
+    std::size_t src_ptr,
+    std::size_t size,
+    std::size_t stream) {
+  if (size == 0) return;
+  auto const err = cudaMemcpyAsync(
+      reinterpret_cast<void*>(dst_ptr),
+      reinterpret_cast<void const*>(src_ptr),
+      size,
+      cudaMemcpyDeviceToHost,
+      reinterpret_cast<cudaStream_t>(stream));
+  throw_if_cuda_error(err, "cudaMemcpyAsync raw device-to-host");
+}
+
+void cuda_memcpy_h2d_raw(
+    std::size_t dst_ptr,
+    std::size_t src_ptr,
+    std::size_t size,
+    std::size_t stream) {
+  if (size == 0) return;
+  auto const err = cudaMemcpyAsync(
+      reinterpret_cast<void*>(dst_ptr),
+      reinterpret_cast<void const*>(src_ptr),
+      size,
+      cudaMemcpyHostToDevice,
+      reinterpret_cast<cudaStream_t>(stream));
+  throw_if_cuda_error(err, "cudaMemcpyAsync raw host-to-device");
 }
 
 void cuda_stream_synchronize_raw(std::size_t stream) {
-  cudaStreamSynchronize(reinterpret_cast<cudaStream_t>(stream));
+  auto const err = cudaStreamSynchronize(reinterpret_cast<cudaStream_t>(stream));
+  throw_if_cuda_error(err, "cudaStreamSynchronize");
 }
 
 static void memcpy_batch_impl(
@@ -230,10 +345,11 @@ static void memcpy_batch_impl(
   attr.flags = cudaMemcpyFlagDefault;
   // CUDA 13 API: (dsts, srcs, sizes, count, attrs, attrsIdxs, numAttrs, stream)
   // Pass single attr for all transfers: attrsIdxs=nullptr, numAttrs=1
-  cudaMemcpyBatchAsync(
+  auto const err = cudaMemcpyBatchAsync(
       reinterpret_cast<void* const*>(dst_ptrs.data()),
       reinterpret_cast<void const* const*>(src_ptrs.data()),
       sizes.data(), n, &attr, nullptr, 1, s);
+  throw_if_cuda_error(err, "cudaMemcpyBatchAsync");
 }
 
 void cuda_memcpy_batch_d2h(

@@ -45,7 +45,6 @@
 use crate::column::ColumnView;
 use crate::error::Result;
 use crate::stream::Stream;
-use crate::table::Table;
 
 /// Builder for [`one_hot_encode`]. See that function for details.
 pub struct OneHotEncode<'a> {
@@ -94,7 +93,7 @@ pub fn one_hot_encode<'a>(
 }
 
 impl crate::stream::GpuOp for OneHotEncode<'_> {
-    type Output = Table;
+    type Output = crate::table::UnboundTable;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -107,7 +106,7 @@ impl crate::stream::GpuOp for OneHotEncode<'_> {
             self.categories.0,
             self.stream.as_raw(),
         )?;
-        Ok(Table(t))
+        Ok(crate::table::RawTable(t))
     }
 }
 

@@ -38,10 +38,30 @@
 //! ```
 
 use cxx::UniquePtr;
+use rmm::gpu_context::ContextBound;
 
 use crate::error::Result;
 use crate::stream::Stream;
-use crate::table::Table;
+use crate::table::UnboundTable;
+
+#[doc(hidden)]
+pub trait UniquePtrOwner<T: cxx::memory::UniquePtrTarget> {
+    fn as_unique_ptr(&self) -> &UniquePtr<T>;
+}
+
+impl<T: cxx::memory::UniquePtrTarget> UniquePtrOwner<T> for UniquePtr<T> {
+    fn as_unique_ptr(&self) -> &UniquePtr<T> {
+        self
+    }
+}
+
+impl<Brand, T: cxx::memory::UniquePtrTarget> UniquePtrOwner<T>
+    for ContextBound<'_, Brand, UniquePtr<T>>
+{
+    fn as_unique_ptr(&self) -> &UniquePtr<T> {
+        self
+    }
+}
 
 #[doc(alias = "mark_join")]
 /// A stateful mark-based hash join that builds a hash table once and supports
@@ -69,11 +89,11 @@ use crate::table::Table;
 /// let result2 = joiner.anti_join(&build, &probe2, &[0]).call()?;
 /// # Ok::<(), cudf::error::Error>(())
 /// ```
-pub struct MarkJoin(UniquePtr<cudf_sys::join::ffi::MarkJoin>);
+pub struct MarkJoin<Raw = UniquePtr<cudf_sys::join::ffi::MarkJoin>>(pub(crate) Raw);
 
 /// Builder for [`MarkJoin::new`]. See that method for details.
 pub struct MarkJoinNew<'a> {
-    build: &'a Table,
+    build: &'a UnboundTable,
     keys: &'a [i32],
     compare_nulls_equal: bool,
     stream: Stream,
@@ -99,16 +119,19 @@ impl crate::stream::GpuOp for MarkJoinNew<'_> {
 }
 
 /// Builder for [`MarkJoin::semi_join`]. See that method for details.
-pub struct MarkJoinSemi<'a> {
-    joiner: &'a MarkJoin,
-    build: &'a Table,
-    probe: &'a Table,
+pub struct MarkJoinSemi<'a, Raw> {
+    joiner: &'a MarkJoin<Raw>,
+    build: &'a UnboundTable,
+    probe: &'a UnboundTable,
     probe_keys: &'a [i32],
     stream: Stream,
 }
 
-impl crate::stream::GpuOp for MarkJoinSemi<'_> {
-    type Output = Table;
+impl<Raw> crate::stream::GpuOp for MarkJoinSemi<'_, Raw>
+where
+    Raw: UniquePtrOwner<cudf_sys::join::ffi::MarkJoin>,
+{
+    type Output = crate::table::UnboundTable;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -117,27 +140,30 @@ impl crate::stream::GpuOp for MarkJoinSemi<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let t = cudf_sys::join::ffi::mark_join_semi(
-            &self.joiner.0,
+            self.joiner.0.as_unique_ptr(),
             &self.build.0,
             &self.probe.0,
             self.probe_keys,
             self.stream.as_raw(),
         )?;
-        Ok(Table(t))
+        Ok(crate::table::RawTable(t))
     }
 }
 
 /// Builder for [`MarkJoin::anti_join`]. See that method for details.
-pub struct MarkJoinAnti<'a> {
-    joiner: &'a MarkJoin,
-    build: &'a Table,
-    probe: &'a Table,
+pub struct MarkJoinAnti<'a, Raw> {
+    joiner: &'a MarkJoin<Raw>,
+    build: &'a UnboundTable,
+    probe: &'a UnboundTable,
     probe_keys: &'a [i32],
     stream: Stream,
 }
 
-impl crate::stream::GpuOp for MarkJoinAnti<'_> {
-    type Output = Table;
+impl<Raw> crate::stream::GpuOp for MarkJoinAnti<'_, Raw>
+where
+    Raw: UniquePtrOwner<cudf_sys::join::ffi::MarkJoin>,
+{
+    type Output = crate::table::UnboundTable;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -146,13 +172,13 @@ impl crate::stream::GpuOp for MarkJoinAnti<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let t = cudf_sys::join::ffi::mark_join_anti(
-            &self.joiner.0,
+            self.joiner.0.as_unique_ptr(),
             &self.build.0,
             &self.probe.0,
             self.probe_keys,
             self.stream.as_raw(),
         )?;
-        Ok(Table(t))
+        Ok(crate::table::RawTable(t))
     }
 }
 
@@ -174,7 +200,7 @@ impl MarkJoin {
     /// error occurs.
     #[allow(clippy::new_ret_no_self)]
     pub fn new<'a>(
-        build: &'a Table,
+        build: &'a UnboundTable,
         keys: &'a [i32],
         compare_nulls_equal: bool,
     ) -> MarkJoinNew<'a> {
@@ -185,7 +211,12 @@ impl MarkJoin {
             stream: Stream::default_stream(),
         }
     }
+}
 
+impl<Raw> MarkJoin<Raw>
+where
+    Raw: UniquePtrOwner<cudf_sys::join::ffi::MarkJoin>,
+{
     /// Performs a semi-join probe: returns rows from `build` whose key columns
     /// have at least one match in the `probe` table.
     ///
@@ -207,10 +238,10 @@ impl MarkJoin {
     /// error occurs.
     pub fn semi_join<'a>(
         &'a self,
-        build: &'a Table,
-        probe: &'a Table,
+        build: &'a UnboundTable,
+        probe: &'a UnboundTable,
         probe_keys: &'a [i32],
-    ) -> MarkJoinSemi<'a> {
+    ) -> MarkJoinSemi<'a, Raw> {
         MarkJoinSemi {
             joiner: self,
             build,
@@ -241,10 +272,10 @@ impl MarkJoin {
     /// error occurs.
     pub fn anti_join<'a>(
         &'a self,
-        build: &'a Table,
-        probe: &'a Table,
+        build: &'a UnboundTable,
+        probe: &'a UnboundTable,
         probe_keys: &'a [i32],
-    ) -> MarkJoinAnti<'a> {
+    ) -> MarkJoinAnti<'a, Raw> {
         MarkJoinAnti {
             joiner: self,
             build,
@@ -260,10 +291,10 @@ mod tests {
     use super::MarkJoin;
     use crate::column::Column;
     use crate::stream::GpuOp;
-    use crate::table::{Table, TableBuilder};
+    use crate::table::TableBuilder;
 
     /// Helper to build a two-column table from i32 slices.
-    fn make_two_col_table(keys: &[i32], vals: &[i32]) -> Table {
+    fn make_two_col_table(keys: &[i32], vals: &[i32]) -> crate::table::UnboundTable {
         let key_col = Column::from_slice_i32(keys).call().unwrap();
         let val_col = Column::from_slice_i32(vals).call().unwrap();
         let mut builder = TableBuilder::new();

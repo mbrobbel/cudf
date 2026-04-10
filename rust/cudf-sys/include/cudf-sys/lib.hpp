@@ -1254,6 +1254,7 @@ class PackedTableVec {
   explicit PackedTableVec(std::vector<cudf::packed_table> v) : vec_(std::move(v)) {}
   std::size_t size() const;
   std::unique_ptr<Table> unpack_at(std::size_t index) const;
+  std::unique_ptr<Table> unpack_at_on_stream(std::size_t index, std::size_t stream) const;
  private:
   std::vector<cudf::packed_table> vec_;
 };
@@ -1261,6 +1262,7 @@ class PackedTableVec {
 std::unique_ptr<PackedColumns> pack_table(Table const& tbl, std::size_t stream);
 std::size_t packed_size_of(Table const& tbl, std::size_t stream);
 std::unique_ptr<Table> unpack_packed(PackedColumns const& packed);
+std::unique_ptr<Table> unpack_packed_on_stream(PackedColumns const& packed, std::size_t stream);
 std::unique_ptr<PackedTableVec> contiguous_split_table(Table const& tbl, rust::Slice<int32_t const> splits, std::size_t stream);
 std::unique_ptr<PackedColumns> make_packed_from_host_parts(rust::Slice<uint8_t const> metadata, rust::Slice<uint8_t const> gpu_data, std::size_t stream);
 
@@ -1455,18 +1457,58 @@ std::size_t expression_tree_add_literal_f32(ExpressionTree& tree, float value);
 std::size_t expression_tree_add_literal_f64(ExpressionTree& tree, double value);
 std::size_t expression_tree_add_literal_bool(ExpressionTree& tree, bool value);
 std::size_t expression_tree_add_literal_string(ExpressionTree& tree, rust::Str value);
+std::size_t expression_tree_add_literal_timestamp_s(ExpressionTree& tree, int64_t value);
+std::size_t expression_tree_add_literal_timestamp_ms(ExpressionTree& tree, int64_t value);
+std::size_t expression_tree_add_literal_timestamp_us(ExpressionTree& tree, int64_t value);
+std::size_t expression_tree_add_literal_timestamp_ns(ExpressionTree& tree, int64_t value);
+std::size_t expression_tree_add_literal_duration_s(ExpressionTree& tree, int64_t value);
+std::size_t expression_tree_add_literal_duration_ms(ExpressionTree& tree, int64_t value);
+std::size_t expression_tree_add_literal_duration_us(ExpressionTree& tree, int64_t value);
+std::size_t expression_tree_add_literal_duration_ns(ExpressionTree& tree, int64_t value);
+std::size_t expression_tree_add_literal_decimal32(ExpressionTree& tree, int32_t value, int32_t scale);
+std::size_t expression_tree_add_literal_decimal64(ExpressionTree& tree, int64_t value, int32_t scale);
 std::size_t expression_tree_add_column_ref(ExpressionTree& tree, int32_t column_index, int32_t table_source);
 std::size_t expression_tree_add_column_name_ref(ExpressionTree& tree, rust::Str name);
 std::size_t expression_tree_add_unary_op(ExpressionTree& tree, int32_t op, std::size_t operand);
 std::size_t expression_tree_add_binary_op(ExpressionTree& tree, int32_t op, std::size_t left, std::size_t right);
 
 std::unique_ptr<Column> ast_compute_column(Table const& tbl, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
+std::unique_ptr<Table> ast_filter(
+    Table const& predicate_table,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    Table const& filter_table,
+    std::size_t stream);
 std::unique_ptr<Table> read_parquet_filtered(rust::Str filepath, ExpressionTree const& tree, std::size_t root_index);
 std::unique_ptr<Table> conditional_inner_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
 std::unique_ptr<Table> conditional_left_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
 std::unique_ptr<Table> conditional_full_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
 std::unique_ptr<Table> conditional_left_semi_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
 std::unique_ptr<Table> conditional_left_anti_join(Table const& left, Table const& right, ExpressionTree const& tree, std::size_t root_index, std::size_t stream);
+std::size_t conditional_inner_join_size(
+    Table const& left,
+    Table const& right,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    std::size_t stream);
+std::size_t conditional_left_join_size(
+    Table const& left,
+    Table const& right,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    std::size_t stream);
+std::size_t conditional_left_semi_join_size(
+    Table const& left,
+    Table const& right,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    std::size_t stream);
+std::size_t conditional_left_anti_join_size(
+    Table const& left,
+    Table const& right,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    std::size_t stream);
 
 // -- JIT cache control --
 

@@ -32,11 +32,11 @@ use arrow_array::{
 };
 use arrow_schema::{DataType as ArrowDataType, Field, Schema};
 
-use crate::column::Column;
+use crate::column::{ColumnOwner, ColumnView, OwnedColumn, RawColumn, UnboundColumn};
 use crate::data_type::TypeId;
 use crate::error::{Error, Result};
-use crate::stream::GpuOp;
-use crate::table::Table;
+use crate::stream::{BindContext, GpuOp};
+use crate::table::{OwnedTable, RawTable, TableOwner, UnboundTable};
 
 /// Maps a cudf [`TypeId`] to an Arrow [`DataType`](ArrowDataType).
 pub fn type_id_to_arrow(tid: TypeId) -> Result<ArrowDataType> {
@@ -135,7 +135,7 @@ macro_rules! primitive_to_gpu {
             .downcast_ref::<arrow_array::PrimitiveArray<$arrow_ty>>()
             .ok_or_else(|| Error::UnsupportedArrowType("type mismatch".into()))?;
         let values = typed.values();
-        let col = Column::$from_fn(values).call()?;
+        let col = UnboundColumn::$from_fn(values).call()?;
         apply_arrow_nulls(col, $array)
     }};
 }
@@ -150,7 +150,7 @@ macro_rules! primitive_to_gpu {
 ///
 /// For the rare case of a non-zero bit-offset (sliced Arrow arrays), falls
 /// back to the boolean-column path.
-fn apply_arrow_nulls(col: Column, array: &dyn Array) -> Result<Column> {
+fn apply_arrow_nulls(col: UnboundColumn, array: &dyn Array) -> Result<UnboundColumn> {
     let Some(null_buf) = array.nulls() else {
         return Ok(col);
     };
@@ -165,16 +165,16 @@ fn apply_arrow_nulls(col: Column, array: &dyn Array) -> Result<Column> {
     // Slow path: non-zero offset requires bit-shifting; fall back to the
     // boolean column approach.
     let validity: Vec<bool> = null_buf.iter().collect();
-    let mask_col = Column::from_slice_bool(&validity).call()?;
+    let mask_col = UnboundColumn::from_slice_bool(&validity).call()?;
     col.with_null_mask_from_bools(&mask_col.view()).call()
 }
 
-impl Column {
+impl UnboundColumn {
     /// Creates a GPU column from an Arrow array.
     ///
     /// Copies data from host (Arrow) to device (GPU). Supports all primitive
     /// types, booleans, and UTF-8 strings. Null masks are preserved.
-    pub fn from_arrow(array: &dyn Array) -> Result<Self> {
+    pub fn from_arrow(array: &dyn Array) -> Result<UnboundColumn> {
         match array.data_type() {
             ArrowDataType::Int8 => primitive_to_gpu!(array, Int8Type, from_slice_i8),
             ArrowDataType::Int16 => primitive_to_gpu!(array, Int16Type, from_slice_i16),
@@ -192,7 +192,7 @@ impl Column {
                     .downcast_ref::<BooleanArray>()
                     .ok_or_else(|| Error::UnsupportedArrowType("BooleanArray mismatch".into()))?;
                 let bools: Vec<bool> = typed.iter().map(|v| v.unwrap_or(false)).collect();
-                let col = Column::from_slice_bool(&bools).call()?;
+                let col = UnboundColumn::from_slice_bool(&bools).call()?;
                 apply_arrow_nulls(col, array)
             }
             ArrowDataType::Utf8 => {
@@ -201,7 +201,7 @@ impl Column {
                     .downcast_ref::<StringArray>()
                     .ok_or_else(|| Error::UnsupportedArrowType("StringArray mismatch".into()))?;
                 let strings: Vec<&str> = typed.iter().map(|v| v.unwrap_or("")).collect();
-                let col = Column::from_strings(&strings).call()?;
+                let col = UnboundColumn::from_strings(&strings).call()?;
                 apply_arrow_nulls(col, array)
             }
             ArrowDataType::Timestamp(arrow_schema::TimeUnit::Second, _) => {
@@ -263,7 +263,36 @@ impl Column {
             other => Err(Error::UnsupportedArrowType(format!("{other}"))),
         }
     }
+}
 
+impl RawColumn<rmm::gpu_context::ContextBound<'_, (), cxx::UniquePtr<cudf_sys::ffi::Column>>> {
+    /// Creates a GPU column from an Arrow array.
+    ///
+    /// This forwarding method preserves the public `Column::from_arrow(...)`
+    /// spelling while returning the legacy unbound owner.
+    pub fn from_arrow(array: &dyn Array) -> Result<UnboundColumn> {
+        UnboundColumn::from_arrow(array)
+    }
+}
+
+impl OwnedColumn<'_> {
+    /// Creates an allocator-bound GPU column from an Arrow array.
+    ///
+    /// This is the safe owning-path counterpart to [`Column::from_arrow`]:
+    /// the upload is executed in `alloc`, and the returned column carries
+    /// `alloc`'s context lifetime.
+    pub fn from_arrow_in<'ctx>(
+        alloc: &rmm::gpu_context::Allocator<'ctx>,
+        array: &dyn Array,
+    ) -> Result<OwnedColumn<'ctx>> {
+        Ok(UnboundColumn::from_arrow(array)?.bind(alloc))
+    }
+}
+
+impl<Raw> RawColumn<Raw>
+where
+    Raw: ColumnOwner,
+{
     /// Copies GPU column data to an Arrow array on the host.
     ///
     /// Supports all primitive types, booleans, and UTF-8 strings.
@@ -273,8 +302,6 @@ impl Column {
     }
 }
 
-use crate::column::ColumnView;
-
 impl ColumnView<'_> {
     /// Copies GPU column view data to an Arrow array on the host.
     ///
@@ -282,17 +309,17 @@ impl ColumnView<'_> {
     /// making it more efficient than converting through an owning Column.
     pub fn to_arrow(&self) -> Result<ArrayRef> {
         let tid = self.type_id();
-        let nulls = self.arrow_nulls();
+        let nulls = self.arrow_nulls()?;
         to_arrow_inner(self, tid, nulls)
     }
 
-    fn arrow_nulls(&self) -> Option<arrow_buffer::NullBuffer> {
+    fn arrow_nulls(&self) -> Result<Option<arrow_buffer::NullBuffer>> {
         if self.has_nulls() {
-            Some(arrow_buffer::NullBuffer::from(
-                self.null_mask_to_host().call().unwrap(),
-            ))
+            Ok(Some(arrow_buffer::NullBuffer::from(
+                self.null_mask_to_host().call()?,
+            )))
         } else {
-            None
+            Ok(None)
         }
     }
 }
@@ -322,8 +349,8 @@ fn to_arrow_inner(
         TypeId::UINT64 => gpu_to_primitive!(col, to_vec_u64, UInt64Array, nulls),
         TypeId::FLOAT32 => gpu_to_primitive!(col, to_vec_f32, Float32Array, nulls),
         TypeId::FLOAT64 => gpu_to_primitive!(col, to_vec_f64, Float64Array, nulls),
-        TypeId::BOOL8 => Ok(bool_to_arrow(col, nulls)),
-        TypeId::STRING => Ok(string_to_arrow(col)),
+        TypeId::BOOL8 => bool_to_arrow(col, nulls),
+        TypeId::STRING => string_to_arrow(col),
         TypeId::TIMESTAMP_SECONDS => {
             gpu_to_primitive!(col, to_vec_i64, arrow_array::TimestampSecondArray, nulls)
         }
@@ -378,44 +405,77 @@ fn to_arrow_inner(
 }
 
 /// Convert a BOOL8 GPU column to Arrow `BooleanArray`.
-fn bool_to_arrow(col: &ColumnView<'_>, nulls: Option<arrow_buffer::NullBuffer>) -> ArrayRef {
-    let values = col.to_vec_bool().call().unwrap();
+fn bool_to_arrow(
+    col: &ColumnView<'_>,
+    nulls: Option<arrow_buffer::NullBuffer>,
+) -> Result<ArrayRef> {
+    let values = col.to_vec_bool().call()?;
     // Build the values buffer directly, then attach the null buffer separately
     // to avoid an intermediate Vec<Option<bool>> allocation.
     let values_buf = arrow_buffer::BooleanBuffer::from(values);
-    Arc::new(BooleanArray::new(values_buf, nulls))
+    Ok(Arc::new(BooleanArray::new(values_buf, nulls)))
 }
 
 /// Convert a STRING GPU column to Arrow `StringArray`.
-fn string_to_arrow(col: &ColumnView<'_>) -> ArrayRef {
-    let values = col.to_vec_string().call().unwrap();
+fn string_to_arrow(col: &ColumnView<'_>) -> Result<ArrayRef> {
+    let values = col.to_vec_string().call()?;
     if col.has_nulls() {
-        let validity = col.null_mask_to_host().call().unwrap();
+        let validity = col.null_mask_to_host().call()?;
         let arr: StringArray = values
             .into_iter()
             .zip(validity)
             .map(|(s, valid)| if valid { Some(s) } else { None })
             .collect();
-        Arc::new(arr)
+        Ok(Arc::new(arr))
     } else {
-        Arc::new(StringArray::from(values))
+        Ok(Arc::new(StringArray::from(values)))
     }
 }
 
-impl Table {
+impl UnboundTable {
     /// Creates a GPU table from an Arrow [`RecordBatch`].
     ///
     /// Each column in the batch is uploaded to the GPU. Field names
     /// are not preserved (cudf tables are positional, not named).
-    pub fn from_record_batch(batch: &RecordBatch) -> Result<Self> {
-        let columns: Vec<Column> = batch
+    pub fn from_record_batch(batch: &RecordBatch) -> Result<UnboundTable> {
+        let columns: Vec<UnboundColumn> = batch
             .columns()
             .iter()
-            .map(|arr| Column::from_arrow(arr.as_ref()))
+            .map(|arr| UnboundColumn::from_arrow(arr.as_ref()))
             .collect::<Result<_>>()?;
-        Table::from_columns(columns)
+        UnboundTable::from_columns(columns)
     }
+}
 
+impl RawTable<rmm::gpu_context::ContextBound<'_, (), cxx::UniquePtr<cudf_sys::ffi::Table>>> {
+    /// Creates a GPU table from an Arrow [`RecordBatch`].
+    ///
+    /// This forwarding method preserves the public `Table::from_record_batch`
+    /// spelling while returning the legacy unbound owner.
+    pub fn from_record_batch(batch: &RecordBatch) -> Result<UnboundTable> {
+        UnboundTable::from_record_batch(batch)
+    }
+}
+
+impl OwnedTable<'_> {
+    /// Creates an allocator-bound GPU table from an Arrow [`RecordBatch`].
+    pub fn from_record_batch_in<'ctx>(
+        alloc: &rmm::gpu_context::Allocator<'ctx>,
+        batch: &RecordBatch,
+    ) -> Result<OwnedTable<'ctx>> {
+        let columns: Vec<OwnedColumn<'ctx>> = batch
+            .columns()
+            .iter()
+            .map(|arr| OwnedColumn::from_arrow_in(alloc, arr.as_ref()))
+            .collect::<Result<_>>()?;
+        UnboundTable::from_columns_in(alloc, columns)
+    }
+}
+
+impl<Raw> RawTable<Raw>
+where
+    Raw: TableOwner,
+{
     /// Copies the GPU table to an Arrow [`RecordBatch`] on the host.
     ///
     /// Column names are generated as `"c0"`, `"c1"`, etc.

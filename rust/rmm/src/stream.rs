@@ -10,6 +10,7 @@
 
 use std::fmt;
 
+use crate::error::Result;
 use cxx::UniquePtr;
 
 /// An owning CUDA stream.
@@ -20,28 +21,23 @@ use cxx::UniquePtr;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use rmm::stream::Stream;
 ///
-/// let stream = Stream::new();
+/// let stream = Stream::new()?;
 /// println!("stream handle: {:#x}", stream.as_raw());
-/// stream.synchronize();
+/// stream.synchronize()?;
+/// # Ok::<(), rmm::error::Error>(())
 /// ```
 #[doc(alias = "rmm::cuda_stream")]
 pub struct Stream(UniquePtr<rmm_sys::ffi::CudaStream>);
-
-impl Default for Stream {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 impl Stream {
     /// Creates a new CUDA stream.
     ///
     /// The stream is destroyed when this value is dropped.
-    pub fn new() -> Self {
-        Self(rmm_sys::ffi::cuda_stream_new())
+    pub fn new() -> Result<Self> {
+        Ok(Self(rmm_sys::ffi::cuda_stream_new()?))
     }
 
     /// Returns the raw `cudaStream_t` handle as `usize`.
@@ -56,8 +52,9 @@ impl Stream {
     ///
     /// After this call returns, all GPU operations previously submitted to
     /// this stream are guaranteed to have finished.
-    pub fn synchronize(&self) {
-        rmm_sys::ffi::cuda_stream_synchronize(&self.0);
+    pub fn synchronize(&self) -> Result<()> {
+        rmm_sys::ffi::cuda_stream_synchronize(&self.0)?;
+        Ok(())
     }
 
     /// Returns `true` if the stream handle is valid (non-null).
@@ -86,13 +83,14 @@ impl fmt::Display for Stream {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use rmm::stream::StreamPool;
 ///
-/// let pool = StreamPool::new(4);
+/// let pool = StreamPool::new(4)?;
 /// assert_eq!(pool.pool_size(), 4);
 ///
 /// let handle = pool.get_stream();
+/// # Ok::<(), rmm::error::Error>(())
 /// ```
 #[doc(alias = "rmm::cuda_stream_pool")]
 pub struct StreamPool(UniquePtr<rmm_sys::ffi::CudaStreamPool>);
@@ -110,7 +108,7 @@ impl StreamPool {
                 "pool_size must be > 0".into(),
             ));
         }
-        Ok(Self(rmm_sys::ffi::cuda_stream_pool_new(size)))
+        Ok(Self(rmm_sys::ffi::cuda_stream_pool_new(size)?))
     }
 
     /// Returns a raw stream handle (`cudaStream_t` as `usize`) from the pool.
@@ -146,20 +144,23 @@ mod tests {
 
     #[test]
     fn stream_creation() {
-        let stream = Stream::new();
+        let _test_lock = crate::test_lock();
+        let stream = Stream::new().unwrap();
         assert!(stream.is_valid());
         assert_ne!(stream.as_raw(), 0);
     }
 
     #[test]
     fn stream_synchronize() {
-        let stream = Stream::new();
-        stream.synchronize();
+        let _test_lock = crate::test_lock();
+        let stream = Stream::new().unwrap();
+        stream.synchronize().unwrap();
     }
 
     #[test]
     fn stream_debug_display() {
-        let stream = Stream::new();
+        let _test_lock = crate::test_lock();
+        let stream = Stream::new().unwrap();
         let debug = format!("{stream:?}");
         assert!(debug.starts_with("Stream("));
         let display = format!("{stream}");
@@ -168,18 +169,21 @@ mod tests {
 
     #[test]
     fn stream_pool_creation() {
+        let _test_lock = crate::test_lock();
         let pool = StreamPool::new(4).unwrap();
         assert_eq!(pool.pool_size(), 4);
     }
 
     #[test]
     fn stream_pool_zero_size_errors() {
+        let _test_lock = crate::test_lock();
         let result = StreamPool::new(0);
         assert!(result.is_err());
     }
 
     #[test]
     fn stream_pool_round_robin() {
+        let _test_lock = crate::test_lock();
         let pool = StreamPool::new(2).unwrap();
         let s1 = pool.get_stream();
         let s2 = pool.get_stream();
@@ -192,6 +196,7 @@ mod tests {
 
     #[test]
     fn stream_pool_debug_display() {
+        let _test_lock = crate::test_lock();
         let pool = StreamPool::new(3).unwrap();
         let debug = format!("{pool:?}");
         assert!(debug.contains("pool_size: 3"));

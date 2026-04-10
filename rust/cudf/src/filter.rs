@@ -7,6 +7,8 @@
 //!
 //! * [`Table::filter`](crate::table::Table::filter) -- select rows where a
 //!   boolean mask column is `true`.
+//! * [`Table::filter_with_ast`](crate::table::Table::filter_with_ast) --
+//!   select rows using an AST predicate.
 //! * [`Table::drop_nulls`](crate::table::Table::drop_nulls) -- drop rows where
 //!   all columns are null.
 

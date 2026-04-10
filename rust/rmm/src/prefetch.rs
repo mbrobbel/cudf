@@ -22,15 +22,23 @@ use crate::device::DeviceId;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use rmm::device;
 /// use rmm::prefetch;
 ///
+/// # let device_ptr = 0usize;
 /// let dev = device::current_device();
-/// prefetch::prefetch(device_ptr, 1024, dev, 0);
+/// prefetch::prefetch(device_ptr, 1024, dev, 0)?;
+/// # Ok::<(), rmm::error::Error>(())
 /// ```
-pub fn prefetch(ptr: usize, size: usize, device: DeviceId, stream: usize) {
-    rmm_sys::ffi::prefetch(ptr, size, device.value(), stream);
+pub fn prefetch(
+    ptr: usize,
+    size: usize,
+    device: DeviceId,
+    stream: usize,
+) -> crate::error::Result<()> {
+    rmm_sys::ffi::prefetch(ptr, size, device.value(), stream)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -41,9 +49,10 @@ mod tests {
 
     #[test]
     fn prefetch_buffer() {
-        let buf = DeviceBuffer::new(1024);
+        let _test_lock = crate::test_lock();
+        let buf = DeviceBuffer::new(1024).unwrap();
         let dev = device::current_device();
         // Should not panic; may be a no-op if not managed memory.
-        prefetch(buf.as_ptr(), buf.size(), dev, 0);
+        prefetch(buf.as_ptr(), buf.size(), dev, 0).unwrap();
     }
 }

@@ -7,7 +7,6 @@
 //! - `table.repeat(count).call()` repeats each row.
 //! - `sequence(count, init, step).call()` generates an arithmetic sequence.
 
-use crate::column::Column;
 use crate::error::Result;
 use crate::scalar::Scalar;
 use crate::stream::Stream;
@@ -70,7 +69,7 @@ pub fn sequence<'a>(count: usize, init: &'a Scalar, step: &'a Scalar) -> Sequenc
 }
 
 impl crate::stream::GpuOp for Sequence<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -78,15 +77,15 @@ impl crate::stream::GpuOp for Sequence<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let init_ffi = crate::scalar::scalar_to_ffi(self.init);
-        let step_ffi = crate::scalar::scalar_to_ffi(self.step);
+        let init_ffi = crate::scalar::scalar_to_ffi(self.init)?;
+        let step_ffi = crate::scalar::scalar_to_ffi(self.step)?;
         let c = cudf_sys::filling::ffi::sequence_column(
             crate::usize_to_i32(self.count),
             &init_ffi,
             &step_ffi,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 

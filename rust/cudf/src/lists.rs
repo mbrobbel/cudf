@@ -14,9 +14,14 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```no_run
+//! use cudf::column::Column;
 //! use cudf::lists::ListExt;
 //! use cudf::stream::GpuOp;
+//!
+//! let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+//! let values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+//! let list_col = Column::from_lists(2, offsets, values).call()?;
 //!
 //! // Count elements in each list row
 //! let counts = list_col.view().list_count_elements().call()?;
@@ -26,7 +31,7 @@
 //! # Ok::<(), cudf::error::Error>(())
 //! ```
 
-use crate::column::{Column, ColumnView};
+use crate::column::ColumnView;
 use crate::error::Result;
 use crate::scalar::Scalar;
 use crate::stream::Stream;
@@ -34,6 +39,9 @@ use crate::stream::Stream;
 mod private {
     pub trait Sealed {}
 }
+
+#[path = "lists/ext_impl.rs"]
+mod ext_impl;
 
 /// Extension trait for list column operations.
 ///
@@ -59,10 +67,14 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+    /// # let list_col = Column::from_lists(3, offsets, values).call()?;
     /// let counts = list_col.view().list_count_elements().call()?;
     /// // For [[1,2,3], [4,5], []] => [3, 2, 0]
     /// # Ok::<(), cudf::error::Error>(())
@@ -79,10 +91,14 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
     /// // Extract the first element from each list
     /// let firsts = list_col.view().list_extract_element(0).call()?;
     ///
@@ -105,10 +121,14 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[3, 1, 2, 5, 4]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
     /// let sorted = list_col.view().list_sort(true, true).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -121,10 +141,14 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
     /// let reversed = list_col.view().list_reverse().call()?;
     /// // [[1,2,3], [4,5]] => [[3,2,1], [5,4]]
     /// # Ok::<(), cudf::error::Error>(())
@@ -138,10 +162,14 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 2]).call()?;
+    /// # let values = Column::from_slice_i32(&[1, 2]).call()?;
+    /// # let list_col = Column::from_lists(1, offsets, values).call()?;
     /// let has_nulls = list_col.view().list_contains_nulls().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -155,10 +183,14 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 4, 6]).call()?;
+    /// # let values = Column::from_slice_i32(&[1, 2, 1, 3, 4, 4]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
     /// let unique = list_col.view().list_distinct().call()?;
     /// // [[1,2,1,3], [4,4]] => [[1,2,3], [4]]
     /// # Ok::<(), cudf::error::Error>(())
@@ -174,10 +206,16 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let inner_offsets = Column::from_slice_i32(&[0, 2, 3, 5]).call()?;
+    /// # let inner_values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+    /// # let inner_lists = Column::from_lists(3, inner_offsets, inner_values).call()?;
+    /// # let outer_offsets = Column::from_slice_i32(&[0, 2, 3]).call()?;
+    /// # let nested_list_col = Column::from_lists(2, outer_offsets, inner_lists).call()?;
     /// // [[[1,2],[3]], [[4,5]]] => [[1,2,3], [4,5]]
     /// let flat = nested_list_col.view().list_concatenate_elements().call()?;
     /// # Ok::<(), cudf::error::Error>(())
@@ -192,11 +230,15 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[1, 2, 42, 4, 5]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
     /// let key = Scalar::from_i32(42);
     /// let found = list_col.view().list_contains_scalar(&key).call()?;
     /// # Ok::<(), cudf::error::Error>(())
@@ -213,10 +255,15 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
+    /// # let keys = Column::from_slice_i32(&[2, 4]).call()?;
     /// let found = list_col.view().list_contains_column(&keys.view()).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -234,11 +281,15 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 4, 6]).call()?;
+    /// # let values = Column::from_slice_i32(&[1, 42, 2, 42, 4, 5]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
     /// let key = Scalar::from_i32(42);
     /// let positions = list_col.view().list_index_of_scalar(&key, true).call()?;
     /// # Ok::<(), cudf::error::Error>(())
@@ -258,10 +309,15 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
+    /// # let keys = Column::from_slice_i32(&[2, 5]).call()?;
     /// let positions = list_col.view().list_index_of_column(&keys.view(), true).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -285,10 +341,17 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[10, 20, 30, 40, 50]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
+    /// # let gather_offsets = Column::from_slice_i32(&[0, 2, 4]).call()?;
+    /// # let gather_values = Column::from_slice_i32(&[0, 2, 1, 0]).call()?;
+    /// # let gather_map = Column::from_lists(2, gather_offsets, gather_values).call()?;
     /// let gathered = list_col.view()
     ///     .list_segmented_gather(&gather_map.view(), true)
     ///     .call()?;
@@ -309,10 +372,14 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 2, 4]).call()?;
+    /// # let values = Column::from_strings(&["a", "b", "c", "d"]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
     /// let formatted = list_col.view().list_format("NULL").call()?;
     /// // [["a","b"], ["c",null]] => ["[a, b]", "[c, NULL]"]
     /// # Ok::<(), cudf::error::Error>(())
@@ -329,10 +396,15 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[10, 20, 30, 40, 50]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
+    /// # let indices = Column::from_slice_i32(&[0, -1]).call()?;
     /// let elements = list_col.view()
     ///     .list_extract_element_column(&indices.view())
     ///     .call()?;
@@ -353,10 +425,14 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[3, 1, 2, 5, 4]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
     /// let sorted = list_col.view().list_stable_sort(true, true).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -373,10 +449,17 @@ pub trait ListExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::lists::ListExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let values = Column::from_slice_i32(&[10, 20, 30, 40, 50]).call()?;
+    /// # let list_col = Column::from_lists(2, offsets, values).call()?;
+    /// # let mask_offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+    /// # let mask_values = Column::from_slice_bool(&[true, false, true, true, false]).call()?;
+    /// # let mask = Column::from_lists(2, mask_offsets, mask_values).call()?;
     /// let filtered = list_col.view()
     ///     .list_apply_boolean_mask(&mask.view())
     ///     .call()?;
@@ -402,7 +485,7 @@ pub struct ListCountElements<'a> {
 }
 
 impl crate::stream::GpuOp for ListCountElements<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -411,7 +494,7 @@ impl crate::stream::GpuOp for ListCountElements<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_count_elements(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -426,7 +509,7 @@ pub struct ListExtractElement<'a> {
 }
 
 impl crate::stream::GpuOp for ListExtractElement<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -439,7 +522,7 @@ impl crate::stream::GpuOp for ListExtractElement<'_> {
             self.index,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -455,7 +538,7 @@ pub struct ListSort<'a> {
 }
 
 impl crate::stream::GpuOp for ListSort<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -469,7 +552,7 @@ impl crate::stream::GpuOp for ListSort<'_> {
             self.nulls_last,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -483,7 +566,7 @@ pub struct ListReverse<'a> {
 }
 
 impl crate::stream::GpuOp for ListReverse<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -492,7 +575,7 @@ impl crate::stream::GpuOp for ListReverse<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_reverse(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -506,7 +589,7 @@ pub struct ListContainsNulls<'a> {
 }
 
 impl crate::stream::GpuOp for ListContainsNulls<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -515,7 +598,7 @@ impl crate::stream::GpuOp for ListContainsNulls<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_contains_nulls(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -529,7 +612,7 @@ pub struct ListDistinct<'a> {
 }
 
 impl crate::stream::GpuOp for ListDistinct<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -538,7 +621,7 @@ impl crate::stream::GpuOp for ListDistinct<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_distinct(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -552,7 +635,7 @@ pub struct ListConcatenateElements<'a> {
 }
 
 impl crate::stream::GpuOp for ListConcatenateElements<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -562,7 +645,7 @@ impl crate::stream::GpuOp for ListConcatenateElements<'_> {
     fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::lists::ffi::lists_concatenate_elements(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -577,7 +660,7 @@ pub struct ListContainsScalar<'a> {
 }
 
 impl crate::stream::GpuOp for ListContainsScalar<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -585,10 +668,10 @@ impl crate::stream::GpuOp for ListContainsScalar<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let ffi = crate::scalar::scalar_to_ffi(self.search_key);
+        let ffi = crate::scalar::scalar_to_ffi(self.search_key)?;
         let c =
             cudf_sys::lists::ffi::lists_contains_scalar(self.view.0, &ffi, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -603,7 +686,7 @@ pub struct ListContainsColumn<'a> {
 }
 
 impl crate::stream::GpuOp for ListContainsColumn<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -616,7 +699,7 @@ impl crate::stream::GpuOp for ListContainsColumn<'_> {
             self.search_keys.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -632,7 +715,7 @@ pub struct ListIndexOfScalar<'a> {
 }
 
 impl crate::stream::GpuOp for ListIndexOfScalar<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -640,14 +723,14 @@ impl crate::stream::GpuOp for ListIndexOfScalar<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let ffi = crate::scalar::scalar_to_ffi(self.search_key);
+        let ffi = crate::scalar::scalar_to_ffi(self.search_key)?;
         let c = cudf_sys::lists::ffi::lists_index_of_scalar(
             self.view.0,
             &ffi,
             self.find_first,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -663,7 +746,7 @@ pub struct ListIndexOfColumn<'a> {
 }
 
 impl crate::stream::GpuOp for ListIndexOfColumn<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -677,7 +760,7 @@ impl crate::stream::GpuOp for ListIndexOfColumn<'_> {
             self.find_first,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -693,7 +776,7 @@ pub struct ListSegmentedGather<'a> {
 }
 
 impl crate::stream::GpuOp for ListSegmentedGather<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -707,7 +790,7 @@ impl crate::stream::GpuOp for ListSegmentedGather<'_> {
             self.nullify_oob,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -722,7 +805,7 @@ pub struct ListFormat<'a> {
 }
 
 impl crate::stream::GpuOp for ListFormat<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -735,7 +818,7 @@ impl crate::stream::GpuOp for ListFormat<'_> {
             self.na_rep,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -750,7 +833,7 @@ pub struct ListExtractElementColumn<'a> {
 }
 
 impl crate::stream::GpuOp for ListExtractElementColumn<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -763,7 +846,7 @@ impl crate::stream::GpuOp for ListExtractElementColumn<'_> {
             self.indices.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -779,7 +862,7 @@ pub struct ListStableSort<'a> {
 }
 
 impl crate::stream::GpuOp for ListStableSort<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -793,7 +876,7 @@ impl crate::stream::GpuOp for ListStableSort<'_> {
             self.nulls_last,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -808,7 +891,7 @@ pub struct ListApplyBooleanMask<'a> {
 }
 
 impl crate::stream::GpuOp for ListApplyBooleanMask<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -821,7 +904,7 @@ impl crate::stream::GpuOp for ListApplyBooleanMask<'_> {
             self.boolean_mask.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -853,12 +936,13 @@ pub struct ListSequences<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
+/// # use cudf::column::Column;
 /// use cudf::lists::list_sequences;
 /// use cudf::stream::GpuOp;
 ///
-/// let starts = Column::from_i32(&[0, 10]).call()?;
-/// let sizes = Column::from_i32(&[3, 2]).call()?;
+/// let starts = Column::from_slice_i32(&[0, 10]).call()?;
+/// let sizes = Column::from_slice_i32(&[3, 2]).call()?;
 /// let seqs = list_sequences(&starts.view(), &sizes.view()).call()?;
 /// // [[0, 1, 2], [10, 11]]
 /// # Ok::<(), cudf::error::Error>(())
@@ -875,7 +959,7 @@ pub fn list_sequences<'a>(
 }
 
 impl crate::stream::GpuOp for ListSequences<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -888,7 +972,7 @@ impl crate::stream::GpuOp for ListSequences<'_> {
             self.sizes.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -917,13 +1001,14 @@ pub struct ListSequencesWithStep<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
+/// # use cudf::column::Column;
 /// use cudf::lists::list_sequences_with_step;
 /// use cudf::stream::GpuOp;
 ///
-/// let starts = Column::from_i32(&[0, 100]).call()?;
-/// let steps = Column::from_i32(&[2, -10]).call()?;
-/// let sizes = Column::from_i32(&[3, 4]).call()?;
+/// let starts = Column::from_slice_i32(&[0, 100]).call()?;
+/// let steps = Column::from_slice_i32(&[2, -10]).call()?;
+/// let sizes = Column::from_slice_i32(&[3, 4]).call()?;
 /// let seqs = list_sequences_with_step(
 ///     &starts.view(), &steps.view(), &sizes.view(),
 /// ).call()?;
@@ -944,7 +1029,7 @@ pub fn list_sequences_with_step<'a>(
 }
 
 impl crate::stream::GpuOp for ListSequencesWithStep<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -958,7 +1043,7 @@ impl crate::stream::GpuOp for ListSequencesWithStep<'_> {
             self.sizes.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -967,7 +1052,7 @@ impl crate::stream::GpuOp for ListSequencesWithStep<'_> {
 /// Created by [`lists_concatenate_rows`]. Call `.call()` to execute, or chain
 /// `.stream(s)` to run on a specific CUDA stream.
 pub struct ListsConcatenateRows<'a> {
-    tbl: &'a crate::table::Table,
+    tbl: &'a crate::table::UnboundTable,
     stream: Stream,
 }
 
@@ -985,14 +1070,23 @@ pub struct ListsConcatenateRows<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
+/// # use cudf::column::Column;
 /// use cudf::lists::lists_concatenate_rows;
 /// use cudf::stream::GpuOp;
+/// use cudf::table::Table;
 ///
+/// # let offsets_a = Column::from_slice_i32(&[0, 2, 3]).call()?;
+/// # let values_a = Column::from_slice_i32(&[1, 2, 3]).call()?;
+/// # let lists_a = Column::from_lists(2, offsets_a, values_a).call()?;
+/// # let offsets_b = Column::from_slice_i32(&[0, 1, 3]).call()?;
+/// # let values_b = Column::from_slice_i32(&[10, 20, 30]).call()?;
+/// # let lists_b = Column::from_lists(2, offsets_b, values_b).call()?;
+/// # let tbl = Table::from_columns(vec![lists_a, lists_b])?;
 /// let combined = lists_concatenate_rows(&tbl).call()?;
 /// # Ok::<(), cudf::error::Error>(())
 /// ```
-pub fn lists_concatenate_rows(tbl: &crate::table::Table) -> ListsConcatenateRows<'_> {
+pub fn lists_concatenate_rows(tbl: &crate::table::UnboundTable) -> ListsConcatenateRows<'_> {
     ListsConcatenateRows {
         tbl,
         stream: Stream::default_stream(),
@@ -1000,7 +1094,7 @@ pub fn lists_concatenate_rows(tbl: &crate::table::Table) -> ListsConcatenateRows
 }
 
 impl crate::stream::GpuOp for ListsConcatenateRows<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -1009,7 +1103,7 @@ impl crate::stream::GpuOp for ListsConcatenateRows<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::lists::ffi::lists_concatenate_rows(&self.tbl.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -1037,10 +1131,17 @@ pub struct ListsHaveOverlap<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
+/// # use cudf::column::Column;
 /// use cudf::lists::lists_have_overlap;
 /// use cudf::stream::GpuOp;
 ///
+/// # let lhs_offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+/// # let lhs_values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+/// # let lhs = Column::from_lists(2, lhs_offsets, lhs_values).call()?;
+/// # let rhs_offsets = Column::from_slice_i32(&[0, 2, 4]).call()?;
+/// # let rhs_values = Column::from_slice_i32(&[3, 9, 4, 8]).call()?;
+/// # let rhs = Column::from_lists(2, rhs_offsets, rhs_values).call()?;
 /// let overlap = lists_have_overlap(&lhs.view(), &rhs.view()).call()?;
 /// # Ok::<(), cudf::error::Error>(())
 /// ```
@@ -1056,7 +1157,7 @@ pub fn lists_have_overlap<'a>(
 }
 
 impl crate::stream::GpuOp for ListsHaveOverlap<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -1066,7 +1167,7 @@ impl crate::stream::GpuOp for ListsHaveOverlap<'_> {
     fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::lists::ffi::lists_have_overlap(self.lhs.0, self.rhs.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -1094,10 +1195,17 @@ pub struct ListsIntersectDistinct<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
+/// # use cudf::column::Column;
 /// use cudf::lists::lists_intersect_distinct;
 /// use cudf::stream::GpuOp;
 ///
+/// # let lhs_offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+/// # let lhs_values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+/// # let lhs = Column::from_lists(2, lhs_offsets, lhs_values).call()?;
+/// # let rhs_offsets = Column::from_slice_i32(&[0, 2, 4]).call()?;
+/// # let rhs_values = Column::from_slice_i32(&[3, 9, 4, 8]).call()?;
+/// # let rhs = Column::from_lists(2, rhs_offsets, rhs_values).call()?;
 /// let common = lists_intersect_distinct(&lhs.view(), &rhs.view()).call()?;
 /// # Ok::<(), cudf::error::Error>(())
 /// ```
@@ -1113,7 +1221,7 @@ pub fn lists_intersect_distinct<'a>(
 }
 
 impl crate::stream::GpuOp for ListsIntersectDistinct<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -1126,7 +1234,7 @@ impl crate::stream::GpuOp for ListsIntersectDistinct<'_> {
             self.rhs.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -1154,10 +1262,17 @@ pub struct ListsUnionDistinct<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
+/// # use cudf::column::Column;
 /// use cudf::lists::lists_union_distinct;
 /// use cudf::stream::GpuOp;
 ///
+/// # let lhs_offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+/// # let lhs_values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+/// # let lhs = Column::from_lists(2, lhs_offsets, lhs_values).call()?;
+/// # let rhs_offsets = Column::from_slice_i32(&[0, 2, 4]).call()?;
+/// # let rhs_values = Column::from_slice_i32(&[3, 9, 4, 8]).call()?;
+/// # let rhs = Column::from_lists(2, rhs_offsets, rhs_values).call()?;
 /// let merged = lists_union_distinct(&lhs.view(), &rhs.view()).call()?;
 /// # Ok::<(), cudf::error::Error>(())
 /// ```
@@ -1173,7 +1288,7 @@ pub fn lists_union_distinct<'a>(
 }
 
 impl crate::stream::GpuOp for ListsUnionDistinct<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -1186,7 +1301,7 @@ impl crate::stream::GpuOp for ListsUnionDistinct<'_> {
             self.rhs.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -1214,10 +1329,17 @@ pub struct ListsDifferenceDistinct<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
+/// # use cudf::column::Column;
 /// use cudf::lists::lists_difference_distinct;
 /// use cudf::stream::GpuOp;
 ///
+/// # let lhs_offsets = Column::from_slice_i32(&[0, 3, 5]).call()?;
+/// # let lhs_values = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
+/// # let lhs = Column::from_lists(2, lhs_offsets, lhs_values).call()?;
+/// # let rhs_offsets = Column::from_slice_i32(&[0, 2, 4]).call()?;
+/// # let rhs_values = Column::from_slice_i32(&[3, 9, 4, 8]).call()?;
+/// # let rhs = Column::from_lists(2, rhs_offsets, rhs_values).call()?;
 /// let diff = lists_difference_distinct(&lhs.view(), &rhs.view()).call()?;
 /// # Ok::<(), cudf::error::Error>(())
 /// ```
@@ -1233,7 +1355,7 @@ pub fn lists_difference_distinct<'a>(
 }
 
 impl crate::stream::GpuOp for ListsDifferenceDistinct<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -1246,144 +1368,6 @@ impl crate::stream::GpuOp for ListsDifferenceDistinct<'_> {
             self.rhs.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
-    }
-}
-
-impl private::Sealed for ColumnView<'_> {}
-
-impl ListExt for ColumnView<'_> {
-    fn list_count_elements(&self) -> ListCountElements<'_> {
-        ListCountElements {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_extract_element(&self, index: i32) -> ListExtractElement<'_> {
-        ListExtractElement {
-            view: self,
-            index,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_sort(&self, ascending: bool, nulls_last: bool) -> ListSort<'_> {
-        ListSort {
-            view: self,
-            ascending,
-            nulls_last,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_reverse(&self) -> ListReverse<'_> {
-        ListReverse {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_contains_nulls(&self) -> ListContainsNulls<'_> {
-        ListContainsNulls {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_distinct(&self) -> ListDistinct<'_> {
-        ListDistinct {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_concatenate_elements(&self) -> ListConcatenateElements<'_> {
-        ListConcatenateElements {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_contains_scalar<'a>(&'a self, search_key: &'a Scalar) -> ListContainsScalar<'a> {
-        ListContainsScalar {
-            view: self,
-            search_key,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_contains_column<'a>(
-        &'a self,
-        search_keys: &'a ColumnView<'a>,
-    ) -> ListContainsColumn<'a> {
-        ListContainsColumn {
-            view: self,
-            search_keys,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_index_of_scalar<'a>(
-        &'a self,
-        search_key: &'a Scalar,
-        find_first: bool,
-    ) -> ListIndexOfScalar<'a> {
-        ListIndexOfScalar {
-            view: self,
-            search_key,
-            find_first,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_index_of_column<'a>(
-        &'a self,
-        search_keys: &'a ColumnView<'a>,
-        find_first: bool,
-    ) -> ListIndexOfColumn<'a> {
-        ListIndexOfColumn {
-            view: self,
-            search_keys,
-            find_first,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_segmented_gather<'a>(
-        &'a self,
-        gather_map: &'a ColumnView<'a>,
-        nullify_oob: bool,
-    ) -> ListSegmentedGather<'a> {
-        ListSegmentedGather {
-            view: self,
-            gather_map,
-            nullify_oob,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_format<'a>(&'a self, na_rep: &'a str) -> ListFormat<'a> {
-        ListFormat {
-            view: self,
-            na_rep,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_extract_element_column<'a>(
-        &'a self,
-        indices: &'a ColumnView<'a>,
-    ) -> ListExtractElementColumn<'a> {
-        ListExtractElementColumn {
-            view: self,
-            indices,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_stable_sort(&self, ascending: bool, nulls_last: bool) -> ListStableSort<'_> {
-        ListStableSort {
-            view: self,
-            ascending,
-            nulls_last,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn list_apply_boolean_mask<'a>(
-        &'a self,
-        boolean_mask: &'a ColumnView<'a>,
-    ) -> ListApplyBooleanMask<'a> {
-        ListApplyBooleanMask {
-            view: self,
-            boolean_mask,
-            stream: Stream::default_stream(),
-        }
+        Ok(crate::column::RawColumn(c))
     }
 }

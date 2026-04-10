@@ -13,14 +13,14 @@ use std::mem;
 use std::time::Duration;
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
-use cudf::column::Column;
+use cudf::column::UnboundColumn as Column;
 use cudf::data_type::TypeId;
 use cudf::groupby::AggregationKind;
 use cudf::ops::BinaryOperator;
 use cudf::scalar::Scalar;
 use cudf::sorting::{NullOrder, Order};
 use cudf::stream::GpuOp;
-use cudf::table::{Table, TableBuilder};
+use cudf::table::{TableBuilder, UnboundTable as Table};
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -3,10 +3,10 @@
 
 //! Concatenation operations for GPU columns and tables.
 
-use crate::column::{Column, ColumnView};
+use crate::column::ColumnView;
 use crate::error::Result;
 use crate::stream::Stream;
-use crate::table::Table;
+use crate::table::UnboundTable;
 
 /// Builder for [`concatenate_columns`].
 ///
@@ -39,7 +39,7 @@ pub struct ConcatenateColumns<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use cudf::concatenate::concatenate_columns;
 /// use cudf::column::Column;
 /// use cudf::scalar::Scalar;
@@ -50,6 +50,7 @@ pub struct ConcatenateColumns<'a> {
 /// let result = concatenate_columns(&[&a.view(), &b.view()]).call()?;
 /// // result contains [1, 1, 1, 2, 2]
 /// assert_eq!(result.len(), 5);
+/// # Ok::<(), cudf::error::Error>(())
 /// ```
 pub fn concatenate_columns<'a>(columns: &'a [&'a ColumnView<'a>]) -> ConcatenateColumns<'a> {
     ConcatenateColumns {
@@ -59,7 +60,7 @@ pub fn concatenate_columns<'a>(columns: &'a [&'a ColumnView<'a>]) -> Concatenate
 }
 
 impl crate::stream::GpuOp for ConcatenateColumns<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -67,6 +68,21 @@ impl crate::stream::GpuOp for ConcatenateColumns<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
+        let Some(first) = self.columns.first() else {
+            return Err(crate::error::Error::InvalidArgument(
+                "at least one column is required for concatenation".into(),
+            ));
+        };
+        if self
+            .columns
+            .iter()
+            .skip(1)
+            .any(|column| !crate::column_types_equivalent(first, column))
+        {
+            return Err(crate::error::Error::InvalidArgument(
+                "all columns must have equivalent types".into(),
+            ));
+        }
         let mut cat = cudf_sys::concatenate::ffi::new_column_concatenator();
         for col in self.columns {
             cudf_sys::concatenate::ffi::column_concatenator_add(cat.pin_mut(), col.0);
@@ -75,7 +91,7 @@ impl crate::stream::GpuOp for ConcatenateColumns<'_> {
             cat.pin_mut(),
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -84,7 +100,7 @@ impl crate::stream::GpuOp for ConcatenateColumns<'_> {
 /// Created by [`concatenate_tables()`]. Call [`.call()`](crate::stream::GpuOp::call) to
 /// execute. Use [`.stream()`](crate::stream::GpuOp::stream) to set a custom CUDA stream.
 pub struct ConcatenateTables<'a> {
-    tables: &'a [&'a Table],
+    tables: &'a [&'a UnboundTable],
     stream: Stream,
 }
 
@@ -109,7 +125,7 @@ pub struct ConcatenateTables<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use cudf::concatenate::concatenate_tables;
 /// use cudf::column::Column;
 /// use cudf::scalar::Scalar;
@@ -128,8 +144,9 @@ pub struct ConcatenateTables<'a> {
 ///
 /// let result = concatenate_tables(&[&t1, &t2]).call()?;
 /// assert_eq!(result.len(), 4);
+/// # Ok::<(), cudf::error::Error>(())
 /// ```
-pub fn concatenate_tables<'a>(tables: &'a [&'a Table]) -> ConcatenateTables<'a> {
+pub fn concatenate_tables<'a>(tables: &'a [&'a UnboundTable]) -> ConcatenateTables<'a> {
     ConcatenateTables {
         tables,
         stream: Stream::default_stream(),
@@ -137,7 +154,7 @@ pub fn concatenate_tables<'a>(tables: &'a [&'a Table]) -> ConcatenateTables<'a> 
 }
 
 impl crate::stream::GpuOp for ConcatenateTables<'_> {
-    type Output = Table;
+    type Output = crate::table::UnboundTable;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -145,6 +162,19 @@ impl crate::stream::GpuOp for ConcatenateTables<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
+        let Some(first) = self.tables.first() else {
+            return Err(crate::error::Error::InvalidArgument(
+                "at least one table is required for concatenation".into(),
+            ));
+        };
+        if self.tables.iter().skip(1).any(|table| {
+            table.columns_len() != first.columns_len()
+                || !crate::tables_have_same_types(first, table)
+        }) {
+            return Err(crate::error::Error::InvalidArgument(
+                "all tables must have matching column schemas".into(),
+            ));
+        }
         let mut cat = cudf_sys::concatenate::ffi::new_table_concatenator();
         for t in self.tables {
             cudf_sys::concatenate::ffi::table_concatenator_add(cat.pin_mut(), &t.0);
@@ -153,7 +183,7 @@ impl crate::stream::GpuOp for ConcatenateTables<'_> {
             cat.pin_mut(),
             self.stream.as_raw(),
         )?;
-        Ok(Table(t))
+        Ok(crate::table::RawTable(t))
     }
 }
 
@@ -196,11 +226,42 @@ mod tests {
     #[test]
     fn concat_empty_column() {
         let c1 = Col::from_scalar(&Scalar::from_i32(1), 3).call().unwrap();
-        let c2 = Col::empty(TypeId::INT32);
+        let c2 = Col::empty(TypeId::INT32).unwrap();
         let result = concatenate_columns(&[&c1.view(), &c2.view()])
             .call()
             .unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result.to_vec_i32().call().unwrap(), vec![1, 1, 1]);
+    }
+
+    #[test]
+    fn concat_columns_empty_errors() {
+        assert!(concatenate_columns(&[]).call().is_err());
+    }
+
+    #[test]
+    fn concat_columns_mismatched_types_error() {
+        let ints = Col::from_scalar(&Scalar::from_i32(1), 2).call().unwrap();
+        let floats = Col::from_scalar(&Scalar::from_f64(2.0), 2).call().unwrap();
+        assert!(
+            concatenate_columns(&[&ints.view(), &floats.view()])
+                .call()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn concat_tables_mismatched_schema_error() {
+        let c1 = Col::from_scalar(&Scalar::from_i32(1), 2).call().unwrap();
+        let c2 = Col::from_scalar(&Scalar::from_f64(3.0), 2).call().unwrap();
+        let mut b1 = TableBuilder::new();
+        b1.push_column(c1);
+        let t1 = b1.build().unwrap();
+
+        let mut b2 = TableBuilder::new();
+        b2.push_column(c2);
+        let t2 = b2.build().unwrap();
+
+        assert!(concatenate_tables(&[&t1, &t2]).call().is_err());
     }
 }

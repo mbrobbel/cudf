@@ -113,9 +113,35 @@ class CudaStream {
 };
 
 std::unique_ptr<CudaStream> cuda_stream_new();
+std::size_t cuda_stream_default_view();
 std::size_t cuda_stream_view(const CudaStream& stream);
 void cuda_stream_synchronize(const CudaStream& stream);
 bool cuda_stream_is_valid(const CudaStream& stream);
+
+// ---------- CudaEvent wrapper ----------
+
+/// Opaque wrapper around `cudaEvent_t`.
+class CudaEvent {
+ public:
+  CudaEvent();
+
+  CudaEvent(const CudaEvent&) = delete;
+  CudaEvent& operator=(const CudaEvent&) = delete;
+  CudaEvent(CudaEvent&&) = delete;
+  CudaEvent& operator=(CudaEvent&&) = delete;
+  ~CudaEvent();
+
+  cudaEvent_t get() const { return event_; }
+
+ private:
+  cudaEvent_t event_;
+};
+
+std::unique_ptr<CudaEvent> cuda_event_new();
+void cuda_event_record(CudaEvent& event, std::size_t stream);
+void cuda_event_synchronize(const CudaEvent& event);
+bool cuda_event_query(const CudaEvent& event);
+void cuda_stream_wait_event_raw(std::size_t stream, const CudaEvent& event);
 
 // ---------- CudaStreamPool wrapper ----------
 
@@ -161,6 +187,9 @@ class CudaMemoryResource {
   ~CudaMemoryResource() = default;
 
   rmm::mr::device_memory_resource* get() { return &mr_; }
+  rmm::mr::device_memory_resource* get() const {
+    return const_cast<rmm::mr::cuda_memory_resource*>(&mr_);
+  }
 
  private:
   rmm::mr::cuda_memory_resource mr_;
@@ -185,6 +214,9 @@ class CudaAsyncMemoryResource {
   ~CudaAsyncMemoryResource() = default;
 
   rmm::mr::device_memory_resource* get() { return &mr_; }
+  rmm::mr::device_memory_resource* get() const {
+    return const_cast<rmm::mr::cuda_async_memory_resource*>(&mr_);
+  }
 
  private:
   rmm::mr::cuda_async_memory_resource mr_;
@@ -208,6 +240,9 @@ class ManagedMemoryResource {
   ~ManagedMemoryResource() = default;
 
   rmm::mr::device_memory_resource* get() { return &mr_; }
+  rmm::mr::device_memory_resource* get() const {
+    return const_cast<rmm::mr::managed_memory_resource*>(&mr_);
+  }
 
  private:
   rmm::mr::managed_memory_resource mr_;
@@ -234,6 +269,9 @@ class PoolMemoryResource {
   ~PoolMemoryResource() = default;
 
   rmm::mr::device_memory_resource* get() { return &mr_; }
+  rmm::mr::device_memory_resource* get() const {
+    return const_cast<rmm::mr::pool_memory_resource<rmm::mr::cuda_memory_resource>*>(&mr_);
+  }
   std::size_t pool_size() const { return mr_.pool_size(); }
 
  private:
@@ -268,10 +306,13 @@ class MemoryResourceRef {
   rmm::mr::device_memory_resource* ptr_;
 };
 
-std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_cuda(CudaMemoryResource& mr);
-std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_pool(PoolMemoryResource& mr);
-std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_async(CudaAsyncMemoryResource& mr);
-std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_managed(ManagedMemoryResource& mr);
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_cuda(const CudaMemoryResource& mr);
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_pool(const PoolMemoryResource& mr);
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_async(
+    const CudaAsyncMemoryResource& mr);
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_from_managed(
+    const ManagedMemoryResource& mr);
+std::unique_ptr<MemoryResourceRef> memory_resource_ref_clone(const MemoryResourceRef& mr);
 
 // ---------- Per-device resource management ----------
 
@@ -326,11 +367,23 @@ class PinnedHostMemoryResource {
 std::unique_ptr<PinnedHostMemoryResource> pinned_host_memory_resource_new();
 std::size_t pinned_host_allocate(PinnedHostMemoryResource& mr, std::size_t size);
 void pinned_host_deallocate(PinnedHostMemoryResource& mr, std::size_t ptr, std::size_t size);
+void pinned_host_copy_to_slice(std::size_t ptr, rust::Slice<uint8_t> dst);
+void pinned_host_copy_from_slice(std::size_t ptr, rust::Slice<const uint8_t> src);
 
 // ---------- Async memcpy ----------
 
 void cuda_memcpy_d2h(rust::Slice<uint8_t> dst, std::size_t src_ptr, std::size_t stream);
 void cuda_memcpy_h2d(std::size_t dst_ptr, rust::Slice<const uint8_t> src, std::size_t stream);
+void cuda_memcpy_d2h_raw(
+    std::size_t dst_ptr,
+    std::size_t src_ptr,
+    std::size_t size,
+    std::size_t stream);
+void cuda_memcpy_h2d_raw(
+    std::size_t dst_ptr,
+    std::size_t src_ptr,
+    std::size_t size,
+    std::size_t stream);
 void cuda_stream_synchronize_raw(std::size_t stream);
 
 /// Batched D2H: copies multiple (dst_ptr, src_device_ptr, size) tuples in one driver call.

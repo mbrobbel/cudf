@@ -30,7 +30,7 @@
 //!   [`ceil`](crate::column::ColumnView::ceil),
 //!   [`floor`](crate::column::ColumnView::floor)
 
-use crate::column::{Column, ColumnView};
+use crate::column::ColumnView;
 use crate::data_type::TypeId;
 use crate::error::Result;
 use crate::scalar::Scalar;
@@ -96,7 +96,7 @@ pub struct BinaryOpColumns<'a> {
 }
 
 impl crate::stream::GpuOp for BinaryOpColumns<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -111,7 +111,7 @@ impl crate::stream::GpuOp for BinaryOpColumns<'_> {
             self.output_type.repr,
             self.stream.as_raw(),
         )?;
-        Ok(Column(col))
+        Ok(crate::column::RawColumn(col))
     }
 }
 
@@ -129,7 +129,7 @@ pub struct BinaryOpColumnScalar<'a> {
 }
 
 impl crate::stream::GpuOp for BinaryOpColumnScalar<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -137,7 +137,7 @@ impl crate::stream::GpuOp for BinaryOpColumnScalar<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let rhs_ffi = crate::scalar::scalar_to_ffi(self.rhs);
+        let rhs_ffi = crate::scalar::scalar_to_ffi(self.rhs)?;
         let col = cudf_sys::binaryop::ffi::binary_operation_column_scalar(
             self.lhs.0,
             &rhs_ffi,
@@ -145,7 +145,7 @@ impl crate::stream::GpuOp for BinaryOpColumnScalar<'_> {
             self.output_type.repr,
             self.stream.as_raw(),
         )?;
-        Ok(Column(col))
+        Ok(crate::column::RawColumn(col))
     }
 }
 
@@ -162,7 +162,7 @@ pub struct ScalarBinaryOp<'a> {
 }
 
 impl crate::stream::GpuOp for ScalarBinaryOp<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -170,7 +170,7 @@ impl crate::stream::GpuOp for ScalarBinaryOp<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let lhs_ffi = crate::scalar::scalar_to_ffi(self.lhs);
+        let lhs_ffi = crate::scalar::scalar_to_ffi(self.lhs)?;
         let col = cudf_sys::binaryop::ffi::binary_operation_scalar_column(
             &lhs_ffi,
             self.rhs.0,
@@ -178,7 +178,7 @@ impl crate::stream::GpuOp for ScalarBinaryOp<'_> {
             self.output_type.repr,
             self.stream.as_raw(),
         )?;
-        Ok(Column(col))
+        Ok(crate::column::RawColumn(col))
     }
 }
 
@@ -199,7 +199,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::data_type::TypeId;
     /// use cudf::ops::BinaryOperator;
@@ -245,7 +245,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::data_type::TypeId;
     /// use cudf::ops::BinaryOperator;
@@ -296,7 +296,7 @@ impl<'a> ColumnView<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use cudf::column::Column;
 /// use cudf::data_type::TypeId;
 /// use cudf::ops::{scalar_binary_op, BinaryOperator};
@@ -372,6 +372,7 @@ pub fn is_supported_binaryop(out: TypeId, lhs: TypeId, rhs: TypeId, op: BinaryOp
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::column::Column;
     use crate::stream::GpuOp;
 
     // -- Binary operation tests --

@@ -26,6 +26,12 @@ pub mod ffi {
         /// Unpacks packed columns into an owned table.
         fn unpack_packed(packed: &PackedColumns) -> Result<UniquePtr<Table>>;
 
+        /// Unpacks packed columns into an owned table using an explicit stream.
+        fn unpack_packed_on_stream(
+            packed: &PackedColumns,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
+
         /// Returns the host metadata as bytes.
         fn metadata_to_host(self: &PackedColumns) -> Vec<u8>;
 
@@ -52,6 +58,13 @@ pub mod ffi {
 
         /// Unpacks partition at `index` into an owned table.
         fn unpack_at(self: &PackedTableVec, index: usize) -> Result<UniquePtr<Table>>;
+
+        /// Unpacks partition at `index` into an owned table using an explicit stream.
+        fn unpack_at_on_stream(
+            self: &PackedTableVec,
+            index: usize,
+            stream: usize,
+        ) -> Result<UniquePtr<Table>>;
 
         /// Reconstructs packed columns from host metadata and data bytes (H2D).
         fn make_packed_from_host_parts(

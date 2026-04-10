@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "cudf-datafusion"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+cudf = { path = "../cudf", features = ["arrow"] }
+datafusion = "46"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

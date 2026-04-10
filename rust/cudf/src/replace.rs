@@ -19,7 +19,7 @@
 //! - [`ColumnView::find_and_replace_all`](crate::column::ColumnView) -- find
 //!   matching values and replace them.
 
-use crate::column::{Column, ColumnView};
+use crate::column::ColumnView;
 use crate::error::Result;
 use crate::scalar::Scalar;
 use crate::stream::Stream;
@@ -36,7 +36,7 @@ pub struct ReplaceNullsColumn<'a> {
 }
 
 impl crate::stream::GpuOp for ReplaceNullsColumn<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -49,7 +49,7 @@ impl crate::stream::GpuOp for ReplaceNullsColumn<'_> {
             self.replacement.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -65,7 +65,7 @@ pub struct ReplaceNullsScalar<'a> {
 }
 
 impl crate::stream::GpuOp for ReplaceNullsScalar<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -73,10 +73,10 @@ impl crate::stream::GpuOp for ReplaceNullsScalar<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let ffi = crate::scalar::scalar_to_ffi(self.replacement);
+        let ffi = crate::scalar::scalar_to_ffi(self.replacement)?;
         let c =
             cudf_sys::replace::ffi::replace_nulls_scalar(self.view.0, &ffi, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -92,7 +92,7 @@ pub struct ReplaceNansColumn<'a> {
 }
 
 impl crate::stream::GpuOp for ReplaceNansColumn<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -105,7 +105,7 @@ impl crate::stream::GpuOp for ReplaceNansColumn<'_> {
             self.replacement.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -121,7 +121,7 @@ pub struct ReplaceNansScalar<'a> {
 }
 
 impl crate::stream::GpuOp for ReplaceNansScalar<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -129,10 +129,10 @@ impl crate::stream::GpuOp for ReplaceNansScalar<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let ffi = crate::scalar::scalar_to_ffi(self.replacement);
+        let ffi = crate::scalar::scalar_to_ffi(self.replacement)?;
         let c =
             cudf_sys::replace::ffi::replace_nans_scalar(self.view.0, &ffi, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -149,7 +149,7 @@ pub struct Clamp<'a> {
 }
 
 impl crate::stream::GpuOp for Clamp<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -157,15 +157,15 @@ impl crate::stream::GpuOp for Clamp<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let lo_ffi = crate::scalar::scalar_to_ffi(self.lo);
-        let hi_ffi = crate::scalar::scalar_to_ffi(self.hi);
+        let lo_ffi = crate::scalar::scalar_to_ffi(self.lo)?;
+        let hi_ffi = crate::scalar::scalar_to_ffi(self.hi)?;
         let c = cudf_sys::replace::ffi::clamp_column(
             self.view.0,
             &lo_ffi,
             &hi_ffi,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -182,7 +182,7 @@ pub struct FindAndReplaceAll<'a> {
 }
 
 impl crate::stream::GpuOp for FindAndReplaceAll<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -196,7 +196,7 @@ impl crate::stream::GpuOp for FindAndReplaceAll<'_> {
             self.new.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -217,7 +217,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
@@ -256,7 +256,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
@@ -292,7 +292,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::stream::GpuOp;
     ///
@@ -324,7 +324,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
@@ -362,7 +362,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
@@ -401,7 +401,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::stream::GpuOp;
     ///

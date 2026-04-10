@@ -17,7 +17,7 @@ use std::fmt;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use rmm::device;
 ///
 /// let dev = device::current_device();
@@ -56,7 +56,7 @@ impl From<rmm_sys::ffi::DeviceId> for DeviceId {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use rmm::device;
 ///
 /// let n = device::num_devices();
@@ -72,7 +72,7 @@ pub fn num_devices() -> i32 {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use rmm::device;
 ///
 /// let dev = device::current_device();
@@ -105,7 +105,7 @@ pub fn total_memory() -> usize {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use rmm::device;
 ///
 /// let half = device::percent_of_free_memory(50);
@@ -124,15 +124,17 @@ pub fn percent_of_free_memory(percent: i32) -> usize {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use rmm::device::ScopedDevice;
+/// use rmm::device::DeviceId;
 ///
 /// {
-///     let _guard = ScopedDevice::new(DeviceId::new(1));
+///     let _guard = ScopedDevice::new(DeviceId::new(1))?;
 ///     // Current device is now 1.
 ///     // ... do work on device 1 ...
 /// }
 /// // Previous device is restored here.
+/// # Ok::<(), rmm::error::Error>(())
 /// ```
 #[doc(alias = "rmm::cuda_set_device_raii")]
 pub struct ScopedDevice(
@@ -145,8 +147,16 @@ impl ScopedDevice {
     /// Sets the current CUDA device to `device` and returns a guard.
     ///
     /// When the guard is dropped, the previous device is restored.
-    pub fn new(device: DeviceId) -> Self {
-        Self(rmm_sys::ffi::scoped_device_new(device.value()))
+    pub fn new(device: DeviceId) -> crate::error::Result<Self> {
+        let value = device.value();
+        let device_count = num_devices();
+        if value < 0 || value >= device_count {
+            return Err(crate::error::Error::InvalidArgument(format!(
+                "device id {value} is out of range 0..{}",
+                device_count.saturating_sub(1)
+            )));
+        }
+        Ok(Self(rmm_sys::ffi::scoped_device_new(device.value())?))
     }
 }
 
@@ -162,11 +172,13 @@ mod tests {
 
     #[test]
     fn has_at_least_one_device() {
+        let _test_lock = crate::test_lock();
         assert!(num_devices() > 0);
     }
 
     #[test]
     fn current_device_is_valid() {
+        let _test_lock = crate::test_lock();
         let dev = current_device();
         assert!(dev.value() >= 0);
         assert!(dev.value() < num_devices());
@@ -174,6 +186,7 @@ mod tests {
 
     #[test]
     fn device_memory_is_nonzero() {
+        let _test_lock = crate::test_lock();
         assert!(total_memory() > 0);
         assert!(available_memory() > 0);
         assert!(available_memory() <= total_memory());
@@ -181,6 +194,7 @@ mod tests {
 
     #[test]
     fn percent_of_free() {
+        let _test_lock = crate::test_lock();
         let half = percent_of_free_memory(50);
         let full = available_memory();
         assert!(half > 0);
@@ -189,13 +203,71 @@ mod tests {
 
     #[test]
     fn device_id_display() {
+        let _test_lock = crate::test_lock();
         let dev = DeviceId::new(0);
         assert_eq!(dev.to_string(), "cuda:0");
     }
 
     #[test]
     fn device_id_roundtrip() {
+        let _test_lock = crate::test_lock();
         let dev = DeviceId::new(42);
         assert_eq!(dev.value(), 42);
+    }
+
+    #[test]
+    fn scoped_device_invalid_id_errors() {
+        let _test_lock = crate::test_lock();
+        let invalid = DeviceId::new(num_devices());
+        assert!(ScopedDevice::new(invalid).is_err());
+    }
+
+    #[test]
+    fn scoped_device_negative_id_errors() {
+        let _test_lock = crate::test_lock();
+        assert!(ScopedDevice::new(DeviceId::new(-1)).is_err());
+    }
+
+    #[test]
+    fn scoped_device_restores_previous_device() {
+        let _test_lock = crate::test_lock();
+        let original = current_device();
+        let target = if num_devices() > 1 {
+            DeviceId::new((original.value() + 1) % num_devices())
+        } else {
+            original
+        };
+
+        {
+            let _guard = ScopedDevice::new(target).unwrap();
+            assert_eq!(current_device(), target);
+        }
+
+        assert_eq!(current_device(), original);
+    }
+
+    #[test]
+    fn scoped_device_nested_guards_restore_lifo() {
+        let _test_lock = crate::test_lock();
+        let original = current_device();
+        let first = if num_devices() > 1 {
+            DeviceId::new((original.value() + 1) % num_devices())
+        } else {
+            original
+        };
+
+        {
+            let _outer = ScopedDevice::new(first).unwrap();
+            assert_eq!(current_device(), first);
+
+            {
+                let _inner = ScopedDevice::new(original).unwrap();
+                assert_eq!(current_device(), original);
+            }
+
+            assert_eq!(current_device(), first);
+        }
+
+        assert_eq!(current_device(), original);
     }
 }

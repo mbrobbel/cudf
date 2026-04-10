@@ -84,6 +84,12 @@ impl From<cxx::Exception> for Error {
     }
 }
 
+impl From<rmm::error::Error> for Error {
+    fn from(e: rmm::error::Error) -> Self {
+        Error::InvalidArgument(format!("rmm error: {e}"))
+    }
+}
+
 /// Result type alias for cudf operations.
 ///
 /// Equivalent to `std::result::Result<T, cudf::error::Error>`.

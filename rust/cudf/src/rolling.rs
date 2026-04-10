@@ -20,13 +20,13 @@
 
 use cxx::UniquePtr;
 
-use crate::column::{Column, ColumnView};
+use crate::column::ColumnView;
 use crate::data_type::TypeId;
 use crate::error::Result;
 use crate::scalar::Scalar;
 use crate::sorting::Order;
 use crate::stream::Stream;
-use crate::table::Table;
+use crate::table::UnboundTable;
 use cudf_sys::ffi::AggregationKind;
 
 /// Builder for a fixed-size rolling window aggregation.
@@ -48,7 +48,7 @@ pub struct RollingWindow<'a> {
 }
 
 impl crate::stream::GpuOp for RollingWindow<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -64,7 +64,7 @@ impl crate::stream::GpuOp for RollingWindow<'_> {
             self.agg_kind.repr,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -78,7 +78,7 @@ impl crate::stream::GpuOp for RollingWindow<'_> {
 /// The input data must be pre-sorted by the group key columns.
 pub struct GroupedRollingWindow<'a> {
     view: &'a ColumnView<'a>,
-    group_keys: &'a Table,
+    group_keys: &'a UnboundTable,
     preceding: i32,
     following: i32,
     min_periods: i32,
@@ -87,7 +87,7 @@ pub struct GroupedRollingWindow<'a> {
 }
 
 impl crate::stream::GpuOp for GroupedRollingWindow<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -104,7 +104,7 @@ impl crate::stream::GpuOp for GroupedRollingWindow<'_> {
             self.agg_kind.repr,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -128,7 +128,7 @@ pub struct RollingWindowWithDefaults<'a> {
 }
 
 impl crate::stream::GpuOp for RollingWindowWithDefaults<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -145,7 +145,7 @@ impl crate::stream::GpuOp for RollingWindowWithDefaults<'_> {
             self.agg_kind.repr,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -159,7 +159,7 @@ impl crate::stream::GpuOp for RollingWindowWithDefaults<'_> {
 /// output values for out-of-bounds positions.
 pub struct GroupedRollingWindowWithDefaults<'a> {
     view: &'a ColumnView<'a>,
-    group_keys: &'a Table,
+    group_keys: &'a UnboundTable,
     default_outputs: &'a ColumnView<'a>,
     preceding: i32,
     following: i32,
@@ -169,7 +169,7 @@ pub struct GroupedRollingWindowWithDefaults<'a> {
 }
 
 impl crate::stream::GpuOp for GroupedRollingWindowWithDefaults<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -187,7 +187,7 @@ impl crate::stream::GpuOp for GroupedRollingWindowWithDefaults<'_> {
             self.agg_kind.repr,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -223,7 +223,7 @@ impl<'a> ColumnView<'a> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
@@ -232,6 +232,8 @@ impl<'a> ColumnView<'a> {
     /// let col = Column::from_slice_i32(&[1, 2, 3, 4, 5]).call()?;
     /// // 3-element trailing window sum
     /// let result = col.view().rolling_window(3, 0, 1, AggregationKind::SUM).call()?;
+    /// assert_eq!(result.len(), 5);
+    /// # Ok::<(), cudf::error::Error>(())
     /// ```
     ///
     /// Returns a [`RollingWindow`] builder. Use `.stream()` to set a custom
@@ -284,7 +286,7 @@ impl<'a> ColumnView<'a> {
     /// custom CUDA stream, then `.call()` to execute.
     pub fn grouped_rolling_window(
         &'a self,
-        group_keys: &'a Table,
+        group_keys: &'a UnboundTable,
         preceding: i32,
         following: i32,
         min_periods: i32,
@@ -373,7 +375,7 @@ impl<'a> ColumnView<'a> {
     /// to set a custom CUDA stream, then `.call()` to execute.
     pub fn grouped_rolling_window_with_defaults(
         &'a self,
-        group_keys: &'a Table,
+        group_keys: &'a UnboundTable,
         default_outputs: &'a ColumnView<'a>,
         preceding: i32,
         following: i32,
@@ -425,7 +427,7 @@ impl<'a> ColumnView<'a> {
     #[allow(clippy::too_many_arguments)]
     pub fn grouped_range_rolling_window(
         &'a self,
-        group_keys: &'a Table,
+        group_keys: &'a UnboundTable,
         orderby: &'a ColumnView<'a>,
         order: Order,
         preceding: &'a RangeWindowBounds,
@@ -462,7 +464,7 @@ impl<'a> ColumnView<'a> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use cudf::rolling::RangeWindowBounds;
 /// use cudf::scalar::Scalar;
 /// use cudf::data_type::TypeId;
@@ -473,6 +475,8 @@ impl<'a> ColumnView<'a> {
 ///
 /// // Window extends to the beginning/end of the group
 /// let unbounded = RangeWindowBounds::unbounded(TypeId::INT32)?;
+/// # let _ = (preceding, following, unbounded);
+/// # Ok::<(), cudf::error::Error>(())
 /// ```
 #[doc(alias = "range_window_bounds")]
 pub struct RangeWindowBounds(UniquePtr<cudf_sys::rolling::ffi::RangeWindowBounds>);
@@ -488,7 +492,7 @@ impl RangeWindowBounds {
     ///
     /// Returns an error if the libcudf call fails.
     pub fn bounded(boundary: &Scalar) -> Result<Self> {
-        let ffi = crate::scalar::scalar_to_ffi(boundary);
+        let ffi = crate::scalar::scalar_to_ffi(boundary)?;
         let b = cudf_sys::rolling::ffi::range_window_bounds_get(
             &ffi,
             Stream::default_stream().as_raw(),
@@ -539,7 +543,7 @@ impl RangeWindowBounds {
 /// boundaries.
 pub struct GroupedRangeRollingWindow<'a> {
     view: &'a ColumnView<'a>,
-    group_keys: &'a Table,
+    group_keys: &'a UnboundTable,
     orderby: &'a ColumnView<'a>,
     order: Order,
     preceding: &'a RangeWindowBounds,
@@ -550,7 +554,7 @@ pub struct GroupedRangeRollingWindow<'a> {
 }
 
 impl crate::stream::GpuOp for GroupedRangeRollingWindow<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -569,6 +573,6 @@ impl crate::stream::GpuOp for GroupedRangeRollingWindow<'_> {
             self.agg_kind.repr,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }

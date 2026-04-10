@@ -14,7 +14,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```no_run
 //! use cudf::column::Column;
 //! use cudf::datetime::DatetimeExt;
 //! use cudf::stream::GpuOp;
@@ -25,13 +25,16 @@
 //! # Ok::<(), cudf::error::Error>(())
 //! ```
 
-use crate::column::{Column, ColumnView};
+use crate::column::ColumnView;
 use crate::error::Result;
 use crate::stream::Stream;
 
 mod private {
     pub trait Sealed {}
 }
+
+#[path = "datetime/ext_impl.rs"]
+mod ext_impl;
 
 /// Extension trait for datetime operations on timestamp columns.
 ///
@@ -54,7 +57,7 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
@@ -72,10 +75,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let months = ts.view().extract_month().call()?;
     /// // months contains values 1-12
     /// # Ok::<(), cudf::error::Error>(())
@@ -88,10 +93,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let days = ts.view().extract_day().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -103,10 +110,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let weekdays = ts.view().extract_weekday().call()?;
     /// // 0=Monday, 1=Tuesday, ..., 6=Sunday
     /// # Ok::<(), cudf::error::Error>(())
@@ -120,10 +129,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let hours = ts.view().extract_hour().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -135,10 +146,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let minutes = ts.view().extract_minute().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -150,10 +163,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let seconds = ts.view().extract_second().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -166,10 +181,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let doy = ts.view().day_of_year().call()?;
     /// // Jan 1 => 1, Feb 1 => 32, etc.
     /// # Ok::<(), cudf::error::Error>(())
@@ -183,10 +200,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let leap = ts.view().is_leap_year().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -198,10 +217,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let dim = ts.view().days_in_month().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -215,10 +236,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let last = ts.view().last_day_of_month().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -231,10 +254,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let quarters = ts.view().extract_quarter().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -248,10 +273,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::{DatetimeExt, RoundingFrequency};
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let ceiled = ts.view().dt_ceil(RoundingFrequency::Hour).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -265,10 +292,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::{DatetimeExt, RoundingFrequency};
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let floored = ts.view().dt_floor(RoundingFrequency::Minute).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -282,10 +311,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::{DatetimeExt, RoundingFrequency};
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let rounded = ts.view().dt_round(RoundingFrequency::Second).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -302,11 +333,13 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
-    /// let months = Column::from_i32(&[1, -2, 3]).call()?;
+    /// # let ts = Column::from_timestamps_s(&[1718443845, 1718443845, 1718443845]).call()?;
+    /// let months = Column::from_slice_i32(&[1, -2, 3]).call()?;
     /// let shifted = ts.view().dt_add_months(&months.view()).call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -321,11 +354,13 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::scalar::Scalar;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_s(&[1718443845]).call()?;
     /// let months = Scalar::from_i32(6);
     /// let shifted = ts.view().dt_add_months_scalar(&months).call()?;
     /// # Ok::<(), cudf::error::Error>(())
@@ -343,10 +378,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_ms(&[1718443845123]).call()?;
     /// let ms = ts.view().extract_millisecond().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -359,10 +396,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_us(&[1718443845123456]).call()?;
     /// let us = ts.view().extract_microsecond().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -375,10 +414,12 @@ pub trait DatetimeExt: private::Sealed {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use cudf::column::Column;
     /// use cudf::datetime::DatetimeExt;
     /// use cudf::stream::GpuOp;
     ///
+    /// # let ts = Column::from_timestamps_ns(&[1718443845123456789]).call()?;
     /// let ns = ts.view().extract_nanosecond().call()?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
@@ -430,7 +471,7 @@ pub struct ExtractYear<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractYear<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -439,7 +480,7 @@ impl crate::stream::GpuOp for ExtractYear<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_year(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -453,7 +494,7 @@ pub struct ExtractMonth<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractMonth<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -462,7 +503,7 @@ impl crate::stream::GpuOp for ExtractMonth<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_month(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -476,7 +517,7 @@ pub struct ExtractDay<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractDay<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -485,7 +526,7 @@ impl crate::stream::GpuOp for ExtractDay<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_day(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -499,7 +540,7 @@ pub struct ExtractWeekday<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractWeekday<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -509,7 +550,7 @@ impl crate::stream::GpuOp for ExtractWeekday<'_> {
     fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_extract_weekday(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -523,7 +564,7 @@ pub struct ExtractHour<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractHour<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -532,7 +573,7 @@ impl crate::stream::GpuOp for ExtractHour<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_extract_hour(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -546,7 +587,7 @@ pub struct ExtractMinute<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractMinute<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -556,7 +597,7 @@ impl crate::stream::GpuOp for ExtractMinute<'_> {
     fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_extract_minute(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -570,7 +611,7 @@ pub struct ExtractSecond<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractSecond<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -580,7 +621,7 @@ impl crate::stream::GpuOp for ExtractSecond<'_> {
     fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_extract_second(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -594,7 +635,7 @@ pub struct DayOfYear<'a> {
 }
 
 impl crate::stream::GpuOp for DayOfYear<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -603,7 +644,7 @@ impl crate::stream::GpuOp for DayOfYear<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_day_of_year(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -617,7 +658,7 @@ pub struct IsLeapYear<'a> {
 }
 
 impl crate::stream::GpuOp for IsLeapYear<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -626,7 +667,7 @@ impl crate::stream::GpuOp for IsLeapYear<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_is_leap_year(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -640,7 +681,7 @@ pub struct DaysInMonth<'a> {
 }
 
 impl crate::stream::GpuOp for DaysInMonth<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -649,7 +690,7 @@ impl crate::stream::GpuOp for DaysInMonth<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::datetime::ffi::datetime_days_in_month(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -663,7 +704,7 @@ pub struct LastDayOfMonth<'a> {
 }
 
 impl crate::stream::GpuOp for LastDayOfMonth<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -673,7 +714,7 @@ impl crate::stream::GpuOp for LastDayOfMonth<'_> {
     fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_last_day_of_month(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -687,7 +728,7 @@ pub struct ExtractQuarter<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractQuarter<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -697,7 +738,7 @@ impl crate::stream::GpuOp for ExtractQuarter<'_> {
     fn call(self) -> Result<Self::Output> {
         let c =
             cudf_sys::datetime::ffi::datetime_extract_quarter(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -712,7 +753,7 @@ pub struct DtCeil<'a> {
 }
 
 impl crate::stream::GpuOp for DtCeil<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -725,7 +766,7 @@ impl crate::stream::GpuOp for DtCeil<'_> {
             i32::from(self.freq),
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -740,7 +781,7 @@ pub struct DtFloor<'a> {
 }
 
 impl crate::stream::GpuOp for DtFloor<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -753,7 +794,7 @@ impl crate::stream::GpuOp for DtFloor<'_> {
             i32::from(self.freq),
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -768,7 +809,7 @@ pub struct DtRound<'a> {
 }
 
 impl crate::stream::GpuOp for DtRound<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -781,7 +822,7 @@ impl crate::stream::GpuOp for DtRound<'_> {
             i32::from(self.freq),
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -796,7 +837,7 @@ pub struct DtAddMonths<'a> {
 }
 
 impl crate::stream::GpuOp for DtAddMonths<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -809,7 +850,7 @@ impl crate::stream::GpuOp for DtAddMonths<'_> {
             self.months.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -824,7 +865,7 @@ pub struct DtAddMonthsScalar<'a> {
 }
 
 impl crate::stream::GpuOp for DtAddMonthsScalar<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -832,13 +873,13 @@ impl crate::stream::GpuOp for DtAddMonthsScalar<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let ffi_scalar = crate::scalar::scalar_to_ffi(self.months);
+        let ffi_scalar = crate::scalar::scalar_to_ffi(self.months)?;
         let c = cudf_sys::datetime::ffi::datetime_add_months_scalar(
             self.view.0,
             &ffi_scalar,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -852,7 +893,7 @@ pub struct ExtractMillisecond<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractMillisecond<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -864,7 +905,7 @@ impl crate::stream::GpuOp for ExtractMillisecond<'_> {
             self.view.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -878,7 +919,7 @@ pub struct ExtractMicrosecond<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractMicrosecond<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -890,7 +931,7 @@ impl crate::stream::GpuOp for ExtractMicrosecond<'_> {
             self.view.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -904,7 +945,7 @@ pub struct ExtractNanosecond<'a> {
 }
 
 impl crate::stream::GpuOp for ExtractNanosecond<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -916,144 +957,7 @@ impl crate::stream::GpuOp for ExtractNanosecond<'_> {
             self.view.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Sealed impl + trait impl
-// ---------------------------------------------------------------------------
-
-impl private::Sealed for ColumnView<'_> {}
-
-impl DatetimeExt for ColumnView<'_> {
-    fn extract_year(&self) -> ExtractYear<'_> {
-        ExtractYear {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_month(&self) -> ExtractMonth<'_> {
-        ExtractMonth {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_day(&self) -> ExtractDay<'_> {
-        ExtractDay {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_weekday(&self) -> ExtractWeekday<'_> {
-        ExtractWeekday {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_hour(&self) -> ExtractHour<'_> {
-        ExtractHour {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_minute(&self) -> ExtractMinute<'_> {
-        ExtractMinute {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_second(&self) -> ExtractSecond<'_> {
-        ExtractSecond {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn day_of_year(&self) -> DayOfYear<'_> {
-        DayOfYear {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn is_leap_year(&self) -> IsLeapYear<'_> {
-        IsLeapYear {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn days_in_month(&self) -> DaysInMonth<'_> {
-        DaysInMonth {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn last_day_of_month(&self) -> LastDayOfMonth<'_> {
-        LastDayOfMonth {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_quarter(&self) -> ExtractQuarter<'_> {
-        ExtractQuarter {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn dt_ceil(&self, freq: RoundingFrequency) -> DtCeil<'_> {
-        DtCeil {
-            view: self,
-            freq,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn dt_floor(&self, freq: RoundingFrequency) -> DtFloor<'_> {
-        DtFloor {
-            view: self,
-            freq,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn dt_round(&self, freq: RoundingFrequency) -> DtRound<'_> {
-        DtRound {
-            view: self,
-            freq,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn dt_add_months<'a>(&'a self, months: &'a ColumnView<'a>) -> DtAddMonths<'a> {
-        DtAddMonths {
-            view: self,
-            months,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn dt_add_months_scalar<'a>(
-        &'a self,
-        months: &'a crate::scalar::Scalar,
-    ) -> DtAddMonthsScalar<'a> {
-        DtAddMonthsScalar {
-            view: self,
-            months,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_millisecond(&self) -> ExtractMillisecond<'_> {
-        ExtractMillisecond {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_microsecond(&self) -> ExtractMicrosecond<'_> {
-        ExtractMicrosecond {
-            view: self,
-            stream: Stream::default_stream(),
-        }
-    }
-    fn extract_nanosecond(&self) -> ExtractNanosecond<'_> {
-        ExtractNanosecond {
-            view: self,
-            stream: Stream::default_stream(),
-        }
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -1065,7 +969,7 @@ mod tests {
     use crate::stream::GpuOp;
 
     /// Helper: create a timestamp column from epoch seconds.
-    fn make_timestamp_seconds(epochs: &[i64]) -> Column {
+    fn make_timestamp_seconds(epochs: &[i64]) -> crate::column::UnboundColumn {
         Column::from_timestamps_s(epochs).call().unwrap()
     }
 

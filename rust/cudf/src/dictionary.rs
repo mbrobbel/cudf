@@ -29,7 +29,7 @@
 //! # Ok::<(), cudf::error::Error>(())
 //! ```
 
-use crate::column::{Column, ColumnView};
+use crate::column::ColumnView;
 use crate::data_type::TypeId;
 use crate::error::Result;
 use crate::scalar::Scalar;
@@ -210,7 +210,7 @@ pub struct DictDecode<'a> {
 }
 
 impl crate::stream::GpuOp for DictDecode<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -219,7 +219,7 @@ impl crate::stream::GpuOp for DictDecode<'_> {
 
     fn call(self) -> Result<Self::Output> {
         let c = cudf_sys::dictionary::ffi::dictionary_decode(self.view.0, self.stream.as_raw())?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -234,7 +234,7 @@ pub struct DictAddKeys<'a> {
 }
 
 impl crate::stream::GpuOp for DictAddKeys<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -247,7 +247,7 @@ impl crate::stream::GpuOp for DictAddKeys<'_> {
             self.new_keys.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -262,7 +262,7 @@ pub struct DictRemoveKeys<'a> {
 }
 
 impl crate::stream::GpuOp for DictRemoveKeys<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -275,7 +275,7 @@ impl crate::stream::GpuOp for DictRemoveKeys<'_> {
             self.keys_to_remove.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -290,7 +290,7 @@ pub struct DictSetKeys<'a> {
 }
 
 impl crate::stream::GpuOp for DictSetKeys<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -303,7 +303,7 @@ impl crate::stream::GpuOp for DictSetKeys<'_> {
             self.keys.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -317,7 +317,7 @@ pub struct DictRemoveUnusedKeys<'a> {
 }
 
 impl crate::stream::GpuOp for DictRemoveUnusedKeys<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -329,7 +329,7 @@ impl crate::stream::GpuOp for DictRemoveUnusedKeys<'_> {
             self.view.0,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 
@@ -352,7 +352,7 @@ impl crate::stream::GpuOp for DictGetIndex<'_> {
     }
 
     fn call(self) -> Result<Self::Output> {
-        let ffi = crate::scalar::scalar_to_ffi(self.key);
+        let ffi = crate::scalar::scalar_to_ffi(self.key)?;
         let s = cudf_sys::dictionary::ffi::dictionary_get_index(
             self.view.0,
             &ffi,
@@ -411,7 +411,7 @@ pub fn dictionary_encode<'a>(
 }
 
 impl crate::stream::GpuOp for DictionaryEncode<'_> {
-    type Output = Column;
+    type Output = crate::column::UnboundColumn;
 
     fn stream(mut self, stream: Stream) -> Self {
         self.stream = stream;
@@ -424,7 +424,7 @@ impl crate::stream::GpuOp for DictionaryEncode<'_> {
             self.indices_type.repr,
             self.stream.as_raw(),
         )?;
-        Ok(Column(c))
+        Ok(crate::column::RawColumn(c))
     }
 }
 

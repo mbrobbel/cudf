@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use crate::table::Table;
+use crate::table::UnboundTable;
 
 /// Column name metadata returned alongside a table from `read_with_metadata`.
 #[derive(Debug, Clone)]
@@ -17,7 +17,7 @@ pub struct TableMetadata {
 /// A table together with column name metadata.
 pub struct TableWithMetadata {
     /// The table data.
-    pub table: Table,
+    pub table: UnboundTable,
     /// Column name metadata.
     pub metadata: TableMetadata,
 }
@@ -28,13 +28,13 @@ fn path_str(path: &Path) -> crate::Result<&str> {
 
 /// CSV read and write operations.
 pub mod csv {
-    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
+    use super::{Path, TableMetadata, TableWithMetadata, UnboundTable, path_str};
 
     /// Reads a CSV file into a [`Table`].
-    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
+    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<UnboundTable> {
         let s = path_str(path.as_ref())?;
         let tbl = cudf_sys::io::ffi::read_csv(s)?;
-        Ok(Table(tbl))
+        Ok(crate::table::RawTable(tbl))
     }
 
     /// Reads a CSV file into a [`TableWithMetadata`] (table + column names).
@@ -44,7 +44,7 @@ pub mod csv {
         let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
         let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
         Ok(TableWithMetadata {
-            table: Table(tbl),
+            table: crate::table::RawTable(tbl),
             metadata: TableMetadata {
                 column_names: names,
             },
@@ -75,7 +75,10 @@ pub mod csv {
     }
 
     /// Reads a CSV file into a [`Table`] with the given options.
-    pub fn read_with_options<P: AsRef<Path>>(path: P, opts: &ReadOptions) -> crate::Result<Table> {
+    pub fn read_with_options<P: AsRef<Path>>(
+        path: P,
+        opts: &ReadOptions,
+    ) -> crate::Result<UnboundTable> {
         let path_str = path
             .as_ref()
             .to_str()
@@ -87,11 +90,11 @@ pub mod csv {
             opts.skip_rows,
             opts.num_rows,
         )?;
-        Ok(Table(tbl))
+        Ok(crate::table::RawTable(tbl))
     }
 
     /// Writes a [`Table`] to a CSV file.
-    pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
+    pub fn write<P: AsRef<Path>>(table: &UnboundTable, path: P) -> crate::Result<()> {
         let path_str = path
             .as_ref()
             .to_str()
@@ -122,7 +125,7 @@ pub mod csv {
 
     /// Writes a [`Table`] to a CSV file with the given options.
     pub fn write_with_options<P: AsRef<Path>>(
-        table: &Table,
+        table: &UnboundTable,
         path: P,
         opts: &WriteOptions<'_>,
     ) -> crate::Result<()> {
@@ -143,13 +146,13 @@ pub mod csv {
 
 /// Parquet read and write operations.
 pub mod parquet {
-    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
+    use super::{Path, TableMetadata, TableWithMetadata, UnboundTable, path_str};
 
     /// Reads a Parquet file into a [`Table`].
-    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
+    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<UnboundTable> {
         let s = path_str(path.as_ref())?;
         let tbl = cudf_sys::io::ffi::read_parquet(s)?;
-        Ok(Table(tbl))
+        Ok(crate::table::RawTable(tbl))
     }
 
     /// Reads a Parquet file into a [`TableWithMetadata`] (table + column names).
@@ -159,7 +162,7 @@ pub mod parquet {
         let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
         let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
         Ok(TableWithMetadata {
-            table: Table(tbl),
+            table: crate::table::RawTable(tbl),
             metadata: TableMetadata {
                 column_names: names,
             },
@@ -182,7 +185,7 @@ pub mod parquet {
         let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
         let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
         Ok(TableWithMetadata {
-            table: Table(tbl),
+            table: crate::table::RawTable(tbl),
             metadata: TableMetadata {
                 column_names: names,
             },
@@ -190,7 +193,7 @@ pub mod parquet {
     }
 
     /// Writes a [`Table`] to a Parquet file.
-    pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
+    pub fn write<P: AsRef<Path>>(table: &UnboundTable, path: P) -> crate::Result<()> {
         let s = path_str(path.as_ref())?;
         cudf_sys::io::ffi::write_parquet(&table.0, s)?;
         Ok(())
@@ -204,7 +207,7 @@ pub mod parquet {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use cudf::ast::ExpressionTree;
     /// use cudf::io::parquet;
     ///
@@ -213,7 +216,7 @@ pub mod parquet {
     /// let threshold = tree.lit_f64(100.0);
     /// let pred = tree.gt(col, threshold);
     ///
-    /// let table = parquet::read_filtered("data.parquet", &tree, pred)?;
+    /// let table = parquet::read_filtered("data.parquet", tree.root(pred)?)?;
     /// # Ok::<(), cudf::error::Error>(())
     /// ```
     ///
@@ -223,17 +226,16 @@ pub mod parquet {
     /// be read, or if the predicate references columns not in the schema.
     pub fn read_filtered<P: AsRef<Path>>(
         path: P,
-        tree: &crate::ast::ExpressionTree,
-        root: crate::ast::ExprRef,
-    ) -> crate::error::Result<Table> {
+        root: crate::ast::RootExpr<'_>,
+    ) -> crate::error::Result<UnboundTable> {
         let s = path_str(path.as_ref())?;
-        let t = cudf_sys::ast::ffi::read_parquet_filtered(s, tree.raw(), root.index())?;
-        Ok(Table(t))
+        let t = cudf_sys::ast::ffi::read_parquet_filtered(s, root.tree.raw(), root.index)?;
+        Ok(crate::table::RawTable(t))
     }
 
     /// Writes a [`Table`] to a Parquet file with column names.
     pub fn write_with_names<P: AsRef<Path>>(
-        table: &Table,
+        table: &UnboundTable,
         path: P,
         column_names: &[&str],
     ) -> crate::Result<()> {
@@ -245,15 +247,15 @@ pub mod parquet {
 
 /// JSON read and write operations.
 pub mod json {
-    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
+    use super::{Path, TableMetadata, TableWithMetadata, UnboundTable, path_str};
 
     /// Reads a JSON file into a [`Table`].
     ///
     /// Set `json_lines` to `true` for JSON Lines (newline-delimited) format.
-    pub fn read<P: AsRef<Path>>(path: P, json_lines: bool) -> crate::Result<Table> {
+    pub fn read<P: AsRef<Path>>(path: P, json_lines: bool) -> crate::Result<UnboundTable> {
         let s = path_str(path.as_ref())?;
         let tbl = cudf_sys::io::ffi::read_json(s, json_lines)?;
-        Ok(Table(tbl))
+        Ok(crate::table::RawTable(tbl))
     }
 
     /// Reads a JSON file into a [`TableWithMetadata`] (table + column names).
@@ -266,7 +268,7 @@ pub mod json {
         let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
         let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
         Ok(TableWithMetadata {
-            table: Table(tbl),
+            table: crate::table::RawTable(tbl),
             metadata: TableMetadata {
                 column_names: names,
             },
@@ -276,7 +278,11 @@ pub mod json {
     /// Writes a [`Table`] to a JSON file.
     ///
     /// Set `json_lines` to `true` for JSON Lines (newline-delimited) format.
-    pub fn write<P: AsRef<Path>>(table: &Table, path: P, json_lines: bool) -> crate::Result<()> {
+    pub fn write<P: AsRef<Path>>(
+        table: &UnboundTable,
+        path: P,
+        json_lines: bool,
+    ) -> crate::Result<()> {
         let s = path_str(path.as_ref())?;
         cudf_sys::io::ffi::write_json(&table.0, s, json_lines)?;
         Ok(())
@@ -285,13 +291,13 @@ pub mod json {
 
 /// Avro read operations.
 pub mod avro {
-    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
+    use super::{Path, TableMetadata, TableWithMetadata, UnboundTable, path_str};
 
     /// Reads an Avro file into a [`Table`].
-    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
+    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<UnboundTable> {
         let s = path_str(path.as_ref())?;
         let tbl = cudf_sys::io::ffi::read_avro(s)?;
-        Ok(Table(tbl))
+        Ok(crate::table::RawTable(tbl))
     }
 
     /// Reads an Avro file into a [`TableWithMetadata`] (table + column names).
@@ -301,7 +307,7 @@ pub mod avro {
         let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
         let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
         Ok(TableWithMetadata {
-            table: Table(tbl),
+            table: crate::table::RawTable(tbl),
             metadata: TableMetadata {
                 column_names: names,
             },
@@ -311,13 +317,13 @@ pub mod avro {
 
 /// ORC read and write operations.
 pub mod orc {
-    use super::{Path, Table, TableMetadata, TableWithMetadata, path_str};
+    use super::{Path, TableMetadata, TableWithMetadata, UnboundTable, path_str};
 
     /// Reads an ORC file into a [`Table`].
-    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<Table> {
+    pub fn read<P: AsRef<Path>>(path: P) -> crate::Result<UnboundTable> {
         let s = path_str(path.as_ref())?;
         let tbl = cudf_sys::io::ffi::read_orc(s)?;
-        Ok(Table(tbl))
+        Ok(crate::table::RawTable(tbl))
     }
 
     /// Reads an ORC file into a [`TableWithMetadata`] (table + column names).
@@ -327,7 +333,7 @@ pub mod orc {
         let names = cudf_sys::io::ffi::table_with_metadata_column_names(&twm);
         let tbl = cudf_sys::io::ffi::table_with_metadata_take_table(twm.pin_mut())?;
         Ok(TableWithMetadata {
-            table: Table(tbl),
+            table: crate::table::RawTable(tbl),
             metadata: TableMetadata {
                 column_names: names,
             },
@@ -335,7 +341,7 @@ pub mod orc {
     }
 
     /// Writes a [`Table`] to an ORC file.
-    pub fn write<P: AsRef<Path>>(table: &Table, path: P) -> crate::Result<()> {
+    pub fn write<P: AsRef<Path>>(table: &UnboundTable, path: P) -> crate::Result<()> {
         let s = path_str(path.as_ref())?;
         cudf_sys::io::ffi::write_orc(&table.0, s)?;
         Ok(())
@@ -350,7 +356,7 @@ mod tests {
     use crate::stream::GpuOp;
     use crate::table::TableBuilder;
 
-    fn make_test_table() -> Table {
+    fn make_test_table() -> crate::table::UnboundTable {
         let c1 = Column::from_scalar(&Scalar::from_i32(42), 3)
             .call()
             .unwrap();

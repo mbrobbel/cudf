@@ -9,7 +9,7 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::approx_constant)]
 
-use cudf::column::Column;
+use cudf::column::UnboundColumn as Column;
 use cudf::data_type::TypeId;
 use cudf::datetime::{DatetimeExt, RoundingFrequency};
 use cudf::groupby::AggregationKind;
@@ -17,7 +17,7 @@ use cudf::scalar::Scalar;
 use cudf::sorting::{NullOrder, Order, RankMethod};
 use cudf::stream::GpuOp;
 use cudf::strings::{SideType, StringExt};
-use cudf::table::{Table, TableBuilder};
+use cudf::table::{TableBuilder, UnboundTable as Table};
 
 // ---------------------------------------------------------------------------
 // Helpers

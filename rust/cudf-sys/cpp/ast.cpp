@@ -7,6 +7,7 @@
 
 #include <cudf/ast/expressions.hpp>
 #include <cudf/ast/ast_operator.hpp>
+#include <cudf/scalar/scalar_factories.hpp>
 #include <cudf/transform.hpp>
 #include <cudf/io/parquet.hpp>
 #include <cudf/join/conditional_join.hpp>
@@ -25,6 +26,14 @@ static std::unique_ptr<cudf::column> idx_to_column(
       rmm::device_buffer{}, 0);
 }
 
+template <typename ScalarT>
+static std::size_t push_literal(ExpressionTree& tree, std::unique_ptr<ScalarT> scalar) {
+  auto& ref = *scalar;
+  tree.scalars().push_back(std::move(scalar));
+  tree.tree().emplace<cudf::ast::literal>(ref);
+  return tree.len() - 1;
+}
+
 // -- ExpressionTree builder functions --
 
 std::unique_ptr<ExpressionTree> new_expression_tree() {
@@ -36,51 +45,86 @@ std::size_t expression_tree_len(ExpressionTree const& tree) {
 }
 
 std::size_t expression_tree_add_literal_i32(ExpressionTree& tree, int32_t value) {
-  auto s = std::make_unique<cudf::numeric_scalar<int32_t>>(value, true);
-  auto& ref = *s;
-  tree.scalars().push_back(std::move(s));
-  tree.tree().emplace<cudf::ast::literal>(ref);
-  return tree.len() - 1;
+  return push_literal(tree, std::make_unique<cudf::numeric_scalar<int32_t>>(value, true));
 }
 
 std::size_t expression_tree_add_literal_i64(ExpressionTree& tree, int64_t value) {
-  auto s = std::make_unique<cudf::numeric_scalar<int64_t>>(value, true);
-  auto& ref = *s;
-  tree.scalars().push_back(std::move(s));
-  tree.tree().emplace<cudf::ast::literal>(ref);
-  return tree.len() - 1;
+  return push_literal(tree, std::make_unique<cudf::numeric_scalar<int64_t>>(value, true));
 }
 
 std::size_t expression_tree_add_literal_f32(ExpressionTree& tree, float value) {
-  auto s = std::make_unique<cudf::numeric_scalar<float>>(value, true);
-  auto& ref = *s;
-  tree.scalars().push_back(std::move(s));
-  tree.tree().emplace<cudf::ast::literal>(ref);
-  return tree.len() - 1;
+  return push_literal(tree, std::make_unique<cudf::numeric_scalar<float>>(value, true));
 }
 
 std::size_t expression_tree_add_literal_f64(ExpressionTree& tree, double value) {
-  auto s = std::make_unique<cudf::numeric_scalar<double>>(value, true);
-  auto& ref = *s;
-  tree.scalars().push_back(std::move(s));
-  tree.tree().emplace<cudf::ast::literal>(ref);
-  return tree.len() - 1;
+  return push_literal(tree, std::make_unique<cudf::numeric_scalar<double>>(value, true));
 }
 
 std::size_t expression_tree_add_literal_bool(ExpressionTree& tree, bool value) {
-  auto s = std::make_unique<cudf::numeric_scalar<bool>>(value, true);
-  auto& ref = *s;
-  tree.scalars().push_back(std::move(s));
-  tree.tree().emplace<cudf::ast::literal>(ref);
-  return tree.len() - 1;
+  return push_literal(tree, std::make_unique<cudf::numeric_scalar<bool>>(value, true));
 }
 
 std::size_t expression_tree_add_literal_string(ExpressionTree& tree, rust::Str value) {
-  auto s = std::make_unique<cudf::string_scalar>(std::string(value.data(), value.size()), true);
-  auto& ref = *s;
-  tree.scalars().push_back(std::move(s));
-  tree.tree().emplace<cudf::ast::literal>(ref);
-  return tree.len() - 1;
+  return push_literal(
+      tree, std::make_unique<cudf::string_scalar>(std::string(value.data(), value.size()), true));
+}
+
+std::size_t expression_tree_add_literal_timestamp_s(ExpressionTree& tree, int64_t value) {
+  return push_literal(
+      tree, std::make_unique<cudf::timestamp_scalar<cudf::timestamp_s>>(
+                cudf::timestamp_s{cudf::duration_s{value}}, true));
+}
+
+std::size_t expression_tree_add_literal_timestamp_ms(ExpressionTree& tree, int64_t value) {
+  return push_literal(
+      tree, std::make_unique<cudf::timestamp_scalar<cudf::timestamp_ms>>(
+                cudf::timestamp_ms{cudf::duration_ms{value}}, true));
+}
+
+std::size_t expression_tree_add_literal_timestamp_us(ExpressionTree& tree, int64_t value) {
+  return push_literal(
+      tree, std::make_unique<cudf::timestamp_scalar<cudf::timestamp_us>>(
+                cudf::timestamp_us{cudf::duration_us{value}}, true));
+}
+
+std::size_t expression_tree_add_literal_timestamp_ns(ExpressionTree& tree, int64_t value) {
+  return push_literal(
+      tree, std::make_unique<cudf::timestamp_scalar<cudf::timestamp_ns>>(
+                cudf::timestamp_ns{cudf::duration_ns{value}}, true));
+}
+
+std::size_t expression_tree_add_literal_duration_s(ExpressionTree& tree, int64_t value) {
+  return push_literal(
+      tree, std::make_unique<cudf::duration_scalar<cudf::duration_s>>(cudf::duration_s{value}, true));
+}
+
+std::size_t expression_tree_add_literal_duration_ms(ExpressionTree& tree, int64_t value) {
+  return push_literal(
+      tree, std::make_unique<cudf::duration_scalar<cudf::duration_ms>>(cudf::duration_ms{value}, true));
+}
+
+std::size_t expression_tree_add_literal_duration_us(ExpressionTree& tree, int64_t value) {
+  return push_literal(
+      tree, std::make_unique<cudf::duration_scalar<cudf::duration_us>>(cudf::duration_us{value}, true));
+}
+
+std::size_t expression_tree_add_literal_duration_ns(ExpressionTree& tree, int64_t value) {
+  return push_literal(
+      tree, std::make_unique<cudf::duration_scalar<cudf::duration_ns>>(cudf::duration_ns{value}, true));
+}
+
+std::size_t expression_tree_add_literal_decimal32(ExpressionTree& tree, int32_t value, int32_t scale) {
+  return push_literal(
+      tree,
+      std::make_unique<cudf::fixed_point_scalar<numeric::decimal32>>(
+          value, numeric::scale_type{scale}, true));
+}
+
+std::size_t expression_tree_add_literal_decimal64(ExpressionTree& tree, int64_t value, int32_t scale) {
+  return push_literal(
+      tree,
+      std::make_unique<cudf::fixed_point_scalar<numeric::decimal64>>(
+          value, numeric::scale_type{scale}, true));
 }
 
 std::size_t expression_tree_add_column_ref(ExpressionTree& tree, int32_t column_index, int32_t table_source) {
@@ -112,6 +156,16 @@ std::size_t expression_tree_add_binary_op(ExpressionTree& tree, int32_t op, std:
 std::unique_ptr<Column> ast_compute_column(
     Table const& tbl, ExpressionTree const& tree, std::size_t root_index, std::size_t stream) {
   return COL(cudf::compute_column(tbl.cached_view(), tree.at(root_index), S(stream)));
+}
+
+std::unique_ptr<Table> ast_filter(
+    Table const& predicate_table,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    Table const& filter_table,
+    std::size_t stream) {
+  return TBL(cudf::filter(
+      predicate_table.cached_view(), tree.at(root_index), filter_table.cached_view(), S(stream)));
 }
 
 // -- Parquet filter --
@@ -210,6 +264,46 @@ std::unique_ptr<Table> conditional_left_anti_join(
   auto idx = cudf::conditional_left_anti_join(lv, right.cached_view(), tree.at(root_index), {}, s);
   auto ic = idx_to_column(std::move(idx));
   return TBL(cudf::gather(lv, ic->view(), cudf::out_of_bounds_policy::DONT_CHECK, s));
+}
+
+std::size_t conditional_inner_join_size(
+    Table const& left,
+    Table const& right,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    std::size_t stream) {
+  return cudf::conditional_inner_join_size(
+      left.cached_view(), right.cached_view(), tree.at(root_index), S(stream));
+}
+
+std::size_t conditional_left_join_size(
+    Table const& left,
+    Table const& right,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    std::size_t stream) {
+  return cudf::conditional_left_join_size(
+      left.cached_view(), right.cached_view(), tree.at(root_index), S(stream));
+}
+
+std::size_t conditional_left_semi_join_size(
+    Table const& left,
+    Table const& right,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    std::size_t stream) {
+  return cudf::conditional_left_semi_join_size(
+      left.cached_view(), right.cached_view(), tree.at(root_index), S(stream));
+}
+
+std::size_t conditional_left_anti_join_size(
+    Table const& left,
+    Table const& right,
+    ExpressionTree const& tree,
+    std::size_t root_index,
+    std::size_t stream) {
+  return cudf::conditional_left_anti_join_size(
+      left.cached_view(), right.cached_view(), tree.at(root_index), S(stream));
 }
 
 }  // namespace cudf_sys

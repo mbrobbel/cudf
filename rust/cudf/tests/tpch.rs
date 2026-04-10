@@ -9,7 +9,7 @@
 
 #![allow(clippy::unwrap_used)]
 
-use cudf::column::Column;
+use cudf::column::UnboundColumn as Column;
 use cudf::data_type::TypeId;
 use cudf::groupby::AggregationKind;
 use cudf::ops::BinaryOperator;
@@ -17,7 +17,7 @@ use cudf::scalar::Scalar;
 use cudf::sorting::{NullOrder, Order};
 use cudf::stream::GpuOp;
 use cudf::strings::StringExt;
-use cudf::table::{Table, TableBuilder};
+use cudf::table::{TableBuilder, UnboundTable as Table};
 
 // ---------------------------------------------------------------------------
 // Helpers

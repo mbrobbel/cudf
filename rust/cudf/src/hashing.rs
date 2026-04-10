@@ -31,9 +31,9 @@ mod tests {
     use crate::data_type::TypeId;
     use crate::scalar::Scalar;
     use crate::stream::GpuOp;
-    use crate::table::{Table, TableBuilder};
+    use crate::table::{TableBuilder, UnboundTable};
 
-    fn make_test_table() -> Table {
+    fn make_test_table() -> UnboundTable {
         let c1 = Col::from_slice_i32(&[1, 2, 3]).call().unwrap();
         let c2 = Col::from_slice_i32(&[4, 5, 6]).call().unwrap();
         let mut builder = TableBuilder::new();
